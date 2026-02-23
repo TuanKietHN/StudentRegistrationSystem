@@ -1,17 +1,16 @@
 <template>
   <v-card>
-    <v-card-title class="d-flex align-center justify-space-between">
-      <div class="text-h6">Quản trị Users</div>
-      <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm user</v-btn>
-    </v-card-title>
     <v-card-text>
+      <PageHeader title="Quản trị Users">
+        <template #actions>
+          <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm user</v-btn>
+        </template>
+      </PageHeader>
       <v-row>
         <v-col cols="12" md="6">
           <v-text-field
             v-model="keyword"
             label="Tìm kiếm theo username/email..."
-            density="comfortable"
-            variant="outlined"
             @update:model-value="handleSearch"
           />
         </v-col>
@@ -20,8 +19,6 @@
             v-model="roleFilter"
             :items="roleOptions"
             label="Lọc theo role"
-            density="comfortable"
-            variant="outlined"
             clearable
             @update:model-value="handleSearch"
           />
@@ -105,20 +102,13 @@
     </v-card>
   </v-dialog>
 
-  <v-dialog v-model="deleteOpen" max-width="520">
-    <v-card>
-      <v-card-title class="text-h6">Xóa user</v-card-title>
-      <v-card-text>
-        Bạn có chắc chắn muốn xóa user
-        <b>{{ deleting?.username }}</b>
-        ({{ deleting?.email }}) không?
-      </v-card-text>
-      <v-card-actions class="justify-end">
-        <v-btn variant="text" @click="deleteOpen = false">Hủy</v-btn>
-        <v-btn color="error" variant="flat" :loading="deletingLoading" @click="confirmDelete">Xóa</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <ConfirmDialog
+    v-model="deleteOpen"
+    title="Xóa user"
+    :text="`Bạn có chắc chắn muốn xóa user ${deleting?.username || ''} (${deleting?.email || ''}) không?`"
+    :loading="deletingLoading"
+    @confirm="confirmDelete"
+  />
 </template>
 
 <script setup lang="ts">
@@ -126,6 +116,8 @@ import { computed, ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { userService, type UserSummary } from '@/api/services/user.service'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
@@ -294,4 +286,3 @@ const confirmDelete = async () => {
 
 onMounted(fetchUsers)
 </script>
-

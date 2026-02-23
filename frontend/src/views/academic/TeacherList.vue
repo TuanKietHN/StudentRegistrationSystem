@@ -1,17 +1,16 @@
 <template>
   <v-card>
-    <v-card-title class="d-flex align-center justify-space-between">
-      <div class="text-h6">Danh sách Giảng viên</div>
-      <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
-    </v-card-title>
     <v-card-text>
+      <PageHeader title="Danh sách Giảng viên">
+        <template #actions>
+          <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
+        </template>
+      </PageHeader>
       <v-row>
         <v-col cols="12" md="6">
           <v-text-field
             v-model="keyword"
             label="Tìm kiếm theo mã, tên..."
-            density="comfortable"
-            variant="outlined"
             @update:model-value="handleSearch"
           />
         </v-col>
@@ -22,8 +21,6 @@
             item-title="title"
             item-value="value"
             label="Lọc theo khoa"
-            density="comfortable"
-            variant="outlined"
             clearable
             @update:model-value="handleSearch"
           />
@@ -138,20 +135,13 @@
     </v-card>
   </v-dialog>
 
-  <v-dialog v-model="deleteOpen" max-width="520">
-    <v-card>
-      <v-card-title class="text-h6">Xóa giảng viên</v-card-title>
-      <v-card-text>
-        Bạn có chắc chắn muốn xóa giảng viên
-        <b>{{ deleting?.username }}</b>
-        ({{ deleting?.employeeCode }}) không?
-      </v-card-text>
-      <v-card-actions class="justify-end">
-        <v-btn variant="text" @click="deleteOpen = false">Hủy</v-btn>
-        <v-btn color="error" variant="flat" :loading="deletingLoading" @click="confirmDelete">Xóa</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <ConfirmDialog
+    v-model="deleteOpen"
+    title="Xóa giảng viên"
+    :text="`Bạn có chắc chắn muốn xóa giảng viên ${deleting?.username || ''} (${deleting?.employeeCode || ''}) không?`"
+    :loading="deletingLoading"
+    @confirm="confirmDelete"
+  />
 </template>
 
 <script setup lang="ts">
@@ -161,6 +151,8 @@ import { departmentService } from '@/api/services/department.service'
 import { userService, type UserSummary } from '@/api/services/user.service'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()

@@ -39,9 +39,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const uiStore = useUiStore()
 
 const username = ref('')
 const password = ref('')
@@ -57,6 +59,7 @@ const handleLogin = async () => {
       username: username.value,
       password: password.value
     })
+    uiStore.notify('Đăng nhập thành công', 'success')
     router.push('/')
   } catch (err: any) {
     if (err?.response?.data?.message) {
@@ -64,6 +67,7 @@ const handleLogin = async () => {
     } else {
       error.value = 'Đăng nhập thất bại. Vui lòng thử lại.'
     }
+    uiStore.notify(error.value, 'error', 4000)
   } finally {
     loading.value = false
   }

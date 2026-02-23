@@ -44,8 +44,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '@/api/services/auth.service'
+import { useUiStore } from '@/stores/ui'
 
 const router = useRouter()
+const uiStore = useUiStore()
 
 const username = ref('')
 const email = ref('')
@@ -64,6 +66,7 @@ const handleRegister = async () => {
 
   if (password.value !== confirmPassword.value) {
     error.value = 'Mật khẩu nhập lại không khớp'
+    uiStore.notify(error.value, 'error', 4000)
     return
   }
 
@@ -76,16 +79,22 @@ const handleRegister = async () => {
       role: role.value || undefined
     })
     success.value = 'Đăng ký thành công. Vui lòng đăng nhập.'
+    uiStore.notify(success.value, 'success')
     setTimeout(() => router.push('/login'), 600)
   } catch (err: any) {
-    if (err?.response?.data?.message) {
-      error.value = err.response.data.message
+    const msg = err?.response?.data?.message
+    const details = err?.response?.data?.data
+    if (msg && details && typeof details === 'object') {
+      const lines = Object.entries(details).map(([k, v]) => `${k}: ${v}`)
+      error.value = `${msg}\n${lines.join('\n')}`
+    } else if (msg) {
+      error.value = msg
     } else {
       error.value = 'Đăng ký thất bại. Vui lòng thử lại.'
     }
+    uiStore.notify(error.value, 'error', 5000)
   } finally {
     loading.value = false
   }
 }
 </script>
-

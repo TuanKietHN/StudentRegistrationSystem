@@ -1,17 +1,34 @@
 <template>
   <v-card>
     <v-card-title class="d-flex align-center justify-space-between">
-      <div class="text-h6">Danh sách Khoa</div>
+      <div class="text-h6">Danh sách Học kỳ</div>
       <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
     </v-card-title>
     <v-card-text>
-      <v-text-field
-        v-model="keyword"
-        label="Tìm kiếm theo mã, tên..."
-        density="comfortable"
-        variant="outlined"
-        @update:model-value="handleSearch"
-      />
+      <v-row>
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="keyword"
+            label="Tìm kiếm theo mã, tên..."
+            density="comfortable"
+            variant="outlined"
+            @update:model-value="handleSearch"
+          />
+        </v-col>
+        <v-col cols="12" md="6">
+          <v-select
+            v-model="activeFilter"
+            :items="activeOptions"
+            item-title="title"
+            item-value="value"
+            label="Lọc trạng thái"
+            density="comfortable"
+            variant="outlined"
+            clearable
+            @update:model-value="handleSearch"
+          />
+        </v-col>
+      </v-row>
 
       <v-progress-linear v-if="loading" indeterminate class="mb-4" />
 
@@ -19,31 +36,33 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Mã Khoa</th>
-            <th>Tên Khoa</th>
-            <th>Trưởng Khoa</th>
+            <th>Mã</th>
+            <th>Tên</th>
+            <th>Bắt đầu</th>
+            <th>Kết thúc</th>
             <th>Trạng thái</th>
             <th>Hành động</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="dept in departments" :key="dept.id">
-            <td>{{ dept.id }}</td>
-            <td>{{ dept.code }}</td>
-            <td>{{ dept.name }}</td>
-            <td>{{ dept.headTeacherName || '-' }}</td>
+          <tr v-for="s in semesters" :key="s.id">
+            <td>{{ s.id }}</td>
+            <td>{{ s.code }}</td>
+            <td>{{ s.name }}</td>
+            <td>{{ s.startDate }}</td>
+            <td>{{ s.endDate }}</td>
             <td>
-              <v-chip :color="dept.active ? 'green' : 'red'" variant="tonal" size="small">
-                {{ dept.active ? 'Hoạt động' : 'Ngưng' }}
+              <v-chip :color="s.active ? 'green' : 'red'" variant="tonal" size="small">
+                {{ s.active ? 'Hoạt động' : 'Ngưng' }}
               </v-chip>
             </td>
             <td>
-              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(dept)">Sửa</v-btn>
-              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(dept)">Xóa</v-btn>
+              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(s)">Sửa</v-btn>
+              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(s)">Xóa</v-btn>
             </td>
           </tr>
-          <tr v-if="departments.length === 0">
-            <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
+          <tr v-if="semesters.length === 0">
+            <td colspan="7" class="text-center py-6">Không có dữ liệu</td>
           </tr>
         </tbody>
       </v-table>
@@ -56,37 +75,36 @@
     </v-card-text>
   </v-card>
 
-  <v-dialog v-model="dialogOpen" max-width="680">
+  <v-dialog v-model="dialogOpen" max-width="760">
     <v-card>
       <v-card-title class="text-h6">
-        {{ editingId ? 'Cập nhật khoa' : 'Thêm khoa' }}
+        {{ editingId ? 'Cập nhật học kỳ' : 'Thêm học kỳ' }}
       </v-card-title>
       <v-card-text>
-        <v-form ref="formRef" @submit.prevent="saveDepartment">
+        <v-form ref="formRef" @submit.prevent="saveSemester">
           <v-row>
             <v-col cols="12" md="6">
-              <v-text-field v-model="form.code" label="Mã khoa" :rules="rules.code" required />
+              <v-text-field v-model="form.code" label="Mã học kỳ" :rules="rules.code" required />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field v-model="form.name" label="Tên khoa" :rules="rules.name" required />
-            </v-col>
-            <v-col cols="12">
-              <v-textarea v-model="form.description" label="Mô tả" rows="3" auto-grow />
+              <v-text-field v-model="form.name" label="Tên học kỳ" :rules="rules.name" required />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="form.parentId"
-                label="Parent ID (tuỳ chọn)"
-                type="number"
-                min="1"
+                v-model="form.startDate"
+                label="Ngày bắt đầu"
+                type="date"
+                :rules="rules.startDate"
+                required
               />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="form.headTeacherId"
-                label="Head Teacher ID (tuỳ chọn)"
-                type="number"
-                min="1"
+                v-model="form.endDate"
+                label="Ngày kết thúc"
+                type="date"
+                :rules="rules.endDate"
+                required
               />
             </v-col>
             <v-col cols="12">
@@ -96,35 +114,31 @@
         </v-form>
       </v-card-text>
       <v-card-actions class="justify-end">
-        <v-btn variant="text" @click="closeDialog">Hủy</v-btn>
-        <v-btn color="primary" variant="flat" :loading="saving" @click="saveDepartment">
-          Lưu
-        </v-btn>
+        <v-btn variant="text" @click="dialogOpen = false">Hủy</v-btn>
+        <v-btn color="primary" variant="flat" :loading="saving" @click="saveSemester">Lưu</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 
   <v-dialog v-model="deleteOpen" max-width="520">
     <v-card>
-      <v-card-title class="text-h6">Xóa khoa</v-card-title>
+      <v-card-title class="text-h6">Xóa học kỳ</v-card-title>
       <v-card-text>
-        Bạn có chắc chắn muốn xóa khoa
+        Bạn có chắc chắn muốn xóa học kỳ
         <b>{{ deleting?.name }}</b>
         ({{ deleting?.code }}) không?
       </v-card-text>
       <v-card-actions class="justify-end">
         <v-btn variant="text" @click="deleteOpen = false">Hủy</v-btn>
-        <v-btn color="error" variant="flat" :loading="deletingLoading" @click="confirmDelete">
-          Xóa
-        </v-btn>
+        <v-btn color="error" variant="flat" :loading="deletingLoading" @click="confirmDelete">Xóa</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import { departmentService, type Department } from '@/api/services/department.service'
+import { computed, onMounted, ref } from 'vue'
+import { semesterService, type Semester } from '@/api/services/semester.service'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 
@@ -132,47 +146,55 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const isAdmin = computed(() => (authStore.currentUser?.role || '').split(',').includes('ADMIN'))
 
-const departments = ref<Department[]>([])
+const semesters = ref<Semester[]>([])
 const loading = ref(false)
 const page = ref(1)
 const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
+const activeFilter = ref<boolean | null>(null)
 let searchTimeout: any = null
+
+const activeOptions = [
+  { title: 'Hoạt động', value: true },
+  { title: 'Ngưng', value: false }
+]
 
 const dialogOpen = ref(false)
 const deleteOpen = ref(false)
 const saving = ref(false)
 const deletingLoading = ref(false)
 const editingId = ref<number | null>(null)
-const deleting = ref<Department | null>(null)
+const deleting = ref<Semester | null>(null)
 const formRef = ref<any>(null)
 
 const form = ref({
   code: '',
   name: '',
-  description: '',
-  parentId: null as number | null,
-  headTeacherId: null as number | null,
+  startDate: '',
+  endDate: '',
   active: true
 })
 
 const rules = {
-  code: [(v: string) => !!v || 'Mã khoa không được để trống'],
-  name: [(v: string) => !!v || 'Tên khoa không được để trống']
+  code: [(v: string) => !!v || 'Code is required'],
+  name: [(v: string) => !!v || 'Name is required'],
+  startDate: [(v: string) => !!v || 'Start date is required'],
+  endDate: [(v: string) => !!v || 'End date is required']
 }
 
-const fetchDepartments = async () => {
+const fetchSemesters = async () => {
   loading.value = true
   try {
-    const response = await departmentService.getAll({
+    const res = await semesterService.getAll({
       page: page.value,
       size: size.value,
-      keyword: keyword.value
+      keyword: keyword.value || undefined,
+      active: activeFilter.value ?? undefined
     })
-    const result = response.data.data
-    departments.value = result.data
-    totalPages.value = result.totalPages
+    const data = res.data.data
+    semesters.value = data.data
+    totalPages.value = data.totalPages
   } finally {
     loading.value = false
   }
@@ -182,14 +204,14 @@ const handleSearch = () => {
   if (searchTimeout) clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
     page.value = 1
-    fetchDepartments()
-  }, 500)
+    fetchSemesters()
+  }, 350)
 }
 
 const changePage = (newPage: number) => {
   if (newPage > 0 && newPage <= totalPages.value) {
     page.value = newPage
-    fetchDepartments()
+    fetchSemesters()
   }
 }
 
@@ -197,37 +219,33 @@ const resetForm = () => {
   form.value = {
     code: '',
     name: '',
-    description: '',
-    parentId: null,
-    headTeacherId: null,
+    startDate: '',
+    endDate: '',
     active: true
   }
 }
 
 const openCreateDialog = () => {
+  if (!isAdmin.value) return
   editingId.value = null
   resetForm()
   dialogOpen.value = true
 }
 
-const openEditDialog = (dept: Department) => {
-  editingId.value = dept.id
+const openEditDialog = (s: Semester) => {
+  if (!isAdmin.value) return
+  editingId.value = s.id
   form.value = {
-    code: dept.code,
-    name: dept.name,
-    description: dept.description || '',
-    parentId: dept.parentId ?? null,
-    headTeacherId: dept.headTeacherId ?? null,
-    active: !!dept.active
+    code: s.code,
+    name: s.name,
+    startDate: s.startDate,
+    endDate: s.endDate,
+    active: !!s.active
   }
   dialogOpen.value = true
 }
 
-const closeDialog = () => {
-  dialogOpen.value = false
-}
-
-const saveDepartment = async () => {
+const saveSemester = async () => {
   if (!isAdmin.value) return
   const res = await formRef.value?.validate?.()
   if (res && res.valid === false) return
@@ -237,21 +255,19 @@ const saveDepartment = async () => {
     const payload = {
       code: form.value.code,
       name: form.value.name,
-      description: form.value.description || null,
-      parentId: form.value.parentId || null,
-      headTeacherId: form.value.headTeacherId || null,
+      startDate: form.value.startDate,
+      endDate: form.value.endDate,
       active: !!form.value.active
     }
-
     if (editingId.value) {
-      await departmentService.update(editingId.value, payload)
-      uiStore.notify('Cập nhật khoa thành công', 'success')
+      await semesterService.update(editingId.value, payload)
+      uiStore.notify('Cập nhật học kỳ thành công', 'success')
     } else {
-      await departmentService.create(payload)
-      uiStore.notify('Tạo khoa thành công', 'success')
+      await semesterService.create(payload)
+      uiStore.notify('Tạo học kỳ thành công', 'success')
     }
     dialogOpen.value = false
-    fetchDepartments()
+    fetchSemesters()
   } catch (err: any) {
     const msg = err?.response?.data?.message || 'Thao tác thất bại'
     const details = err?.response?.data?.data
@@ -266,9 +282,9 @@ const saveDepartment = async () => {
   }
 }
 
-const openDeleteDialog = (dept: Department) => {
+const openDeleteDialog = (s: Semester) => {
   if (!isAdmin.value) return
-  deleting.value = dept
+  deleting.value = s
   deleteOpen.value = true
 }
 
@@ -276,10 +292,10 @@ const confirmDelete = async () => {
   if (!deleting.value) return
   deletingLoading.value = true
   try {
-    await departmentService.delete(deleting.value.id)
-    uiStore.notify('Xóa khoa thành công', 'success')
+    await semesterService.delete(deleting.value.id)
+    uiStore.notify('Xóa học kỳ thành công', 'success')
     deleteOpen.value = false
-    fetchDepartments()
+    fetchSemesters()
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Xóa thất bại', 'error', 4000)
   } finally {
@@ -287,5 +303,6 @@ const confirmDelete = async () => {
   }
 }
 
-onMounted(fetchDepartments)
+onMounted(fetchSemesters)
 </script>
+

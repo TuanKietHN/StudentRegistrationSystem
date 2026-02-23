@@ -76,20 +76,23 @@ public class DataSeeder implements CommandLineRunner {
             String rawPassword,
             Set<RoleType> roles
     ) {
-        if (userRepository.existsByEmail(email)) {
-            log.info("User [{}] already exists, skipping", email);
-            return;
-        }
+        userRepository.findByEmail(email).ifPresentOrElse(existing -> {
+            existing.setUsername(username);
+            existing.setPassword(passwordEncoder.encode(rawPassword));
+            existing.setRoles(roles);
+            userRepository.save(existing);
+            log.info("Updated seed user [{}]", email);
+        }, () -> {
+            User user = User.builder()
+                    .username(username)
+                    .email(email)
+                    .password(passwordEncoder.encode(rawPassword))
+                    .roles(roles)
+                    .build();
 
-        User user = User.builder()
-                .username(username)
-                .email(email)
-                .password(passwordEncoder.encode(rawPassword))
-                .roles(roles)
-                .build();
-
-        userRepository.save(user);
-        log.info("Seeded iam [{}]", email);
+            userRepository.save(user);
+            log.info("Seeded user [{}]", email);
+        });
     }
 
     /* =========================

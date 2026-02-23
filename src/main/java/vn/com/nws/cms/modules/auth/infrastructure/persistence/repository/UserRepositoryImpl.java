@@ -67,10 +67,7 @@ public class UserRepositoryImpl implements UserRepository {
                 jpaRoleRepository.findByName(roleType.authority())
                         .ifPresent(roleEntity -> {
                             UserRoleEntity userRole = new UserRoleEntity();
-                            // If iam ID is null (new iam), ID part will be null.
-                            // However, we can set association and let JPA handle it if we use @MapsId properly or save iam first.
-                            // With composite key and @MapsId, we usually just set the relation.
-                            userRole.setId(new UserRoleId(finalEntity.getId(), roleEntity.getId())); 
+                            userRole.setId(new UserRoleId());
                             userRole.setUser(finalEntity);
                             userRole.setRole(roleEntity);
                             userRole.setAssignedAt(LocalDateTime.now());

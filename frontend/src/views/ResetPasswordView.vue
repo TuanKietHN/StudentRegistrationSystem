@@ -37,9 +37,11 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authService } from '@/api/services/auth.service'
+import { useUiStore } from '@/stores/ui'
 
 const route = useRoute()
 const router = useRouter()
+const uiStore = useUiStore()
 
 const token = ref('')
 const newPassword = ref('')
@@ -60,6 +62,7 @@ const handleSubmit = async () => {
 
   if (newPassword.value !== confirmPassword.value) {
     error.value = 'Mật khẩu nhập lại không khớp'
+    uiStore.notify(error.value, 'error', 4000)
     return
   }
 
@@ -67,6 +70,7 @@ const handleSubmit = async () => {
   try {
     await authService.resetPassword({ token: token.value, newPassword: newPassword.value })
     success.value = 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập.'
+    uiStore.notify(success.value, 'success')
     setTimeout(() => router.push('/login'), 600)
   } catch (err: any) {
     if (err?.response?.data?.message) {
@@ -74,9 +78,9 @@ const handleSubmit = async () => {
     } else {
       error.value = 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.'
     }
+    uiStore.notify(error.value, 'error', 5000)
   } finally {
     loading.value = false
   }
 }
 </script>
-

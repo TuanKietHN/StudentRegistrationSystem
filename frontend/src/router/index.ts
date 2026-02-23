@@ -6,6 +6,10 @@ import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import DepartmentList from '../views/academic/DepartmentList.vue'
 import TeacherList from '../views/academic/TeacherList.vue'
+import SemesterList from '../views/academic/SemesterList.vue'
+import SubjectList from '../views/academic/SubjectList.vue'
+import CourseList from '../views/academic/CourseList.vue'
+import UserList from '../views/iam/UserList.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -47,6 +51,30 @@ const router = createRouter({
       path: '/teachers',
       name: 'teachers',
       component: TeacherList,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/semesters',
+      name: 'semesters',
+      component: SemesterList,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/subjects',
+      name: 'subjects',
+      component: SubjectList,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/courses',
+      name: 'courses',
+      component: CourseList,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/users',
+      name: 'users',
+      component: UserList,
       meta: { requiresAuth: true }
     }
   ]

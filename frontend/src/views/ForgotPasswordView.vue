@@ -29,11 +29,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { authService } from '@/api/services/auth.service'
+import { useUiStore } from '@/stores/ui'
 
 const email = ref('')
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+const uiStore = useUiStore()
 
 const handleSubmit = async () => {
   error.value = ''
@@ -45,12 +47,14 @@ const handleSubmit = async () => {
     success.value = token
       ? `Token đặt lại mật khẩu (dev): ${token}`
       : 'Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi.'
+    uiStore.notify(success.value, 'success', 5000)
   } catch (err: any) {
     if (err?.response?.data?.message) {
       error.value = err.response.data.message
     } else {
       error.value = 'Gửi yêu cầu thất bại. Vui lòng thử lại.'
     }
+    uiStore.notify(error.value, 'error', 5000)
   } finally {
     loading.value = false
   }

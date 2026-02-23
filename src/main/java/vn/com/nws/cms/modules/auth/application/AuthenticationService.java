@@ -50,8 +50,9 @@ public class AuthenticationService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtProvider.generateToken(authentication);
-        
-        User user = userRepository.findByUsername(loginRequest.getUsername())
+
+        String principalUsername = authentication.getName();
+        User user = userRepository.findByUsername(principalUsername)
                 .orElseThrow(() -> new BusinessException("User not found"));
 
         // Handle Refresh Token

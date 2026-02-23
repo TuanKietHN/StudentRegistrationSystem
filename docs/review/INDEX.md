@@ -4,7 +4,7 @@ Mục tiêu của bộ tài liệu này:
 - Rà soát hiện trạng codebase (backend + frontend)
 - Đối chiếu cấu trúc database (migration) với entity/domain hiện có
 - Đánh giá mức phù hợp cho hệ thống quản lý khóa học nội bộ
-- Đề xuất các chức năng bổ sung và hướng mở rộng xử lý video khóa học
+- Đề xuất các chức năng bổ sung theo hướng quản lý nội bộ (không bao gồm LMS/online)
 
 ## Danh mục
 
@@ -18,5 +18,4 @@ Mục tiêu của bộ tài liệu này:
    Tổng hợp chức năng hiện có (API/role) và danh sách tính năng có thể bổ sung theo mức ưu tiên.
 
 4. [04-Video-Extension.md](04-Video-Extension.md)  
-   Thiết kế hướng mở rộng để xử lý video khóa học (upload, transcode, phát HLS, phân quyền, tracking tiến độ).
-
+   Ghi chú phạm vi: loại bỏ khóa học online/video; chuẩn hoá Course theo V1 (lớp học phần).

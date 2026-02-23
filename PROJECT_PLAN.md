@@ -2,7 +2,7 @@
 
 ## 1. Tổng quan Dự án
 *   **Tên dự án**: Course Management System (CMS)
-*   **Mục tiêu**: Xây dựng hệ thống quản lý khóa học nội bộ hiện đại, hỗ trợ chuẩn E-learning.
+*   **Mục tiêu**: Xây dựng hệ thống quản lý khóa học nội bộ hiện đại (không bao gồm LMS/khóa học online).
 *   **Kiến trúc**: Modular Monolith (Clean Architecture).
 *   **Môi trường**: Java 21, Spring Boot 4.0.2.
 
@@ -57,7 +57,7 @@ cms-root/
 │   │   ├── common/
 │   │   └── modules/
 │   │       ├── auth/
-│   │       ├── user/
+│   │       ├── iam/
 │   │       ├── academic/
 │   │       ├── storage/ (New)
 │   │       └── notification/ (New)
@@ -86,7 +86,7 @@ cms-root/
 
 ### Quy trình Build & Run
 1.  **Development**:
-    *   Spring Boot: Run port `8080`.
+    *   Spring Boot: Run port `8081`.
     *   Vue.js: Run `npm run dev` port `5173`.
     *   **Proxy**: Vite config proxy `/api` -> `localhost:8080`.
 2.  **Production**:
@@ -125,5 +125,4 @@ cms-root/
 - [ ] **Academic**: API + UI (Quản lý Học kỳ, Môn học).
 
 ### Giai đoạn 4: E-learning Features
-- [ ] Tham khảo chuẩn xAPI/SCORM cho cấu trúc dữ liệu khóa học.
-- [ ] Implement chức năng học tập (Bài giảng, Video, Quiz).
+N/A (ngoài phạm vi dự án hiện tại).

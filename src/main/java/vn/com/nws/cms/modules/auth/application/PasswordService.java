@@ -2,11 +2,13 @@ package vn.com.nws.cms.modules.auth.application;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
+import vn.com.nws.cms.modules.auth.api.dto.ForgotPasswordResponse;
 import vn.com.nws.cms.modules.auth.api.dto.ForgotPasswordRequest;
 import vn.com.nws.cms.modules.auth.api.dto.ResetPasswordRequest;
 import vn.com.nws.cms.modules.auth.domain.model.User;
@@ -25,10 +27,13 @@ public class PasswordService {
     private final PasswordEncoder passwordEncoder;
     private final vn.com.nws.cms.infrastructure.messaging.EmailProducer emailProducer;
 
+    @Value("${cms.debug.return-reset-token:false}")
+    private boolean returnResetToken;
+
     private static final String REDIS_RESET_TOKEN_PREFIX = "auth:reset:";
     private static final String REDIS_USER_RT_KEY_PREFIX = "auth:u:rt:"; // Needed to invalidate sessions
 
-    public void forgotPassword(ForgotPasswordRequest request) {
+    public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException("User with email " + request.getEmail() + " not found"));
 
@@ -38,15 +43,20 @@ public class PasswordService {
         // Store in Redis: key=token, value=email, ttl=15 min
         redisTemplate.opsForValue().set(key, user.getEmail(), Duration.ofMinutes(15));
         
-        log.info("Reset Password Token for {}: {}", user.getEmail(), resetToken);
-        
-        // Send Reset Password Email asynchronously
-        emailProducer.sendEmail(vn.com.nws.cms.common.dto.EmailMessage.builder()
-                .to(user.getEmail())
-                .subject("Reset Password Request")
-                .body("Your reset token is: " + resetToken)
-                .type("FORGOT_PASSWORD")
-                .build());
+        try {
+            emailProducer.sendEmail(vn.com.nws.cms.common.dto.EmailMessage.builder()
+                    .to(user.getEmail())
+                    .subject("Reset Password Request")
+                    .body("Your reset token is: " + resetToken)
+                    .type("FORGOT_PASSWORD")
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to enqueue forgot-password email for {}", user.getEmail(), e);
+        }
+
+        return ForgotPasswordResponse.builder()
+                .resetToken(returnResetToken ? resetToken : null)
+                .build();
     }
 
     @Transactional

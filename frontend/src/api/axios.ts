@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api', // Proxied by Vite
+  baseURL: '/api', // Proxied by Vite or direct URL
   headers: {
     'Content-Type': 'application/json',
   },
@@ -24,9 +24,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // TODO: Handle token refresh or redirect to login
-      console.error('Unauthorized, redirecting to login...');
-      // router.push('/login');
+      // Clear storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

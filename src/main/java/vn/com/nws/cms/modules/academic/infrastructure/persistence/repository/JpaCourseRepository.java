@@ -18,7 +18,7 @@ public interface JpaCourseRepository extends JpaRepository<CourseEntity, Long> {
            "(:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
            "(:semesterId IS NULL OR c.semester.id = :semesterId) AND " +
            "(:subjectId IS NULL OR c.subject.id = :subjectId) AND " +
-           "(:teacherId IS NULL OR c.teacher.id = :teacherId) AND " +
+           "(:teacherId IS NULL OR c.teacherId = :teacherId) AND " +
            "(:active IS NULL OR c.active = :active)")
     Page<CourseEntity> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, Pageable pageable);
 
@@ -26,7 +26,7 @@ public interface JpaCourseRepository extends JpaRepository<CourseEntity, Long> {
            "(:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
            "(:semesterId IS NULL OR c.semester.id = :semesterId) AND " +
            "(:subjectId IS NULL OR c.subject.id = :subjectId) AND " +
-           "(:teacherId IS NULL OR c.teacher.id = :teacherId) AND " +
+           "(:teacherId IS NULL OR c.teacherId = :teacherId) AND " +
            "(:active IS NULL OR c.active = :active)")
     long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active);
 }

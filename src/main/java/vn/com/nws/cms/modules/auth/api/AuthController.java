@@ -54,9 +54,9 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     @Operation(summary = "Quên mật khẩu", description = "Yêu cầu đặt lại mật khẩu qua email")
-    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        passwordService.forgotPassword(request);
-        return ResponseEntity.ok(ApiResponse.success("Hướng dẫn đặt lại mật khẩu đã được gửi đến email", null));
+    public ResponseEntity<ApiResponse<ForgotPasswordResponse>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        ForgotPasswordResponse response = passwordService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Hướng dẫn đặt lại mật khẩu đã được gửi đến email", response));
     }
 
     @PostMapping("/reset-password")

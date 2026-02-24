@@ -17,21 +17,21 @@
 
 <script setup lang="ts">
 withDefaults(
-  defineProps<{
-    modelValue: boolean
-    title: string
-    text: string
-    confirmText?: string
-    cancelText?: string
-    confirmColor?: string
-    loading?: boolean
-  }>(),
-  {
-    confirmText: 'Xóa',
-    cancelText: 'Hủy',
-    confirmColor: 'error',
-    loading: false
-  }
+    defineProps<{
+      modelValue: boolean
+      title: string
+      text: string
+      confirmText?: string
+      cancelText?: string
+      confirmColor?: string
+      loading?: boolean
+    }>(),
+    {
+      confirmText: 'Xóa',
+      cancelText: 'Hủy',
+      confirmColor: 'error',
+      loading: false
+    }
 )
 
 const emit = defineEmits<{

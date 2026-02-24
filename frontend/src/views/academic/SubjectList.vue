@@ -9,20 +9,20 @@
       <v-row>
         <v-col cols="12" md="6">
           <v-text-field
-            v-model="keyword"
-            label="Tìm kiếm theo mã, tên..."
-            @update:model-value="handleSearch"
+              v-model="keyword"
+              label="Tìm kiếm theo mã, tên..."
+              @update:model-value="handleSearch"
           />
         </v-col>
         <v-col cols="12" md="6">
           <v-select
-            v-model="activeFilter"
-            :items="activeOptions"
-            item-title="title"
-            item-value="value"
-            label="Lọc trạng thái"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="activeFilter"
+              :items="activeOptions"
+              item-title="title"
+              item-value="value"
+              label="Lọc trạng thái"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
       </v-row>
@@ -31,34 +31,34 @@
 
       <v-table>
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Mã</th>
-            <th>Tên</th>
-            <th>Số tín chỉ</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Mã</th>
+          <th>Tên</th>
+          <th>Số tín chỉ</th>
+          <th>Trạng thái</th>
+          <th>Hành động</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="s in subjects" :key="s.id">
-            <td>{{ s.id }}</td>
-            <td>{{ s.code }}</td>
-            <td>{{ s.name }}</td>
-            <td>{{ s.credit }}</td>
-            <td>
-              <v-chip :color="s.active ? 'green' : 'red'" variant="tonal" size="small">
-                {{ s.active ? 'Hoạt động' : 'Ngưng' }}
-              </v-chip>
-            </td>
-            <td>
-              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(s)">Sửa</v-btn>
-              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(s)">Xóa</v-btn>
-            </td>
-          </tr>
-          <tr v-if="subjects.length === 0">
-            <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
-          </tr>
+        <tr v-for="s in subjects" :key="s.id">
+          <td>{{ s.id }}</td>
+          <td>{{ s.code }}</td>
+          <td>{{ s.name }}</td>
+          <td>{{ s.credit }}</td>
+          <td>
+            <v-chip :color="s.active ? 'green' : 'red'" variant="tonal" size="small">
+              {{ s.active ? 'Hoạt động' : 'Ngưng' }}
+            </v-chip>
+          </td>
+          <td>
+            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(s)">Sửa</v-btn>
+            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(s)">Xóa</v-btn>
+          </td>
+        </tr>
+        <tr v-if="subjects.length === 0">
+          <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
+        </tr>
         </tbody>
       </v-table>
 
@@ -86,12 +86,12 @@
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="form.credit"
-                label="Số tín chỉ"
-                type="number"
-                min="0"
-                :rules="rules.credit"
-                required
+                  v-model.number="form.credit"
+                  label="Số tín chỉ"
+                  type="number"
+                  min="0"
+                  :rules="rules.credit"
+                  required
               />
             </v-col>
             <v-col cols="12">
@@ -111,11 +111,11 @@
   </v-dialog>
 
   <ConfirmDialog
-    v-model="deleteOpen"
-    title="Xóa môn học"
-    :text="`Bạn có chắc chắn muốn xóa môn học ${deleting?.name || ''} (${deleting?.code || ''}) không?`"
-    :loading="deletingLoading"
-    @confirm="confirmDelete"
+      v-model="deleteOpen"
+      title="Xóa môn học"
+      :text="`Bạn có chắc chắn muốn xóa môn học ${deleting?.name || ''} (${deleting?.code || ''}) không?`"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
   />
 </template>
 

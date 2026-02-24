@@ -6,44 +6,51 @@
           <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
         </template>
       </PageHeader>
-      <v-text-field
-        v-model="keyword"
-        label="Tìm kiếm theo mã, tên..."
-        @update:model-value="handleSearch"
-      />
+      <!-- Search Section -->
+      <div class="search-section">
+        <v-text-field
+            v-model="keyword"
+            placeholder="Tìm kiếm theo mã, tên..."
+            variant="outlined"
+            prepend-inner-icon="mdi-magnify"
+            density="comfortable"
+            @update:model-value="handleSearch"
+            class="search-field"
+        />
+      </div>
 
-      <v-progress-linear v-if="loading" indeterminate class="mb-4" />
+      <v-progress-linear v-if="loading" indeterminate class="mb-4 rounded-pill" />
 
       <v-table>
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Mã Khoa</th>
-            <th>Tên Khoa</th>
-            <th>Trưởng Khoa</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Mã Khoa</th>
+          <th>Tên Khoa</th>
+          <th>Trưởng Khoa</th>
+          <th>Trạng thái</th>
+          <th>Hành động</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="dept in departments" :key="dept.id">
-            <td>{{ dept.id }}</td>
-            <td>{{ dept.code }}</td>
-            <td>{{ dept.name }}</td>
-            <td>{{ dept.headTeacherName || '-' }}</td>
-            <td>
-              <v-chip :color="dept.active ? 'green' : 'red'" variant="tonal" size="small">
-                {{ dept.active ? 'Hoạt động' : 'Ngưng' }}
-              </v-chip>
-            </td>
-            <td>
-              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(dept)">Sửa</v-btn>
-              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(dept)">Xóa</v-btn>
-            </td>
-          </tr>
-          <tr v-if="departments.length === 0">
-            <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
-          </tr>
+        <tr v-for="dept in departments" :key="dept.id">
+          <td>{{ dept.id }}</td>
+          <td>{{ dept.code }}</td>
+          <td>{{ dept.name }}</td>
+          <td>{{ dept.headTeacherName || '-' }}</td>
+          <td>
+            <v-chip :color="dept.active ? 'green' : 'red'" variant="tonal" size="small">
+              {{ dept.active ? 'Hoạt động' : 'Ngưng' }}
+            </v-chip>
+          </td>
+          <td>
+            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(dept)">Sửa</v-btn>
+            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(dept)">Xóa</v-btn>
+          </td>
+        </tr>
+        <tr v-if="departments.length === 0">
+          <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
+        </tr>
         </tbody>
       </v-table>
 
@@ -74,18 +81,18 @@
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="form.parentId"
-                label="Parent ID (tuỳ chọn)"
-                type="number"
-                min="1"
+                  v-model.number="form.parentId"
+                  label="Parent ID (tuỳ chọn)"
+                  type="number"
+                  min="1"
               />
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model.number="form.headTeacherId"
-                label="Head Teacher ID (tuỳ chọn)"
-                type="number"
-                min="1"
+                  v-model.number="form.headTeacherId"
+                  label="Head Teacher ID (tuỳ chọn)"
+                  type="number"
+                  min="1"
               />
             </v-col>
             <v-col cols="12">
@@ -104,11 +111,11 @@
   </v-dialog>
 
   <ConfirmDialog
-    v-model="deleteOpen"
-    title="Xóa khoa"
-    :text="`Bạn có chắc chắn muốn xóa khoa ${deleting?.name || ''} (${deleting?.code || ''}) không?`"
-    :loading="deletingLoading"
-    @confirm="confirmDelete"
+      v-model="deleteOpen"
+      title="Xóa khoa"
+      :text="`Bạn có chắc chắn muốn xóa khoa ${deleting?.name || ''} (${deleting?.code || ''}) không?`"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
   />
 </template>
 
@@ -281,3 +288,67 @@ const confirmDelete = async () => {
 
 onMounted(fetchDepartments)
 </script>
+
+<style scoped>
+.search-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.search-field {
+  width: 100%;
+}
+
+.search-field :deep(.v-field) {
+  border-radius: 12px;
+}
+
+:deep(.v-table) {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+:deep(.v-table thead tr) {
+  background: linear-gradient(to right, #f9fafb, #f3f4f6);
+  border-bottom: 2px solid #e5e7eb;
+}
+
+:deep(.v-table thead th) {
+  font-weight: 700;
+  color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 12px;
+}
+
+:deep(.v-table tbody tr) {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+:deep(.v-table tbody tr:hover) {
+  background-color: #f9fafb;
+}
+
+:deep(.v-table tbody td) {
+  padding: 16px 12px;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+:deep(.v-chip) {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+:deep(.v-progress-linear) {
+  border-radius: 12px;
+}
+</style>

@@ -9,20 +9,20 @@
       <v-row>
         <v-col cols="12" md="6">
           <v-text-field
-            v-model="keyword"
-            label="Tìm kiếm theo mã, tên..."
-            @update:model-value="handleSearch"
+              v-model="keyword"
+              label="Tìm kiếm theo mã, tên..."
+              @update:model-value="handleSearch"
           />
         </v-col>
         <v-col cols="12" md="6">
           <v-select
-            v-model="departmentFilterId"
-            :items="departmentOptions"
-            item-title="title"
-            item-value="value"
-            label="Lọc theo khoa"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="departmentFilterId"
+              :items="departmentOptions"
+              item-title="title"
+              item-value="value"
+              label="Lọc theo khoa"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
       </v-row>
@@ -31,38 +31,38 @@
 
       <v-table>
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Mã NV</th>
-            <th>Username</th>
-            <th>Họ tên</th>
-            <th>Khoa</th>
-            <th>Chức danh</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Mã NV</th>
+          <th>Username</th>
+          <th>Họ tên</th>
+          <th>Khoa</th>
+          <th>Chức danh</th>
+          <th>Trạng thái</th>
+          <th>Hành động</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="teacher in teachers" :key="teacher.id">
-            <td>{{ teacher.id }}</td>
-            <td>{{ teacher.employeeCode }}</td>
-            <td>{{ teacher.username }}</td>
-            <td>{{ teacher.fullName || '-' }}</td>
-            <td>{{ teacher.departmentName || '-' }}</td>
-            <td>{{ teacher.title || '-' }}</td>
-            <td>
-              <v-chip :color="teacher.active ? 'green' : 'red'" variant="tonal" size="small">
-                {{ teacher.active ? 'Hoạt động' : 'Ngưng' }}
-              </v-chip>
-            </td>
-            <td>
-              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(teacher)">Sửa</v-btn>
-              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(teacher)">Xóa</v-btn>
-            </td>
-          </tr>
-          <tr v-if="teachers.length === 0">
-            <td colspan="8" class="text-center py-6">Không có dữ liệu</td>
-          </tr>
+        <tr v-for="teacher in teachers" :key="teacher.id">
+          <td>{{ teacher.id }}</td>
+          <td>{{ teacher.employeeCode }}</td>
+          <td>{{ teacher.username }}</td>
+          <td>{{ teacher.fullName || '-' }}</td>
+          <td>{{ teacher.departmentName || '-' }}</td>
+          <td>{{ teacher.title || '-' }}</td>
+          <td>
+            <v-chip :color="teacher.active ? 'green' : 'red'" variant="tonal" size="small">
+              {{ teacher.active ? 'Hoạt động' : 'Ngưng' }}
+            </v-chip>
+          </td>
+          <td>
+            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(teacher)">Sửa</v-btn>
+            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(teacher)">Xóa</v-btn>
+          </td>
+        </tr>
+        <tr v-if="teachers.length === 0">
+          <td colspan="8" class="text-center py-6">Không có dữ liệu</td>
+        </tr>
         </tbody>
       </v-table>
 
@@ -87,30 +87,30 @@
             </v-col>
             <v-col cols="12" md="6">
               <v-autocomplete
-                v-model="form.userId"
-                :items="userOptions"
-                item-title="title"
-                item-value="value"
-                :loading="userLoading"
-                :disabled="!!editingId"
-                label="User (bắt buộc)"
-                density="comfortable"
-                variant="outlined"
-                :rules="editingId ? [] : rules.userId"
-                @update:search="onUserSearch"
-                clearable
+                  v-model="form.userId"
+                  :items="userOptions"
+                  item-title="title"
+                  item-value="value"
+                  :loading="userLoading"
+                  :disabled="!!editingId"
+                  label="User (bắt buộc)"
+                  density="comfortable"
+                  variant="outlined"
+                  :rules="editingId ? [] : rules.userId"
+                  @update:search="onUserSearch"
+                  clearable
               />
             </v-col>
             <v-col cols="12" md="6">
               <v-select
-                v-model="form.departmentId"
-                :items="departmentOptions"
-                item-title="title"
-                item-value="value"
-                label="Khoa"
-                density="comfortable"
-                variant="outlined"
-                clearable
+                  v-model="form.departmentId"
+                  :items="departmentOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Khoa"
+                  density="comfortable"
+                  variant="outlined"
+                  clearable
               />
             </v-col>
             <v-col cols="12" md="6">
@@ -136,11 +136,11 @@
   </v-dialog>
 
   <ConfirmDialog
-    v-model="deleteOpen"
-    title="Xóa giảng viên"
-    :text="`Bạn có chắc chắn muốn xóa giảng viên ${deleting?.username || ''} (${deleting?.employeeCode || ''}) không?`"
-    :loading="deletingLoading"
-    @confirm="confirmDelete"
+      v-model="deleteOpen"
+      title="Xóa giảng viên"
+      :text="`Bạn có chắc chắn muốn xóa giảng viên ${deleting?.username || ''} (${deleting?.employeeCode || ''}) không?`"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
   />
 </template>
 

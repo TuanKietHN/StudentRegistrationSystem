@@ -9,18 +9,18 @@
       <v-row>
         <v-col cols="12" md="6">
           <v-text-field
-            v-model="keyword"
-            label="Tìm kiếm theo username/email..."
-            @update:model-value="handleSearch"
+              v-model="keyword"
+              label="Tìm kiếm theo username/email..."
+              @update:model-value="handleSearch"
           />
         </v-col>
         <v-col cols="12" md="6">
           <v-select
-            v-model="roleFilter"
-            :items="roleOptions"
-            label="Lọc theo role"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="roleFilter"
+              :items="roleOptions"
+              label="Lọc theo role"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
       </v-row>
@@ -29,32 +29,32 @@
 
       <v-table>
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Hành động</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Hành động</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="u in users" :key="u.id">
-            <td>{{ u.id }}</td>
-            <td>{{ u.username }}</td>
-            <td>{{ u.email }}</td>
-            <td>
-              <v-chip v-for="r in splitRoles(u.role)" :key="r" size="small" variant="tonal" class="mr-1 mb-1">
-                {{ r }}
-              </v-chip>
-            </td>
-            <td>
-              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(u)">Sửa</v-btn>
-              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(u)">Xóa</v-btn>
-            </td>
-          </tr>
-          <tr v-if="users.length === 0">
-            <td colspan="5" class="text-center py-6">Không có dữ liệu</td>
-          </tr>
+        <tr v-for="u in users" :key="u.id">
+          <td>{{ u.id }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.email }}</td>
+          <td>
+            <v-chip v-for="r in splitRoles(u.role)" :key="r" size="small" variant="tonal" class="mr-1 mb-1">
+              {{ r }}
+            </v-chip>
+          </td>
+          <td>
+            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(u)">Sửa</v-btn>
+            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(u)">Xóa</v-btn>
+          </td>
+        </tr>
+        <tr v-if="users.length === 0">
+          <td colspan="5" class="text-center py-6">Không có dữ liệu</td>
+        </tr>
         </tbody>
       </v-table>
 
@@ -85,11 +85,11 @@
             </v-col>
             <v-col cols="12" md="6">
               <v-text-field
-                v-model="form.password"
-                label="Mật khẩu"
-                type="password"
-                autocomplete="new-password"
-                :rules="editingId ? [] : rules.password"
+                  v-model="form.password"
+                  label="Mật khẩu"
+                  type="password"
+                  autocomplete="new-password"
+                  :rules="editingId ? [] : rules.password"
               />
             </v-col>
           </v-row>
@@ -103,11 +103,11 @@
   </v-dialog>
 
   <ConfirmDialog
-    v-model="deleteOpen"
-    title="Xóa user"
-    :text="`Bạn có chắc chắn muốn xóa user ${deleting?.username || ''} (${deleting?.email || ''}) không?`"
-    :loading="deletingLoading"
-    @confirm="confirmDelete"
+      v-model="deleteOpen"
+      title="Xóa user"
+      :text="`Bạn có chắc chắn muốn xóa user ${deleting?.username || ''} (${deleting?.email || ''}) không?`"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
   />
 </template>
 
@@ -158,9 +158,9 @@ const rules = {
 
 const splitRoles = (role: string) => {
   return (role || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
 }
 
 const fetchUsers = async () => {

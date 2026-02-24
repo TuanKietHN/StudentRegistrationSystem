@@ -9,20 +9,20 @@
       <v-row>
         <v-col cols="12" md="4">
           <v-text-field
-            v-model="keyword"
-            label="Tìm kiếm theo mã, tên..."
-            @update:model-value="handleSearch"
+              v-model="keyword"
+              label="Tìm kiếm theo mã, tên..."
+              @update:model-value="handleSearch"
           />
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="semesterFilterId"
-            :items="semesterOptions"
-            item-title="title"
-            item-value="value"
-            label="Lọc học kỳ"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="semesterFilterId"
+              :items="semesterOptions"
+              item-title="title"
+              item-value="value"
+              label="Lọc học kỳ"
+              clearable
+              @update:model-value="handleSearch"
           />
           <div v-if="activeSemesterLabel" class="text-caption mt-1">
             Học kỳ đang active: {{ activeSemesterLabel }}
@@ -30,37 +30,37 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="subjectFilterId"
-            :items="subjectOptions"
-            item-title="title"
-            item-value="value"
-            label="Lọc môn học"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="subjectFilterId"
+              :items="subjectOptions"
+              item-title="title"
+              item-value="value"
+              label="Lọc môn học"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
       </v-row>
       <v-row>
         <v-col cols="12" md="4">
           <v-select
-            v-model="teacherFilterUserId"
-            :items="teacherOptions"
-            item-title="title"
-            item-value="value"
-            label="Lọc giảng viên"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="teacherFilterUserId"
+              :items="teacherOptions"
+              item-title="title"
+              item-value="value"
+              label="Lọc giảng viên"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="activeFilter"
-            :items="activeOptions"
-            item-title="title"
-            item-value="value"
-            label="Lọc trạng thái"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="activeFilter"
+              :items="activeOptions"
+              item-title="title"
+              item-value="value"
+              label="Lọc trạng thái"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
       </v-row>
@@ -69,40 +69,40 @@
 
       <v-table>
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Mã</th>
-            <th>Tên</th>
-            <th>Học kỳ</th>
-            <th>Môn học</th>
-            <th>Giảng viên</th>
-            <th>Sĩ số tối đa</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
+        <tr>
+          <th>ID</th>
+          <th>Mã</th>
+          <th>Tên</th>
+          <th>Học kỳ</th>
+          <th>Môn học</th>
+          <th>Giảng viên</th>
+          <th>Sĩ số tối đa</th>
+          <th>Trạng thái</th>
+          <th>Hành động</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="c in courses" :key="c.id">
-            <td>{{ c.id }}</td>
-            <td>{{ c.code }}</td>
-            <td>{{ c.name }}</td>
-            <td>{{ c.semester?.code || '-' }}</td>
-            <td>{{ c.subject?.code || '-' }}</td>
-            <td>{{ c.teacher?.username || '-' }}</td>
-            <td>{{ c.maxStudents }}</td>
-            <td>
-              <v-chip :color="c.active ? 'green' : 'red'" variant="tonal" size="small">
-                {{ c.active ? 'Hoạt động' : 'Ngưng' }}
-              </v-chip>
-            </td>
-            <td>
-              <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(c)">Sửa</v-btn>
-              <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(c)">Xóa</v-btn>
-            </td>
-          </tr>
-          <tr v-if="courses.length === 0">
-            <td colspan="9" class="text-center py-6">Không có dữ liệu</td>
-          </tr>
+        <tr v-for="c in courses" :key="c.id">
+          <td>{{ c.id }}</td>
+          <td>{{ c.code }}</td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.semester?.code || '-' }}</td>
+          <td>{{ c.subject?.code || '-' }}</td>
+          <td>{{ c.teacher?.username || '-' }}</td>
+          <td>{{ c.maxStudents }}</td>
+          <td>
+            <v-chip :color="c.active ? 'green' : 'red'" variant="tonal" size="small">
+              {{ c.active ? 'Hoạt động' : 'Ngưng' }}
+            </v-chip>
+          </td>
+          <td>
+            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(c)">Sửa</v-btn>
+            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(c)">Xóa</v-btn>
+          </td>
+        </tr>
+        <tr v-if="courses.length === 0">
+          <td colspan="9" class="text-center py-6">Không có dữ liệu</td>
+        </tr>
         </tbody>
       </v-table>
 
@@ -130,48 +130,48 @@
             </v-col>
             <v-col cols="12" md="4">
               <v-select
-                v-model="form.semesterId"
-                :items="semesterOptions"
-                item-title="title"
-                item-value="value"
-                label="Học kỳ"
-                :rules="rules.semesterId"
-                density="comfortable"
-                variant="outlined"
+                  v-model="form.semesterId"
+                  :items="semesterOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Học kỳ"
+                  :rules="rules.semesterId"
+                  density="comfortable"
+                  variant="outlined"
               />
             </v-col>
             <v-col cols="12" md="4">
               <v-select
-                v-model="form.subjectId"
-                :items="subjectOptions"
-                item-title="title"
-                item-value="value"
-                label="Môn học"
-                :rules="rules.subjectId"
-                density="comfortable"
-                variant="outlined"
+                  v-model="form.subjectId"
+                  :items="subjectOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Môn học"
+                  :rules="rules.subjectId"
+                  density="comfortable"
+                  variant="outlined"
               />
             </v-col>
             <v-col cols="12" md="4">
               <v-select
-                v-model="form.teacherUserId"
-                :items="teacherOptions"
-                item-title="title"
-                item-value="value"
-                label="Giảng viên (tuỳ chọn)"
-                density="comfortable"
-                variant="outlined"
-                clearable
+                  v-model="form.teacherUserId"
+                  :items="teacherOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Giảng viên (tuỳ chọn)"
+                  density="comfortable"
+                  variant="outlined"
+                  clearable
               />
             </v-col>
             <v-col cols="12" md="4">
               <v-text-field
-                v-model.number="form.maxStudents"
-                label="Sĩ số tối đa"
-                type="number"
-                min="1"
-                :rules="rules.maxStudents"
-                required
+                  v-model.number="form.maxStudents"
+                  label="Sĩ số tối đa"
+                  type="number"
+                  min="1"
+                  :rules="rules.maxStudents"
+                  required
               />
             </v-col>
             <v-col cols="12" md="8">
@@ -188,11 +188,11 @@
   </v-dialog>
 
   <ConfirmDialog
-    v-model="deleteOpen"
-    title="Xóa lớp học"
-    :text="`Bạn có chắc chắn muốn xóa lớp ${deleting?.name || ''} (${deleting?.code || ''}) không?`"
-    :loading="deletingLoading"
-    @confirm="confirmDelete"
+      v-model="deleteOpen"
+      title="Xóa lớp học"
+      :text="`Bạn có chắc chắn muốn xóa lớp ${deleting?.name || ''} (${deleting?.code || ''}) không?`"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
   />
 </template>
 

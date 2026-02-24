@@ -1,4 +1,4 @@
--- =====================================================
+       -- =====================================================
 -- V12__courses_teacher_fk_to_teachers.sql
 -- Enforce courses.teacher_id -> teachers.id (database-level constraint)
 -- Data migration:

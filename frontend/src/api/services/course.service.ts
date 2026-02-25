@@ -1,11 +1,22 @@
 import api from '@/api/axios'
 
+export interface CourseTimeSlot {
+  id: number
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+}
+
 export interface Course {
   id: number
   name: string
   code: string
   maxStudents: number
+  currentStudents: number
   active: boolean
+  enrollmentStartDate?: string | null
+  enrollmentEndDate?: string | null
+  timeSlots?: CourseTimeSlot[]
   subject?: any
   semester?: any
   teacher?: any
@@ -38,4 +49,3 @@ export const courseService = {
     return api.delete(`/v1/courses/${id}`)
   }
 }
-

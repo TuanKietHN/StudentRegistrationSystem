@@ -71,10 +71,7 @@
 
           <!-- Footer -->
           <v-card-text class="login-footer">
-            <p class="footer-text">
-              Chưa có tài khoản?
-              <router-link to="/register" class="link">Đăng ký ngay</router-link>
-            </p>
+            <p class="footer-text">Liên hệ quản trị viên để được cấp tài khoản.</p>
           </v-card-text>
         </v-card>
       </v-col>
@@ -84,11 +81,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 
-const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 
@@ -107,7 +104,8 @@ const handleLogin = async () => {
       password: password.value
     })
     uiStore.notify('Đăng nhập thành công', 'success')
-    router.push('/')
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null
+    authStore.redirectAfterLogin(redirect)
   } catch (err: any) {
     if (err?.response?.data?.message) {
       error.value = err.response.data.message

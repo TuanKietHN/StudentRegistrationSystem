@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
 public class CourseCreateRequest {
     @NotBlank(message = "Name is required")
@@ -26,4 +28,7 @@ public class CourseCreateRequest {
     private Long teacherId;
 
     private boolean active;
+
+    private LocalDate enrollmentStartDate;
+    private LocalDate enrollmentEndDate;
 }

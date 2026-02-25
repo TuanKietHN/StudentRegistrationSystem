@@ -12,6 +12,9 @@ import vn.com.nws.cms.common.dto.ApiResponse;
 import vn.com.nws.cms.common.dto.PageResponse;
 import vn.com.nws.cms.modules.academic.api.dto.*;
 import vn.com.nws.cms.modules.academic.application.CourseService;
+import vn.com.nws.cms.modules.academic.application.CourseTimeSlotService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/courses")
@@ -20,6 +23,7 @@ import vn.com.nws.cms.modules.academic.application.CourseService;
 public class CourseController {
 
     private final CourseService courseService;
+    private final CourseTimeSlotService courseTimeSlotService;
 
     @GetMapping
     @Operation(summary = "Danh sách lớp học phần", description = "Lấy danh sách lớp học phần có phân trang và tìm kiếm")
@@ -76,5 +80,23 @@ public class CourseController {
     public ResponseEntity<ApiResponse<Void>> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa lớp học phần thành công", null));
+    }
+
+    @GetMapping("/{id}/time-slots")
+    @Operation(summary = "Lịch học của lớp", description = "Lấy lịch học (time slots) của lớp học phần")
+    public ResponseEntity<ApiResponse<List<CourseTimeSlotResponse>>> getCourseTimeSlots(@PathVariable Long id) {
+        List<CourseTimeSlotResponse> response = courseTimeSlotService.getCourseTimeSlots(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy lịch học thành công", response));
+    }
+
+    @PutMapping("/{id}/time-slots")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Cập nhật lịch học của lớp", description = "Cập nhật lịch học (time slots) của lớp học phần (Admin)")
+    public ResponseEntity<ApiResponse<List<CourseTimeSlotResponse>>> replaceCourseTimeSlots(
+            @PathVariable Long id,
+            @Valid @RequestBody List<CourseTimeSlotRequest> request
+    ) {
+        List<CourseTimeSlotResponse> response = courseTimeSlotService.replaceCourseTimeSlots(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật lịch học thành công", response));
     }
 }

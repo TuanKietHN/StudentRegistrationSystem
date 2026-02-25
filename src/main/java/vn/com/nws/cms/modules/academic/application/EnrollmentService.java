@@ -6,9 +6,11 @@ import java.util.List;
 
 public interface EnrollmentService {
     EnrollmentResponse enrollStudent(EnrollmentCreateRequest request);
+    EnrollmentResponse enrollSelf(String username, EnrollmentSelfRequest request);
     EnrollmentResponse updateEnrollment(Long id, EnrollmentUpdateRequest request);
-    void deleteEnrollment(Long id);
+    void cancelEnrollment(Long id, String username, boolean isAdmin);
     
     List<EnrollmentResponse> getStudentEnrollments(Long studentId);
+    List<EnrollmentResponse> getMyEnrollments(String username);
     List<EnrollmentResponse> getCourseEnrollments(Long courseId);
 }

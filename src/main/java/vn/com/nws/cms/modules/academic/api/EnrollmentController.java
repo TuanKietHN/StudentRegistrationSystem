@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import vn.com.nws.cms.common.dto.ApiResponse;
 import vn.com.nws.cms.modules.academic.api.dto.*;
@@ -22,10 +23,18 @@ public class EnrollmentController {
     private final EnrollmentService enrollmentService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-    @Operation(summary = "Đăng ký học phần", description = "Sinh viên đăng ký vào lớp học phần")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Đăng ký học phần (Admin)", description = "Admin đăng ký lớp học phần cho sinh viên")
     public ResponseEntity<ApiResponse<EnrollmentResponse>> enrollStudent(@Valid @RequestBody EnrollmentCreateRequest request) {
         EnrollmentResponse response = enrollmentService.enrollStudent(request);
+        return ResponseEntity.ok(ApiResponse.success("Đăng ký học phần thành công", response));
+    }
+
+    @PostMapping("/self")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Đăng ký học phần (Sinh viên)", description = "Sinh viên tự đăng ký vào lớp học phần trong thời gian mở đăng ký")
+    public ResponseEntity<ApiResponse<EnrollmentResponse>> enrollSelf(Authentication authentication, @Valid @RequestBody EnrollmentSelfRequest request) {
+        EnrollmentResponse response = enrollmentService.enrollSelf(authentication.getName(), request);
         return ResponseEntity.ok(ApiResponse.success("Đăng ký học phần thành công", response));
     }
 
@@ -40,17 +49,27 @@ public class EnrollmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Hủy đăng ký", description = "Hủy đăng ký học phần (Admin)")
-    public ResponseEntity<ApiResponse<Void>> deleteEnrollment(@PathVariable Long id) {
-        enrollmentService.deleteEnrollment(id);
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+    @Operation(summary = "Hủy đăng ký", description = "Sinh viên hủy đăng ký trong thời gian mở đăng ký; Admin có thể hủy")
+    public ResponseEntity<ApiResponse<Void>> cancelEnrollment(Authentication authentication, @PathVariable Long id) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        enrollmentService.cancelEnrollment(id, authentication.getName(), isAdmin);
         return ResponseEntity.ok(ApiResponse.success("Hủy đăng ký thành công", null));
     }
 
     @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Danh sách học phần của sinh viên", description = "Lấy danh sách các lớp học phần sinh viên đã đăng ký")
     public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getStudentEnrollments(@PathVariable Long studentId) {
         List<EnrollmentResponse> response = enrollmentService.getStudentEnrollments(studentId);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách học phần thành công", response));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Danh sách học phần của tôi", description = "Lấy danh sách các lớp học phần tôi đã đăng ký")
+    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getMyEnrollments(Authentication authentication) {
+        List<EnrollmentResponse> response = enrollmentService.getMyEnrollments(authentication.getName());
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách học phần thành công", response));
     }
 

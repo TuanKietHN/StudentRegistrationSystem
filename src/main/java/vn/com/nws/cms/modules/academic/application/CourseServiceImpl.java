@@ -10,12 +10,14 @@ import vn.com.nws.cms.modules.academic.domain.model.Course;
 import vn.com.nws.cms.modules.academic.domain.model.Semester;
 import vn.com.nws.cms.modules.academic.domain.model.Subject;
 import vn.com.nws.cms.modules.academic.domain.repository.CourseRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.CourseTimeSlotRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.SemesterRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.SubjectRepository;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 import vn.com.nws.cms.modules.iam.api.dto.UserResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,7 @@ public class CourseServiceImpl implements CourseService {
     private final SubjectRepository subjectRepository;
     private final SemesterRepository semesterRepository;
     private final UserRepository userRepository;
+    private final CourseTimeSlotRepository courseTimeSlotRepository;
 
     @Override
     public PageResponse<CourseResponse> getCourses(CourseFilterRequest request) {
@@ -97,7 +100,11 @@ public class CourseServiceImpl implements CourseService {
                 .subject(subject)
                 .semester(semester)
                 .teacher(teacher)
+                .enrollmentStartDate(request.getEnrollmentStartDate() != null ? request.getEnrollmentStartDate() : LocalDate.now())
+                .enrollmentEndDate(request.getEnrollmentEndDate() != null ? request.getEnrollmentEndDate() : LocalDate.now().plusDays(365))
                 .build();
+
+        validateEnrollmentWindow(course.getEnrollmentStartDate(), course.getEnrollmentEndDate());
 
         course = courseRepository.save(course);
         return toResponse(course);
@@ -138,6 +145,14 @@ public class CourseServiceImpl implements CourseService {
             course.setTeacher(teacher);
         }
 
+        if (request.getEnrollmentStartDate() != null) {
+            course.setEnrollmentStartDate(request.getEnrollmentStartDate());
+        }
+        if (request.getEnrollmentEndDate() != null) {
+            course.setEnrollmentEndDate(request.getEnrollmentEndDate());
+        }
+        validateEnrollmentWindow(course.getEnrollmentStartDate(), course.getEnrollmentEndDate());
+
         course = courseRepository.save(course);
         return toResponse(course);
     }
@@ -152,6 +167,9 @@ public class CourseServiceImpl implements CourseService {
     }
 
     private CourseResponse toResponse(Course course) {
+        List<CourseTimeSlotResponse> timeSlots = courseTimeSlotRepository.findByCourseId(course.getId()).stream()
+                .map(CourseTimeSlotResponse::fromDomain)
+                .toList();
         return CourseResponse.builder()
                 .id(course.getId())
                 .name(course.getName())
@@ -176,8 +194,20 @@ public class CourseServiceImpl implements CourseService {
                         .email(course.getTeacher().getEmail())
                         .role(course.getTeacher().getRoles().stream().map(Enum::name).collect(Collectors.joining(",")))
                         .build() : null)
+                .enrollmentStartDate(course.getEnrollmentStartDate())
+                .enrollmentEndDate(course.getEnrollmentEndDate())
+                .timeSlots(timeSlots)
                 .createdAt(course.getCreatedAt())
                 .updatedAt(course.getUpdatedAt())
                 .build();
+    }
+
+    private void validateEnrollmentWindow(LocalDate start, LocalDate end) {
+        if (start == null || end == null) {
+            throw new BusinessException("Khoảng thời gian mở đăng ký là bắt buộc");
+        }
+        if (start.isAfter(end)) {
+            throw new BusinessException("Thời gian mở đăng ký không hợp lệ");
+        }
     }
 }

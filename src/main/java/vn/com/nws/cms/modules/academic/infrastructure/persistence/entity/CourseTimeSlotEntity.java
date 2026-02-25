@@ -7,15 +7,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
 
+import java.time.LocalTime;
+
 @Entity
-@Table(name = "enrollments", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"course_id", "student_id"})
-})
+@Table(name = "course_time_slots")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EnrollmentEntity extends AuditEntity {
+public class CourseTimeSlotEntity extends AuditEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -24,12 +25,13 @@ public class EnrollmentEntity extends AuditEntity {
     @JoinColumn(name = "course_id", nullable = false)
     private CourseEntity course;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id", nullable = false)
-    private StudentEntity student;
+    @Column(name = "day_of_week", nullable = false)
+    private short dayOfWeek;
 
-    @Column(nullable = false)
-    private String status;
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
 
-    private Double grade;
+    @Column(name = "end_time", nullable = false)
+    private LocalTime endTime;
 }
+

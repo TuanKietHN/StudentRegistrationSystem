@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "courses")
 @Data
@@ -32,6 +34,12 @@ public class CourseEntity extends AuditEntity {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Column(name = "enrollment_start_date")
+    private LocalDate enrollmentStartDate;
+
+    @Column(name = "enrollment_end_date")
+    private LocalDate enrollmentEndDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id", nullable = false)

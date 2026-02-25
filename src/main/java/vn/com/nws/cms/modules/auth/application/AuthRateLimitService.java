@@ -2,7 +2,7 @@ package vn.com.nws.cms.modules.auth.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import vn.com.nws.cms.common.exception.BusinessException;
 
@@ -12,7 +12,7 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class AuthRateLimitService {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${cms.auth.ratelimit.login.ip.max}")
     private long loginIpMax;
@@ -48,4 +48,3 @@ public class AuthRateLimitService {
         return count <= max;
     }
 }
-

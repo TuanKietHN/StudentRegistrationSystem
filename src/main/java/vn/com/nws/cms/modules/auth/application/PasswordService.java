@@ -3,7 +3,7 @@ package vn.com.nws.cms.modules.auth.application;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ import java.util.UUID;
 public class PasswordService {
 
     private final UserRepository userRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final PasswordEncoder passwordEncoder;
     private final vn.com.nws.cms.infrastructure.messaging.EmailProducer emailProducer;
     private final AuthSessionService authSessionService;
@@ -62,7 +62,7 @@ public class PasswordService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         String key = REDIS_RESET_TOKEN_PREFIX + request.getToken();
-        String email = (String) redisTemplate.opsForValue().get(key);
+        String email = redisTemplate.opsForValue().get(key);
         
         if (email == null) {
             throw new BusinessException("Invalid or expired reset token");

@@ -115,10 +115,16 @@ cms-root/
 - [x] Tích hợp MinIO để lưu trữ file/avatar.
 
 ### Giai đoạn 2: Frontend Setup (Vue.js)
-- [ ] Khởi tạo dự án Vue 3 + Vite + TS trong thư mục `frontend`.
-- [ ] Cấu hình Axios & Interceptor (Auto attach Token).
-- [ ] Setup Layouts (Admin/User) & Router.
-- [ ] Implement trang Login/Register kết nối API.
+- [x] Khởi tạo dự án Vue 3 + Vite + TS trong thư mục `frontend`.
+- [x] Cấu hình Axios instance + interceptor attach JWT.
+- [x] Setup Router + guards `requiresAuth`.
+- [x] Implement Login/Register/Forgot/Reset kết nối API.
+- [x] Chuẩn UI nền tảng với Vuetify theme + components dùng lại (Phase 1).
+- [x] Làm snackbar/toast global (Pinia UI store + hiển thị trong App).
+- [x] Hoàn thiện luồng refresh token (401 → refresh → retry).
+- [x] Thêm route-level authorization `roles` (admin-only routes).
+- [x] Lazy-load routes (tối ưu bundle) theo Phase 3.
+- [x] Chuẩn hoá helper parse `ApiResponse<T>`/`PageResponse<T>` để giảm lặp.
 
 ### Giai đoạn 3: Core Features (Fullstack)
 - [ ] **User Management**: API + UI (Profile, Admin Dashboard).

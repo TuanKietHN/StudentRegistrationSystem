@@ -26,12 +26,12 @@ public class PasswordService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final PasswordEncoder passwordEncoder;
     private final vn.com.nws.cms.infrastructure.messaging.EmailProducer emailProducer;
+    private final AuthSessionService authSessionService;
 
     @Value("${cms.debug.return-reset-token:false}")
     private boolean returnResetToken;
 
     private static final String REDIS_RESET_TOKEN_PREFIX = "auth:reset:";
-    private static final String REDIS_USER_RT_KEY_PREFIX = "auth:u:rt:"; // Needed to invalidate sessions
 
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
@@ -78,6 +78,6 @@ public class PasswordService {
         redisTemplate.delete(key);
         
         // Optional: Invalidate all sessions (force login)
-        redisTemplate.delete(REDIS_USER_RT_KEY_PREFIX + user.getUsername());
+        authSessionService.revokeAll(user.getUsername());
     }
 }

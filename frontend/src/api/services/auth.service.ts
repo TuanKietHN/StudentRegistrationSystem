@@ -7,7 +7,7 @@ export interface LoginPayload {
 
 export interface TokenResponse {
   accessToken: string
-  refreshToken: string
+  refreshToken?: string | null
   tokenType: string
   expiresIn: number
   username: string
@@ -34,6 +34,12 @@ export const authService = {
   login(payload: LoginPayload) {
     return api.post('/v1/auth/login', payload)
   },
+  refresh() {
+    return api.post('/v1/auth/refresh', {})
+  },
+  logout() {
+    return api.post('/v1/auth/logout', {})
+  },
   register(payload: RegisterPayload) {
     return api.post('/v1/auth/register', payload)
   },
@@ -44,4 +50,3 @@ export const authService = {
     return api.post('/v1/auth/reset-password', payload)
   }
 }
-

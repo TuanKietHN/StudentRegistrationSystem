@@ -209,7 +209,12 @@ Mục tiêu: frontend triển khai tính năng theo từng module backend một 
 - Lazy-load routes (khuyến nghị): `() => import('...')` cho views lớn.
 - Cache lookup data:
   - `semesterOptions/subjectOptions` dùng nhiều màn hình → đưa vào store cache.
-
+  - 
+### 6.7. Notification
+- Dùng Vuetify snackbar toast notification cho thông báo success/error.
+- Làm toast global
+- Hiển thị error message rõ ràng từ backend.
+- Có thể tắt/ẩn snackbar khi cần.
 ---
 
 ## 7) Checklist triển khai module mới (chuẩn doanh nghiệp)

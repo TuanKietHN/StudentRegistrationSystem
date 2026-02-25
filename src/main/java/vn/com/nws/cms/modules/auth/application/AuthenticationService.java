@@ -3,7 +3,7 @@ package vn.com.nws.cms.modules.auth.application;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -14,14 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.common.security.JwtProvider;
 import vn.com.nws.cms.modules.auth.api.dto.LoginRequest;
-import vn.com.nws.cms.modules.auth.api.dto.RefreshTokenRequest;
 import vn.com.nws.cms.modules.auth.api.dto.TokenResponse;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 
-import java.time.Duration;
-import java.util.Collections;
-import java.util.UUID;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,22 +28,43 @@ public class AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final JwtProvider jwtProvider;
-
-    @Value("${jwt.refresh-expiration}")
-    private long refreshExpiration;
+    private final AuthSessionService authSessionService;
+    private final AuthRateLimitService authRateLimitService;
+    private final AuthAuditService authAuditService;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    private static final String REDIS_RT_KEY_PREFIX = "auth:rt:"; // Key: token -> Value: username
-    private static final String REDIS_USER_RT_KEY_PREFIX = "auth:u:rt:"; // Key: username -> Value: token (Single Session enforcement)
+    @Value("${cms.auth.login.max-failures}")
+    private int maxLoginFailures;
+
+    @Value("${cms.auth.login.lock-minutes}")
+    private int loginLockMinutes;
 
     @Transactional
-    public TokenResponse login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+    public LoginResult login(LoginRequest loginRequest, String deviceId, String ip, String userAgent) {
+        authRateLimitService.checkLoginAllowed(ip, loginRequest.getUsername());
+
+        User preUser = userRepository.findByUsername(loginRequest.getUsername())
+                .or(() -> userRepository.findByEmail(loginRequest.getUsername()))
+                .orElse(null);
+        if (preUser != null && isLocked(preUser)) {
+            authAuditService.record(preUser.getUsername(), "LOGIN_BLOCKED_LOCKED", false, ip, userAgent, null, null);
+            throw new BusinessException("Tài khoản đang bị khóa. Vui lòng thử lại sau.");
+        }
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        } catch (AuthenticationException e) {
+            if (preUser != null) {
+                handleLoginFailure(preUser, ip, userAgent);
+            }
+            authAuditService.record(preUser != null ? preUser.getUsername() : null, "LOGIN_FAILED", false, ip, userAgent, null, null);
+            throw new BusinessException("Sai thông tin đăng nhập");
+        }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtProvider.generateToken(authentication);
@@ -55,80 +73,61 @@ public class AuthenticationService {
         User user = userRepository.findByUsername(principalUsername)
                 .orElseThrow(() -> new BusinessException("User not found"));
 
-        // Handle Refresh Token
-        String refreshToken = UUID.randomUUID().toString();
-        saveRefreshTokenToRedis(user.getUsername(), refreshToken);
+        clearLoginFailure(user, ip, userAgent);
 
-        return buildTokenResponse(jwt, refreshToken, user);
+        AuthSessionService.SessionIssueResult session = authSessionService.issue(user.getUsername(), deviceId, ip, userAgent);
+        TokenResponse tokenResponse = buildTokenResponse(jwt, null, user);
+        authAuditService.record(user.getUsername(), "LOGIN_SUCCESS", true, ip, userAgent, session.sessionId(), null);
+
+        return new LoginResult(tokenResponse, session.sessionId(), session.refreshToken());
     }
 
-    public TokenResponse refreshToken(RefreshTokenRequest request) {
-        String requestRefreshToken = request.getRefreshToken();
-        
-        // 1. Find username by token
-        String username = (String) redisTemplate.opsForValue().get(REDIS_RT_KEY_PREFIX + requestRefreshToken);
-        if (username == null) {
-            throw new BusinessException("Refresh token is invalid or expired!");
-        }
-
-        // 2. Validate Single Session (Token Reuse Detection)
-        String currentActiveToken = (String) redisTemplate.opsForValue().get(REDIS_USER_RT_KEY_PREFIX + username);
-        if (!requestRefreshToken.equals(currentActiveToken)) {
-            // Token mismatch! Possible theft. Invalidate everything for this iam.
-            redisTemplate.delete(REDIS_USER_RT_KEY_PREFIX + username);
-            redisTemplate.delete(REDIS_RT_KEY_PREFIX + requestRefreshToken);
-            if (currentActiveToken != null) {
-                redisTemplate.delete(REDIS_RT_KEY_PREFIX + currentActiveToken);
+    public RefreshResult refresh(String refreshToken, String deviceId, String ip, String userAgent) {
+        AuthSessionService.SessionData preSession = authSessionService.findByRefreshToken(refreshToken);
+        AuthSessionService.SessionRotateResult rotated;
+        try {
+            rotated = authSessionService.rotate(refreshToken, deviceId, ip, userAgent);
+        } catch (BusinessException e) {
+            if (preSession != null && e.getMessage() != null && e.getMessage().contains("reuse")) {
+                userRepository.findByUsername(preSession.username()).ifPresent(user -> {
+                    lockUser(user);
+                    authAuditService.record(user.getUsername(), "REFRESH_REUSE_DETECTED", false, ip, userAgent, preSession.sessionId(), null);
+                });
             }
-            throw new BusinessException("Refresh token reuse detected! Please login again.");
+            throw e;
+        }
+        User user = userRepository.findByUsername(rotated.username())
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (isLocked(user)) {
+            authSessionService.revokeAll(user.getUsername());
+            authAuditService.record(user.getUsername(), "REFRESH_BLOCKED_LOCKED", false, ip, userAgent, rotated.sessionId(), null);
+            throw new BusinessException("Tài khoản đang bị khóa. Vui lòng thử lại sau.");
         }
 
-        // 3. Rotate Token
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessException("User not found"));
-
-        // Generate new JWT
         Authentication auth = new UsernamePasswordAuthenticationToken(
-                user.getUsername(), 
-                null, 
+                user.getUsername(),
+                null,
                 user.getRoles().stream()
-                    .map(role -> new SimpleGrantedAuthority(role.authority()))
-                    .collect(Collectors.toList())
+                        .map(role -> new SimpleGrantedAuthority(role.authority()))
+                        .collect(Collectors.toList())
         );
         String newAccessToken = jwtProvider.generateToken(auth);
-        
-        // Generate new Refresh Token
-        String newRefreshToken = UUID.randomUUID().toString();
-        
-        // Cleanup old token
-        redisTemplate.delete(REDIS_RT_KEY_PREFIX + requestRefreshToken);
-        
-        // Save new token
-        saveRefreshTokenToRedis(username, newRefreshToken);
+        TokenResponse tokenResponse = buildTokenResponse(newAccessToken, null, user);
+        authAuditService.record(user.getUsername(), "REFRESH_SUCCESS", true, ip, userAgent, rotated.sessionId(), null);
 
-        return buildTokenResponse(newAccessToken, newRefreshToken, user);
+        return new RefreshResult(tokenResponse, rotated.sessionId(), rotated.refreshToken());
     }
 
-    public void logout(String refreshToken) {
-        if (refreshToken != null) {
-            String username = (String) redisTemplate.opsForValue().get(REDIS_RT_KEY_PREFIX + refreshToken);
-            if (username != null) {
-                redisTemplate.delete(REDIS_RT_KEY_PREFIX + refreshToken);
-                redisTemplate.delete(REDIS_USER_RT_KEY_PREFIX + username);
-            }
+    public void logout(String refreshToken, String ip, String userAgent) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return;
         }
+        authSessionService.revokeByRefreshToken(refreshToken);
+        authAuditService.record(null, "LOGOUT", true, ip, userAgent, null, null);
     }
 
-    private void saveRefreshTokenToRedis(String username, String refreshToken) {
-        // Enforce Single Session: Invalidate old token if exists
-        String oldToken = (String) redisTemplate.opsForValue().get(REDIS_USER_RT_KEY_PREFIX + username);
-        if (oldToken != null) {
-            redisTemplate.delete(REDIS_RT_KEY_PREFIX + oldToken);
-        }
-
-        // Save new token
-        redisTemplate.opsForValue().set(REDIS_RT_KEY_PREFIX + refreshToken, username, Duration.ofMillis(refreshExpiration));
-        redisTemplate.opsForValue().set(REDIS_USER_RT_KEY_PREFIX + username, refreshToken, Duration.ofMillis(refreshExpiration));
+    public void revokeAllSessions(String username) {
+        authSessionService.revokeAll(username);
     }
 
     private TokenResponse buildTokenResponse(String accessToken, String refreshToken, User user) {
@@ -141,4 +140,40 @@ public class AuthenticationService {
                 .role(user.getRoles().stream().map(Enum::name).collect(Collectors.joining(",")))
                 .build();
     }
+
+    private void handleLoginFailure(User user, String ip, String userAgent) {
+        int failures = user.getFailedLoginAttempts() + 1;
+        if (failures >= maxLoginFailures) {
+            user.setFailedLoginAttempts(0);
+            user.setLockUntil(LocalDateTime.now().plusMinutes(loginLockMinutes));
+            userRepository.save(user);
+            authAuditService.record(user.getUsername(), "LOGIN_LOCKED", false, ip, userAgent, null, null);
+            return;
+        }
+        user.setFailedLoginAttempts(failures);
+        userRepository.save(user);
+    }
+
+    private void clearLoginFailure(User user, String ip, String userAgent) {
+        user.setFailedLoginAttempts(0);
+        user.setLockUntil(null);
+        user.setLastLoginAt(LocalDateTime.now());
+        user.setLastLoginIp(ip);
+        user.setLastLoginUserAgent(userAgent);
+        userRepository.save(user);
+    }
+
+    private void lockUser(User user) {
+        user.setFailedLoginAttempts(0);
+        user.setLockUntil(LocalDateTime.now().plusMinutes(loginLockMinutes));
+        userRepository.save(user);
+    }
+
+    private boolean isLocked(User user) {
+        return user.getLockUntil() != null && user.getLockUntil().isAfter(LocalDateTime.now());
+    }
+
+    public record LoginResult(TokenResponse tokenResponse, String sessionId, String refreshToken) {}
+
+    public record RefreshResult(TokenResponse tokenResponse, String sessionId, String refreshToken) {}
 }

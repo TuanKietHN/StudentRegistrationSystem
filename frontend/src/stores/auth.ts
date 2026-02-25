@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import router from '@/router';
-import { authService, type LoginPayload } from '@/api/services/auth.service';
+import { authService, type LoginPayload, type TokenResponse } from '@/api/services/auth.service';
+import { unwrapApiResponse } from '@/api/response';
 
 interface User {
   username: string;
@@ -26,19 +27,22 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    setSession(payload: Pick<TokenResponse, 'accessToken' | 'username' | 'role'>) {
+      const { accessToken, username, role } = payload;
+
+      this.token = accessToken;
+      this.user = { username, role };
+      this.isAuthenticated = true;
+
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('user', JSON.stringify(this.user));
+    },
+
     async login(credentials: LoginPayload) {
       try {
         const response = await authService.login(credentials);
-        const data = response.data.data;
-        const { accessToken, refreshToken, username, role } = data;
-
-        this.token = accessToken;
-        this.user = { username, role };
-        this.isAuthenticated = true;
-
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(this.user));
+        const data = unwrapApiResponse<TokenResponse>(response);
+        this.setSession(data);
 
         return true;
       } catch (error) {
@@ -46,12 +50,15 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    logout() {
+    async logout() {
+      try {
+        await authService.logout()
+      } catch {
+      }
       this.token = null;
       this.user = null;
       this.isAuthenticated = false;
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       router.push('/login');
     },

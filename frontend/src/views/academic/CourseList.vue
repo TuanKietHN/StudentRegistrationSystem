@@ -200,15 +200,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import { useLookupsStore } from '@/stores/lookups'
+import { useDebounceFn } from '@/composables/useDebounceFn'
+import { unwrapPageResponse } from '@/api/response'
 import { courseService, type Course } from '@/api/services/course.service'
-import { semesterService } from '@/api/services/semester.service'
-import { subjectService } from '@/api/services/subject.service'
 import { teacherService } from '@/api/services/teacher.service'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const authStore = useAuthStore()
 const uiStore = useUiStore()
+const lookupsStore = useLookupsStore()
 const isAdmin = computed(() => (authStore.currentUser?.role || '').split(',').includes('ADMIN'))
 
 const courses = ref<Course[]>([])
@@ -221,14 +223,11 @@ const semesterFilterId = ref<number | null>(null)
 const subjectFilterId = ref<number | null>(null)
 const teacherFilterUserId = ref<number | null>(null)
 const activeFilter = ref<boolean | null>(null)
-let searchTimeout: any = null
-
-const activeSemesterId = ref<number | null>(null)
-const activeSemesterLabel = ref('')
-
-const semesterOptions = ref<Array<{ title: string; value: number }>>([])
-const subjectOptions = ref<Array<{ title: string; value: number }>>([])
 const teacherOptions = ref<Array<{ title: string; value: number }>>([])
+const semesterOptions = computed(() => lookupsStore.semesterOptions)
+const subjectOptions = computed(() => lookupsStore.subjectOptions)
+const activeSemesterId = computed(() => lookupsStore.activeSemesterId)
+const activeSemesterLabel = computed(() => lookupsStore.activeSemesterLabel)
 
 const activeOptions = [
   { title: 'Hoạt động', value: true },
@@ -254,11 +253,11 @@ const form = ref({
 })
 
 const rules = {
-  code: [(v: string) => !!v || 'Code is required'],
-  name: [(v: string) => !!v || 'Name is required'],
-  semesterId: [(v: number | null) => !!v || 'Semester is required'],
-  subjectId: [(v: number | null) => !!v || 'Subject is required'],
-  maxStudents: [(v: number) => v >= 1 || 'Max students must be >= 1']
+  code: [(v: string) => !!v || 'Mã lớp là bắt buộc'],
+  name: [(v: string) => !!v || 'Tên lớp là bắt buộc'],
+  semesterId: [(v: number | null) => !!v || 'Học kỳ là bắt buộc'],
+  subjectId: [(v: number | null) => !!v || 'Môn học là bắt buộc'],
+  maxStudents: [(v: number) => v >= 1 || 'Sĩ số tối đa phải >= 1']
 }
 
 const fetchCourses = async () => {
@@ -273,7 +272,7 @@ const fetchCourses = async () => {
       teacherId: teacherFilterUserId.value || undefined,
       active: activeFilter.value ?? undefined
     })
-    const data = res.data.data
+    const data = unwrapPageResponse<Course>(res)
     courses.value = data.data
     totalPages.value = data.totalPages
   } finally {
@@ -281,13 +280,12 @@ const fetchCourses = async () => {
   }
 }
 
-const handleSearch = () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    page.value = 1
-    fetchCourses()
-  }, 350)
-}
+const { debounced: debouncedSearch } = useDebounceFn(() => {
+  page.value = 1
+  fetchCourses()
+}, 350)
+
+const handleSearch = () => debouncedSearch()
 
 const changePage = (newPage: number) => {
   if (newPage > 0 && newPage <= totalPages.value) {
@@ -298,31 +296,15 @@ const changePage = (newPage: number) => {
 
 const fetchSelectOptions = async () => {
   try {
-    const [sem, sub, tea, activeSem] = await Promise.all([
-      semesterService.getAll({ page: 1, size: 200 }),
-      subjectService.getAll({ page: 1, size: 200 }),
-      teacherService.getAll({ page: 1, size: 200 }),
-      semesterService.getActive()
-    ])
-    semesterOptions.value = (sem.data.data.data || []).map((s: any) => ({ title: `${s.code} - ${s.name}`, value: s.id }))
-    subjectOptions.value = (sub.data.data.data || []).map((s: any) => ({ title: `${s.code} - ${s.name}`, value: s.id }))
-    teacherOptions.value = (tea.data.data.data || []).map((t: any) => ({
+    const [tea] = await Promise.all([teacherService.getAll({ page: 1, size: 200 }), lookupsStore.ensureAcademicLookups()])
+    const teachers = unwrapPageResponse<any>(tea)
+    teacherOptions.value = (teachers.data || []).map((t: any) => ({
       title: `${t.username} (${t.employeeCode})`,
       value: t.userId
     }))
-
-    const active = activeSem?.data?.data
-    activeSemesterId.value = active?.id ?? null
-    activeSemesterLabel.value = active ? `${active.code} - ${active.name}` : ''
-    if (!semesterFilterId.value && activeSemesterId.value) {
-      semesterFilterId.value = activeSemesterId.value
-    }
+    if (!semesterFilterId.value && activeSemesterId.value) semesterFilterId.value = activeSemesterId.value
   } catch {
-    semesterOptions.value = []
-    subjectOptions.value = []
     teacherOptions.value = []
-    activeSemesterId.value = null
-    activeSemesterLabel.value = ''
   }
 }
 

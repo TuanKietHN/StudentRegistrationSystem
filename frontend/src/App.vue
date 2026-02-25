@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useUiStore } from '@/stores/ui'
 
 const authStore = useAuthStore()
@@ -18,6 +18,20 @@ const drawer = computed({
 const handleLogout = () => {
   authStore.logout()
 }
+
+const onApiNotify = (event: Event) => {
+  const detail = (event as CustomEvent<{ text: string; color?: any; timeout?: number }>).detail
+  if (!detail?.text) return
+  uiStore.notify(detail.text, detail.color, detail.timeout)
+}
+
+onMounted(() => {
+  window.addEventListener('api:notify', onApiNotify as EventListener)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('api:notify', onApiNotify as EventListener)
+})
 </script>
 
 <template>
@@ -68,6 +82,9 @@ const handleLogout = () => {
       location="bottom right"
     >
       {{ uiStore.snackbar.text }}
+      <template #actions>
+        <v-btn icon="mdi-close" variant="text" @click="uiStore.closeSnackbar" />
+      </template>
     </v-snackbar>
   </v-app>
 </template>

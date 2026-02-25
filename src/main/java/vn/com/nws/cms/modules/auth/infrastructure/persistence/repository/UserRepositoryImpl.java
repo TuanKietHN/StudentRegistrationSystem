@@ -44,6 +44,11 @@ public class UserRepositoryImpl implements UserRepository {
                 existing.setPassword(mappedEntity.getPassword());
                 existing.setEmail(mappedEntity.getEmail());
                 existing.setAvatar(mappedEntity.getAvatar());
+                existing.setFailedLoginAttempts(mappedEntity.getFailedLoginAttempts());
+                existing.setLockUntil(mappedEntity.getLockUntil());
+                existing.setLastLoginAt(mappedEntity.getLastLoginAt());
+                existing.setLastLoginIp(mappedEntity.getLastLoginIp());
+                existing.setLastLoginUserAgent(mappedEntity.getLastLoginUserAgent());
                 entity = existing;
             } else {
                 entity = userMapper.toEntity(user);

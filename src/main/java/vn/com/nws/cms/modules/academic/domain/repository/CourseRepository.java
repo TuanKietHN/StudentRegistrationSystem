@@ -1,6 +1,7 @@
 package vn.com.nws.cms.modules.academic.domain.repository;
 
 import vn.com.nws.cms.modules.academic.domain.model.Course;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,6 @@ public interface CourseRepository {
     void deleteById(Long id);
     boolean existsByCode(String code);
     
-    List<Course> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, int page, int size);
-    long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active);
+    List<Course> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, CourseLifecycleStatus status, int page, int size);
+    long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, CourseLifecycleStatus status);
 }

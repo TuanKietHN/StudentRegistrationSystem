@@ -6,8 +6,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "courses")
@@ -34,6 +36,22 @@ public class CourseEntity extends AuditEntity {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CourseLifecycleStatus status;
+
+    @Column(name = "min_students", nullable = false)
+    private Integer minStudents;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
+    @Column(name = "canceled_reason", columnDefinition = "TEXT")
+    private String canceledReason;
+
+    @Column(name = "merged_into_course_id")
+    private Long mergedIntoCourseId;
 
     @Column(name = "enrollment_start_date")
     private LocalDate enrollmentStartDate;

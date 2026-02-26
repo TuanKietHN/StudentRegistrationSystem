@@ -13,6 +13,7 @@ import vn.com.nws.cms.common.dto.PageResponse;
 import vn.com.nws.cms.modules.academic.api.dto.*;
 import vn.com.nws.cms.modules.academic.application.CourseService;
 import vn.com.nws.cms.modules.academic.application.CourseTimeSlotService;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ public class CourseController {
             @Parameter(description = "ID môn học") @RequestParam(required = false) Long subjectId,
             @Parameter(description = "ID giảng viên") @RequestParam(required = false) Long teacherId,
             @Parameter(description = "Trạng thái hoạt động") @RequestParam(required = false) Boolean active,
+            @Parameter(description = "Lifecycle status") @RequestParam(required = false) CourseLifecycleStatus status,
             @Parameter(description = "Số trang (bắt đầu từ 1)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Số lượng bản ghi mỗi trang") @RequestParam(defaultValue = "10") int size
     ) {
@@ -42,6 +44,7 @@ public class CourseController {
         request.setSubjectId(subjectId);
         request.setTeacherId(teacherId);
         request.setActive(active);
+        request.setStatus(status);
         request.setPage(page);
         request.setSize(size);
 
@@ -72,6 +75,25 @@ public class CourseController {
             @Valid @RequestBody CourseUpdateRequest request) {
         CourseResponse response = courseService.updateCourse(id, request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật lớp học phần thành công", response));
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Hủy lớp học phần", description = "Hủy lớp học phần và đóng đăng ký (Admin)")
+    public ResponseEntity<ApiResponse<CourseResponse>> cancelCourse(
+            @PathVariable Long id,
+            @RequestBody(required = false) CourseCancelRequest request
+    ) {
+        CourseResponse response = courseService.cancelCourse(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Hủy lớp học phần thành công", response));
+    }
+
+    @PostMapping("/merge")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Dồn lớp (merge)", description = "Chuyển enrollments từ nhiều lớp nguồn sang lớp đích (Admin)")
+    public ResponseEntity<ApiResponse<CourseResponse>> mergeCourses(@Valid @RequestBody CourseMergeRequest request) {
+        CourseResponse response = courseService.mergeCourses(request);
+        return ResponseEntity.ok(ApiResponse.success("Dồn lớp thành công", response));
     }
 
     @DeleteMapping("/{id}")

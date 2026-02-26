@@ -2,9 +2,12 @@ package vn.com.nws.cms.modules.academic.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.api.dto.*;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
 import vn.com.nws.cms.modules.academic.domain.model.Course;
 import vn.com.nws.cms.modules.academic.domain.model.Enrollment;
 import vn.com.nws.cms.modules.academic.domain.model.Student;
@@ -30,17 +33,35 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     private final StudentRepository studentRepository;
     private final CourseTimeSlotRepository courseTimeSlotRepository;
 
+    /**
+     * REQUIRES_NEW: Luôn tạo transaction độc lập, suspend TX cha nếu có.
+     *
+     * Quan trọng: Method này nhận studentId = student PROFILE id (không phải userId).
+     * Lý do: EnrollmentEntity.student là StudentEntity (profile), không phải UserEntity.
+     * EnrollmentCreateRequest.studentId phải là Student.id (profile).
+     *
+     * REQUIRES_NEW đảm bảo khi throw BusinessException:
+     * - Chỉ TX con của method này rollback
+     * - TX cha (nếu có, ví dụ DataSeeder.run()) KHÔNG bị mark rollback-only
+     * - Caller catch exception → tiếp tục bình thường
+     */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public EnrollmentResponse enrollStudent(EnrollmentCreateRequest request) {
         Course course = courseRepository.findById(request.getCourseId())
                 .orElseThrow(() -> new BusinessException("Course not found"));
 
+        // request.getStudentId() = student profile id
         Student studentProfile = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"));
+
         return enrollInternal(course, studentProfile);
     }
 
+    /**
+     * enrollSelf gọi từ API trực tiếp — không cần REQUIRES_NEW.
+     * REQUIRED là đủ: không có TX cha nào bị ảnh hưởng.
+     */
     @Override
     @Transactional
     public EnrollmentResponse enrollSelf(String username, EnrollmentSelfRequest request) {
@@ -51,20 +72,31 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     private EnrollmentResponse enrollInternal(Course course, Student studentProfile) {
+        // --- Business rule checks ---
         if (!course.isActive()) {
             throw new BusinessException("Course is not active");
         }
+
+        if (course.getStatus() != null && course.getStatus() != CourseLifecycleStatus.OPEN) {
+            throw new BusinessException("Course is not open for enrollment");
+        }
+
         assertEnrollmentWindowOpen(course);
+
         if (!studentProfile.isActive()) {
             throw new BusinessException("Hồ sơ sinh viên không hoạt động");
         }
+
+        // Check trùng enrollment theo studentProfileId — khớp với EnrollmentEntity.student (StudentEntity)
         if (enrollmentRepository.existsByCourseIdAndStudentId(course.getId(), studentProfile.getId())) {
             throw new BusinessException("Student already enrolled in this course");
         }
+
         if (course.getCurrentStudents() >= course.getMaxStudents()) {
             throw new BusinessException("Course is full");
         }
 
+        // --- Schedule conflict check ---
         var slots = courseTimeSlotRepository.findByCourseId(course.getId());
         if (!slots.isEmpty()) {
             for (var slot : slots) {
@@ -82,14 +114,17 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             }
         }
 
-        // Increase current students count
+        // --- Persist ---
         course.setCurrentStudents(course.getCurrentStudents() + 1);
         courseRepository.save(course);
 
+        // Enrollment.student trong domain model là User (do toResponse() truy cập username/email).
+        // EnrollmentEntity.student là StudentEntity — EnrollmentMapper sẽ bridge từ StudentEntity.user.
+        // Nếu domain Enrollment.student là Student (profile), đổi dòng dưới thành studentProfile.
         Enrollment enrollment = Enrollment.builder()
                 .course(course)
                 .student(studentProfile.getUser())
-                .status("ENROLLED")
+                .status(EnrollmentStatus.ENROLLED)
                 .build();
 
         enrollment = enrollmentRepository.save(enrollment);
@@ -103,15 +138,15 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 .orElseThrow(() -> new BusinessException("Enrollment not found"));
 
         if (request.getStatus() != null) {
-            // If dropping, decrease count
-            if ("DROPPED".equals(request.getStatus()) && !"DROPPED".equals(enrollment.getStatus())) {
+            if (request.getStatus() == EnrollmentStatus.DROPPED
+                    && enrollment.getStatus() != EnrollmentStatus.DROPPED) {
                 Course course = enrollment.getCourse();
-                course.setCurrentStudents(course.getCurrentStudents() - 1);
+                course.setCurrentStudents(Math.max(0, course.getCurrentStudents() - 1));
                 courseRepository.save(course);
             }
             enrollment.setStatus(request.getStatus());
         }
-        
+
         if (request.getGrade() != null) {
             enrollment.setGrade(request.getGrade());
         }
@@ -133,22 +168,21 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             User currentUser = userRepository.findByUsername(username)
                     .or(() -> userRepository.findByEmail(username))
                     .orElseThrow(() -> new BusinessException("User not found"));
-            if (enrollment.getStudent() == null || enrollment.getStudent().getId() == null
+
+            if (enrollment.getStudent() == null
+                    || enrollment.getStudent().getId() == null
                     || !enrollment.getStudent().getId().equals(currentUser.getId())) {
                 throw new BusinessException("Bạn không có quyền hủy đăng ký này");
             }
         }
 
-        // Decrease count
-        if (course.getCurrentStudents() > 0) {
-            course.setCurrentStudents(course.getCurrentStudents() - 1);
-            courseRepository.save(course);
-        }
-
+        course.setCurrentStudents(Math.max(0, course.getCurrentStudents() - 1));
+        courseRepository.save(course);
         enrollmentRepository.deleteById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EnrollmentResponse> getStudentEnrollments(Long studentId) {
         return enrollmentRepository.findByStudentId(studentId).stream()
                 .map(this::toResponse)
@@ -156,6 +190,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EnrollmentResponse> getMyEnrollments(String username) {
         Student student = resolveStudentByUsername(username);
         return enrollmentRepository.findByStudentId(student.getId()).stream()
@@ -164,14 +199,22 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EnrollmentResponse> getCourseEnrollments(Long courseId) {
         return enrollmentRepository.findByCourseId(courseId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
     private EnrollmentResponse toResponse(Enrollment enrollment) {
-        // Simplified mapping for brevity
+        Course course    = enrollment.getCourse();
+        List<CourseTimeSlotResponse> timeSlots = courseTimeSlotRepository.findByCourseId(course.getId())
+                .stream().map(CourseTimeSlotResponse::fromDomain).toList();
+
         return EnrollmentResponse.builder()
                 .id(enrollment.getId())
                 .status(enrollment.getStatus())
@@ -179,15 +222,48 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 .createdAt(enrollment.getCreatedAt())
                 .updatedAt(enrollment.getUpdatedAt())
                 .course(CourseResponse.builder()
-                        .id(enrollment.getCourse().getId())
-                        .name(enrollment.getCourse().getName())
-                        .code(enrollment.getCourse().getCode())
+                        .id(course.getId())
+                        .name(course.getName())
+                        .code(course.getCode())
+                        .maxStudents(course.getMaxStudents())
+                        .currentStudents(course.getCurrentStudents())
+                        .active(course.isActive())
+                        .enrollmentStartDate(course.getEnrollmentStartDate())
+                        .enrollmentEndDate(course.getEnrollmentEndDate())
+                        .semester(course.getSemester() != null
+                                ? SemesterResponse.builder()
+                                .id(course.getSemester().getId())
+                                .name(course.getSemester().getName())
+                                .code(course.getSemester().getCode())
+                                .build()
+                                : null)
+                        .subject(course.getSubject() != null
+                                ? SubjectResponse.builder()
+                                .id(course.getSubject().getId())
+                                .name(course.getSubject().getName())
+                                .code(course.getSubject().getCode())
+                                .credit(course.getSubject().getCredits())
+                                .build()
+                                : null)
+                        .teacher(course.getTeacher() != null
+                                ? UserResponse.builder()
+                                .id(course.getTeacher().getId())
+                                .username(course.getTeacher().getUsername())
+                                .email(course.getTeacher().getEmail())
+                                .role(course.getTeacher().getRoles().stream()
+                                        .map(Enum::name)
+                                        .collect(Collectors.joining(",")))
+                                .build()
+                                : null)
+                        .timeSlots(timeSlots)
                         .build())
-                .student(UserResponse.builder()
+                .student(enrollment.getStudent() != null
+                        ? UserResponse.builder()
                         .id(enrollment.getStudent().getId())
                         .username(enrollment.getStudent().getUsername())
                         .email(enrollment.getStudent().getEmail())
-                        .build())
+                        .build()
+                        : null)
                 .build();
     }
 
@@ -201,7 +277,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     private void assertEnrollmentWindowOpen(Course course) {
         LocalDate start = course.getEnrollmentStartDate();
-        LocalDate end = course.getEnrollmentEndDate();
+        LocalDate end   = course.getEnrollmentEndDate();
         if (start == null || end == null) {
             throw new BusinessException("Ngoài thời gian mở đăng ký");
         }

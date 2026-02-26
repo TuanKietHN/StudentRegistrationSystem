@@ -1,6 +1,7 @@
 package vn.com.nws.cms.modules.academic.api.dto;
 
 import lombok.Data;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
 
 @Data
 public class CourseFilterRequest {
@@ -9,6 +10,7 @@ public class CourseFilterRequest {
     private Long subjectId;
     private Long teacherId;
     private Boolean active;
+    private CourseLifecycleStatus status;
     private int page = 1;
     private int size = 10;
 }

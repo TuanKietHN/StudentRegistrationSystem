@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
 
 import java.time.LocalDate;
 
@@ -19,6 +20,9 @@ public class CourseCreateRequest {
     @Min(value = 1, message = "Max students must be at least 1")
     private Integer maxStudents;
 
+    @Min(value = 0, message = "Min students must be at least 0")
+    private Integer minStudents;
+
     @NotNull(message = "Subject ID is required")
     private Long subjectId;
 
@@ -28,6 +32,8 @@ public class CourseCreateRequest {
     private Long teacherId;
 
     private boolean active;
+
+    private CourseLifecycleStatus status;
 
     private LocalDate enrollmentStartDate;
     private LocalDate enrollmentEndDate;

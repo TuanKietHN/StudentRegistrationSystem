@@ -8,5 +8,7 @@ public interface CourseService {
     CourseResponse getCourseById(Long id);
     CourseResponse createCourse(CourseCreateRequest request);
     CourseResponse updateCourse(Long id, CourseUpdateRequest request);
+    CourseResponse cancelCourse(Long id, CourseCancelRequest request);
+    CourseResponse mergeCourses(CourseMergeRequest request);
     void deleteCourse(Long id);
 }

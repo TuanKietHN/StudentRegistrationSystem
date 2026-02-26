@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
 
 @Entity
 @Table(name = "enrollments", uniqueConstraints = {
@@ -28,8 +29,9 @@ public class EnrollmentEntity extends AuditEntity {
     @JoinColumn(name = "student_id", nullable = false)
     private StudentEntity student;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private EnrollmentStatus status;
 
     private Double grade;
 }

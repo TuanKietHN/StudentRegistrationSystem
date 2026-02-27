@@ -16,6 +16,7 @@
             <th>Mã lớp</th>
             <th>Tên lớp</th>
             <th>Học kỳ</th>
+            <th>Thời gian học</th>
             <th>Trạng thái</th>
             <th>Điểm</th>
             <th>Hành động</th>
@@ -27,6 +28,7 @@
             <td>{{ e.course?.code || '-' }}</td>
             <td>{{ e.course?.name || '-' }}</td>
             <td>{{ e.course?.semester?.code || '-' }}</td>
+            <td>{{ formatTimeSlots(e.course?.timeSlots) }}</td>
             <td>
               <v-chip color="blue" variant="tonal" size="small">{{ e.status }}</v-chip>
             </td>
@@ -45,7 +47,7 @@
             </td>
           </tr>
           <tr v-if="enrollments.length === 0">
-            <td colspan="7" class="text-center py-6">Chưa có lớp đã đăng ký</td>
+            <td colspan="8" class="text-center py-6">Chưa có lớp đã đăng ký</td>
           </tr>
         </tbody>
       </v-table>
@@ -79,6 +81,11 @@ const canCancel = (e: Enrollment) => {
   return isWindowOpen(e.course?.enrollmentStartDate, e.course?.enrollmentEndDate)
 }
 
+const formatTimeSlots = (slots?: Array<{ dayOfWeek: number; startTime: string; endTime: string }> | null) => {
+  if (!slots?.length) return '-'
+  return slots.map((s) => `T${s.dayOfWeek} ${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`).join(', ')
+}
+
 const reload = async () => {
   loading.value = true
   try {
@@ -107,4 +114,3 @@ onMounted(async () => {
   await reload()
 })
 </script>
-

@@ -20,7 +20,7 @@ export function applyGuards(router: Router) {
           detail: { text: 'Không có quyền truy cập trang này', color: 'warning', timeout: 3000 }
         })
       )
-      return { name: 'Home' }
+      return { name: authStore.defaultRouteNameForRole(authStore.activeRole) }
     }
 
     const requiredActiveRole = to.meta.activeRoleRequired
@@ -33,11 +33,10 @@ export function applyGuards(router: Router) {
             detail: { text: 'Không có quyền truy cập trang này', color: 'warning', timeout: 3000 }
           })
         )
-        return { name: 'Home' }
+        return { name: authStore.defaultRouteNameForRole(authStore.activeRole) }
       }
     }
 
     return true
   })
 }
-

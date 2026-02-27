@@ -1,20 +1,16 @@
 <template>
   <v-card>
-    <v-card-text class="py-8">
-      <PageHeader title="Trang chủ giảng viên">
-        <template #actions>
-          <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
-        </template>
-      </PageHeader>
+    <v-card-text>
+      <PageHeader title="Trang chủ sinh viên" />
 
       <v-row>
         <v-col cols="12" md="6">
           <v-card variant="outlined">
-            <v-card-title class="text-subtitle-1">Lịch làm việc</v-card-title>
+            <v-card-title class="text-subtitle-1">Lịch học</v-card-title>
             <v-card-text>
               <v-progress-linear v-if="loading" indeterminate class="mb-4" />
               <div v-if="!loading && scheduleDays.length === 0" class="text-body-2 text-medium-emphasis">
-                Chưa có lịch giảng dạy
+                Chưa có lịch học
               </div>
               <div v-for="d in scheduleDays" :key="d.day" class="mb-4">
                 <div class="text-subtitle-2 mb-2">{{ d.label }}</div>
@@ -41,7 +37,9 @@
           <v-card variant="outlined">
             <v-card-title class="text-subtitle-1">Thao tác nhanh</v-card-title>
             <v-card-text class="d-flex flex-wrap ga-2">
-              <v-btn color="primary" variant="flat" :to="{ name: 'TeacherCourses' }">Lớp tôi dạy</v-btn>
+              <v-btn color="primary" variant="flat" :to="{ name: 'StudentCourseRegistration' }">Đăng ký lớp</v-btn>
+              <v-btn variant="outlined" :to="{ name: 'StudentMyEnrollments' }">Lớp đã đăng ký</v-btn>
+              <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
             </v-card-text>
           </v-card>
         </v-col>
@@ -52,66 +50,47 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { unwrapPageResponse } from '@/api/response'
-import { courseService, type Course } from '@/api/services/course.service'
+import { unwrapApiResponse } from '@/api/response'
+import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 type ScheduleItem = { key: string; day: number; time: string; title: string; start: string }
 type ScheduleDay = { day: number; label: string; items: ScheduleItem[] }
 
-const authStore = useAuthStore()
 const loading = ref(false)
-const courses = ref<Course[]>([])
+const enrollments = ref<Enrollment[]>([])
 
 const dayLabel = (day: number) => {
   if (day === 8) return 'Chủ nhật'
   return `Thứ ${day}`
 }
 
-const fetchAllActiveCourses = async () => {
-  const all: Course[] = []
-  let page = 1
-  while (true) {
-    const res = await courseService.getAll({ page, size: 200, active: true })
-    const data = unwrapPageResponse<Course>(res)
-    all.push(...(data.data || []))
-    const totalPages = data.totalPages || 1
-    if (page >= totalPages) break
-    page++
-  }
-  return all
-}
-
 const reload = async () => {
   loading.value = true
   try {
-    courses.value = await fetchAllActiveCourses()
+    const res = await enrollmentService.getMyEnrollments()
+    enrollments.value = unwrapApiResponse<Enrollment[]>(res) || []
   } finally {
     loading.value = false
   }
 }
 
 const scheduleDays = computed<ScheduleDay[]>(() => {
-  const username = authStore.currentUser?.username
-  if (!username) return []
-
   const items: ScheduleItem[] = []
-  for (const c of courses.value) {
-    if ((c.teacher?.username || '') !== username) continue
-    const slots = c.timeSlots || []
+  for (const e of enrollments.value) {
+    if (e.status !== 'ENROLLED') continue
+    const slots = e.course?.timeSlots || []
     for (const s of slots) {
       const time = `${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`
       items.push({
-        key: `${c.id}-${s.id}`,
+        key: `${e.id}-${s.id}`,
         day: s.dayOfWeek,
         time,
-        title: `${c.code || ''} - ${c.name || ''}`.trim(),
+        title: `${e.course?.code || ''} - ${e.course?.name || ''}`.trim(),
         start: s.startTime
       })
     }
   }
-
   const byDay = new Map<number, ScheduleItem[]>()
   for (const it of items) {
     const arr = byDay.get(it.day) || []

@@ -126,10 +126,10 @@ export const useAuthStore = defineStore('auth', {
     },
 
     defaultRouteNameForRole(role: string | null): string {
-      if (role === 'ADMIN') return 'Home'
-      if (role === 'STUDENT') return 'StudentCourseRegistration'
+      if (role === 'ADMIN') return 'AdminHome'
+      if (role === 'STUDENT') return 'StudentHome'
       if (role === 'TEACHER') return 'TeacherHome'
-      return 'Home'
+      return 'Root'
     },
 
     redirectAfterLogin(redirect?: string | null) {

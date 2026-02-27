@@ -47,6 +47,7 @@ import {
   enrollmentService,
   type Enrollment,
 } from "@/api/services/enrollment.service";
+import { vnDayLabelFromIso } from "@/utils/schedule";
 import PageHeader from "@/components/ui/PageHeader.vue";
 
 type ScheduleItem = {
@@ -60,11 +61,6 @@ type ScheduleDay = { day: number; label: string; items: ScheduleItem[] };
 
 const loading = ref(false);
 const enrollments = ref<Enrollment[]>([]);
-
-const dayLabel = (day: number) => {
-  if (day === 8) return "Chủ nhật";
-  return `Thứ ${day}`;
-};
 
 const reload = async () => {
   loading.value = true;
@@ -101,7 +97,7 @@ const scheduleDays = computed<ScheduleDay[]>(() => {
   return Array.from(byDay.entries())
     .map(([day, arr]) => ({
       day,
-      label: dayLabel(day),
+      label: vnDayLabelFromIso(day),
       items: arr.sort((a, b) => a.start.localeCompare(b.start)),
     }))
     .sort((a, b) => a.day - b.day);

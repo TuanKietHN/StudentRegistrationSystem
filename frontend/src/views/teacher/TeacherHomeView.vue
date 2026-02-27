@@ -55,6 +55,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { unwrapPageResponse } from '@/api/response'
 import { courseService, type Course } from '@/api/services/course.service'
+import { vnDayLabelFromIso } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 type ScheduleItem = { key: string; day: number; time: string; title: string; start: string }
@@ -63,11 +64,6 @@ type ScheduleDay = { day: number; label: string; items: ScheduleItem[] }
 const authStore = useAuthStore()
 const loading = ref(false)
 const courses = ref<Course[]>([])
-
-const dayLabel = (day: number) => {
-  if (day === 8) return 'Chủ nhật'
-  return `Thứ ${day}`
-}
 
 const fetchAllActiveCourses = async () => {
   const all: Course[] = []
@@ -121,7 +117,7 @@ const scheduleDays = computed<ScheduleDay[]>(() => {
   return Array.from(byDay.entries())
     .map(([day, arr]) => ({
       day,
-      label: dayLabel(day),
+      label: vnDayLabelFromIso(day),
       items: arr.sort((a, b) => a.start.localeCompare(b.start))
     }))
     .sort((a, b) => a.day - b.day)

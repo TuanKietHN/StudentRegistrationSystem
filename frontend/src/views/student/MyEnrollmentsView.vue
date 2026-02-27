@@ -60,6 +60,7 @@ import { onMounted, ref } from 'vue'
 import { unwrapApiResponse } from '@/api/response'
 import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
 import { useUiStore } from '@/stores/ui'
+import { formatTimeSlotsVn } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 const uiStore = useUiStore()
@@ -81,10 +82,8 @@ const canCancel = (e: Enrollment) => {
   return isWindowOpen(e.course?.enrollmentStartDate, e.course?.enrollmentEndDate)
 }
 
-const formatTimeSlots = (slots?: Array<{ dayOfWeek: number; startTime: string; endTime: string }> | null) => {
-  if (!slots?.length) return '-'
-  return slots.map((s) => `T${s.dayOfWeek} ${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`).join(', ')
-}
+const formatTimeSlots = (slots?: Array<{ dayOfWeek: number; startTime: string; endTime: string }> | null) =>
+  formatTimeSlotsVn(slots)
 
 const reload = async () => {
   loading.value = true

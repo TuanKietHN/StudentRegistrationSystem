@@ -86,6 +86,7 @@ import { useLookupsStore } from '@/stores/lookups'
 import { unwrapPageResponse } from '@/api/response'
 import { courseService, type Course, type CourseTimeSlot } from '@/api/services/course.service'
 import { useDebounceFn } from '@/composables/useDebounceFn'
+import { formatTimeSlotsVn } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 const router = useRouter()
@@ -110,10 +111,7 @@ const myCourses = computed(() => {
   return (courses.value || []).filter((c) => (c.teacher?.username || '') === username)
 })
 
-const formatTimeSlots = (slots?: CourseTimeSlot[] | null) => {
-  if (!slots?.length) return '-'
-  return slots.map((s) => `T${s.dayOfWeek} ${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`).join(', ')
-}
+const formatTimeSlots = (slots?: CourseTimeSlot[] | null) => formatTimeSlotsVn(slots)
 
 const fetchCourses = async () => {
   loading.value = true

@@ -25,7 +25,7 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
     public Enrollment save(Enrollment enrollment) {
         EnrollmentEntity entity = enrollmentMapper.toEntity(enrollment);
         if (enrollment.getStudent() != null && enrollment.getStudent().getId() != null) {
-            StudentEntity studentEntity = studentJpaRepository.findByUserId(enrollment.getStudent().getId())
+            StudentEntity studentEntity = studentJpaRepository.findById(enrollment.getStudent().getId())
                     .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"));
             entity.setStudent(studentEntity);
         }

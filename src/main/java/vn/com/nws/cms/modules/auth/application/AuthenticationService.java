@@ -44,8 +44,6 @@ public class AuthenticationService {
 
     @Transactional
     public LoginResult login(LoginRequest loginRequest, String deviceId, String ip, String userAgent) {
-        authRateLimitService.checkLoginAllowed(ip, loginRequest.getUsername());
-
         User preUser = userRepository.findByUsername(loginRequest.getUsername())
                 .or(() -> userRepository.findByEmail(loginRequest.getUsername()))
                 .orElse(null);
@@ -59,6 +57,7 @@ public class AuthenticationService {
             authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         } catch (AuthenticationException e) {
+            authRateLimitService.recordLoginFailureOrThrow(ip, loginRequest.getUsername());
             if (preUser != null) {
                 handleLoginFailure(preUser, ip, userAgent);
             }
@@ -74,6 +73,8 @@ public class AuthenticationService {
                 .orElseThrow(() -> new BusinessException("User not found"));
 
         clearLoginFailure(user, ip, userAgent);
+        authRateLimitService.clearLoginCounters(ip, principalUsername);
+        authRateLimitService.clearLoginCounters(ip, loginRequest.getUsername());
 
         AuthSessionService.SessionIssueResult session = authSessionService.issue(user.getUsername(), deviceId, ip, userAgent);
         TokenResponse tokenResponse = buildTokenResponse(jwt, null, user);

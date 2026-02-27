@@ -118,12 +118,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         course.setCurrentStudents(course.getCurrentStudents() + 1);
         courseRepository.save(course);
 
-        // Enrollment.student trong domain model là User (do toResponse() truy cập username/email).
-        // EnrollmentEntity.student là StudentEntity — EnrollmentMapper sẽ bridge từ StudentEntity.user.
-        // Nếu domain Enrollment.student là Student (profile), đổi dòng dưới thành studentProfile.
         Enrollment enrollment = Enrollment.builder()
                 .course(course)
-                .student(studentProfile.getUser())
+                .student(studentProfile)
                 .status(EnrollmentStatus.ENROLLED)
                 .build();
 
@@ -170,8 +167,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                     .orElseThrow(() -> new BusinessException("User not found"));
 
             if (enrollment.getStudent() == null
-                    || enrollment.getStudent().getId() == null
-                    || !enrollment.getStudent().getId().equals(currentUser.getId())) {
+                    || enrollment.getStudent().getUser() == null
+                    || enrollment.getStudent().getUser().getId() == null
+                    || !enrollment.getStudent().getUser().getId().equals(currentUser.getId())) {
                 throw new BusinessException("Bạn không có quyền hủy đăng ký này");
             }
         }
@@ -258,10 +256,11 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                         .timeSlots(timeSlots)
                         .build())
                 .student(enrollment.getStudent() != null
+                        && enrollment.getStudent().getUser() != null
                         ? UserResponse.builder()
-                        .id(enrollment.getStudent().getId())
-                        .username(enrollment.getStudent().getUsername())
-                        .email(enrollment.getStudent().getEmail())
+                        .id(enrollment.getStudent().getUser().getId())
+                        .username(enrollment.getStudent().getUser().getUsername())
+                        .email(enrollment.getStudent().getUser().getEmail())
                         .build()
                         : null)
                 .build();

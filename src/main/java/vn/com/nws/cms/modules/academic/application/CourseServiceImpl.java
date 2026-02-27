@@ -12,7 +12,6 @@ import vn.com.nws.cms.modules.academic.domain.model.CourseTimeSlot;
 import vn.com.nws.cms.modules.academic.domain.model.Semester;
 import vn.com.nws.cms.modules.academic.domain.model.Subject;
 import vn.com.nws.cms.modules.academic.domain.repository.EnrollmentRepository;
-import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.CourseRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.CourseTimeSlotRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.SemesterRepository;
@@ -38,7 +37,6 @@ public class CourseServiceImpl implements CourseService {
     private final UserRepository userRepository;
     private final CourseTimeSlotRepository courseTimeSlotRepository;
     private final EnrollmentRepository enrollmentRepository;
-    private final StudentRepository studentRepository;
 
     @Override
     public PageResponse<CourseResponse> getCourses(CourseFilterRequest request) {
@@ -240,10 +238,10 @@ public class CourseServiceImpl implements CourseService {
             }
 
             for (var e : enrollmentRepository.findByCourseId(src.getId())) {
-                Long studentUserId = e.getStudent().getId();
-                Long studentProfileId = studentRepository.findByUserId(studentUserId)
-                        .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"))
-                        .getId();
+                Long studentProfileId = e.getStudent() != null ? e.getStudent().getId() : null;
+                if (studentProfileId == null) {
+                    continue;
+                }
                 boolean already = enrollmentRepository.existsByCourseIdAndStudentId(target.getId(), studentProfileId);
                 if (!already) {
                     toMove++;
@@ -258,10 +256,11 @@ public class CourseServiceImpl implements CourseService {
         for (Long srcId : sourceIds) {
             Course src = courseRepository.findById(srcId).orElseThrow();
             for (var e : enrollmentRepository.findByCourseId(src.getId())) {
-                Long studentUserId = e.getStudent().getId();
-                Long studentProfileId = studentRepository.findByUserId(studentUserId)
-                        .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"))
-                        .getId();
+                Long studentProfileId = e.getStudent() != null ? e.getStudent().getId() : null;
+                if (studentProfileId == null) {
+                    enrollmentRepository.deleteById(e.getId());
+                    continue;
+                }
                 boolean already = enrollmentRepository.existsByCourseIdAndStudentId(target.getId(), studentProfileId);
                 if (already) {
                     enrollmentRepository.deleteById(e.getId());

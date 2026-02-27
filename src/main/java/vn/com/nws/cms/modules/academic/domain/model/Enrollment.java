@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
 import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
-import vn.com.nws.cms.modules.auth.domain.model.User;
 
 @Data
 @Builder
@@ -15,7 +14,7 @@ import vn.com.nws.cms.modules.auth.domain.model.User;
 public class Enrollment extends AuditEntity {
     private Long id;
     private Course course;
-    private User student;
+    private Student student;
     private EnrollmentStatus status;
     private Double grade;
 }

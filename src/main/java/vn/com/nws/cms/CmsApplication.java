@@ -5,7 +5,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 import java.util.Arrays;
@@ -20,7 +19,7 @@ public class CmsApplication {
 
     }
     @EventListener(ApplicationReadyEvent.class)
-    public void checkProfile(Environment env) {
-        log.info(">>> Active profiles: {}", Arrays.toString(env.getActiveProfiles()));
+    public void checkProfile(ApplicationReadyEvent event) {
+        log.info(">>> Active profiles: {}", Arrays.toString(event.getApplicationContext().getEnvironment().getActiveProfiles()));
     }
 }

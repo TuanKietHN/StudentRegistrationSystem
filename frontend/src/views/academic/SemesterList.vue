@@ -80,6 +80,11 @@
       <v-card-text>
         <v-form ref="formRef" @submit.prevent="saveSemester">
           <v-row>
+            <v-col cols="12" v-if="willDeactivateOtherSemester">
+              <v-alert color="info" variant="tonal" density="compact">
+                Chỉ có 1 học kỳ được “Hoạt động”. Bật “Kích hoạt” sẽ tự chuyển học kỳ đang hoạt động sang “Ngưng”.
+              </v-alert>
+            </v-col>
             <v-col cols="12" md="6">
               <v-text-field v-model="form.code" label="Mã học kỳ" :rules="rules.code" required />
             </v-col>
@@ -105,7 +110,14 @@
               />
             </v-col>
             <v-col cols="12">
-              <v-switch v-model="form.active" label="Kích hoạt" inset />
+              <v-switch
+                v-model="form.active"
+                :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
+                inset
+                density="comfortable"
+                color="success"
+                hide-details
+              />
             </v-col>
           </v-row>
         </v-form>
@@ -165,7 +177,7 @@ const form = ref({
   name: '',
   startDate: '',
   endDate: '',
-  active: true
+  active: false
 })
 
 const rules = {
@@ -213,9 +225,16 @@ const resetForm = () => {
     name: '',
     startDate: '',
     endDate: '',
-    active: true
+    active: false
   }
 }
+
+const activeSemester = computed(() => semesters.value.find(s => !!s.active) || null)
+const willDeactivateOtherSemester = computed(() => {
+  if (!form.value.active) return false
+  if (!activeSemester.value) return false
+  return activeSemester.value.id !== editingId.value
+})
 
 const openCreateDialog = () => {
   if (!isAdmin.value) return

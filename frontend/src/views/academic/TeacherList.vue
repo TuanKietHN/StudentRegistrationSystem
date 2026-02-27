@@ -98,6 +98,7 @@
                   variant="outlined"
                   :rules="editingId ? [] : rules.userId"
                   @update:search="onUserSearch"
+                  @focus="onUserFocus"
                   clearable
               />
             </v-col>
@@ -123,7 +124,14 @@
               <v-text-field v-model="form.phone" label="Số điện thoại" density="comfortable" variant="outlined" />
             </v-col>
             <v-col cols="12">
-              <v-switch v-model="form.active" label="Kích hoạt" inset />
+              <v-switch
+                v-model="form.active"
+                :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
+                inset
+                density="comfortable"
+                color="success"
+                hide-details
+              />
             </v-col>
           </v-row>
         </v-form>
@@ -180,6 +188,7 @@ const formRef = ref<any>(null)
 const userOptions = ref<Array<{ title: string; value: number }>>([])
 const userLoading = ref(false)
 let userSearchTimeout: any = null
+let userPreloadOnce = false
 
 const form = ref({
   userId: null as number | null,
@@ -253,6 +262,7 @@ const resetForm = () => {
 const openCreateDialog = () => {
   editingId.value = null
   resetForm()
+  preloadUsers()
   dialogOpen.value = true
 }
 
@@ -332,24 +342,45 @@ const confirmDelete = async () => {
   }
 }
 
+const fetchUserOptions = async (keyword?: string) => {
+  userLoading.value = true
+  try {
+    const res = await userService.getAll({
+      page: 1,
+      size: 20,
+      keyword: keyword && keyword.trim() ? keyword.trim() : undefined
+    })
+    const list: UserSummary[] = res.data.data.data || []
+    userOptions.value = list.map(u => ({ title: `${u.username} (${u.email})`, value: u.id }))
+  } catch {
+    userOptions.value = []
+  } finally {
+    userLoading.value = false
+  }
+}
+
+const preloadUsers = async () => {
+  if (userPreloadOnce || editingId.value) return
+  userPreloadOnce = true
+  await fetchUserOptions()
+}
+
+const onUserFocus = () => {
+  preloadUsers()
+}
+
 const onUserSearch = (q: string) => {
   if (userSearchTimeout) clearTimeout(userSearchTimeout)
   userSearchTimeout = setTimeout(async () => {
     const query = (q || '').trim()
-    if (query.length < 2) {
-      userOptions.value = []
+    if (!query) {
+      preloadUsers()
       return
     }
-    userLoading.value = true
-    try {
-      const res = await userService.getAll({ page: 1, size: 10, keyword: query })
-      const list: UserSummary[] = res.data.data.data || []
-      userOptions.value = list.map(u => ({ title: `${u.username} (${u.email})`, value: u.id }))
-    } catch {
-      userOptions.value = []
-    } finally {
-      userLoading.value = false
+    if (query.length < 2) {
+      return
     }
+    await fetchUserOptions(query)
   }, 350)
 }
 

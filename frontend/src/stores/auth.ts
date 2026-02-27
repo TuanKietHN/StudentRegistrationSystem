@@ -126,7 +126,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     defaultRouteNameForRole(role: string | null): string {
-      if (role === 'ADMIN') return 'AdminUsers'
+      if (role === 'ADMIN') return 'Home'
       if (role === 'STUDENT') return 'StudentCourseRegistration'
       if (role === 'TEACHER') return 'TeacherHome'
       return 'Home'

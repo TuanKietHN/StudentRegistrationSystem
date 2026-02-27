@@ -87,8 +87,10 @@
               <v-text-field
                   v-model="form.password"
                   label="Mật khẩu"
-                  type="password"
+                  :type="showPassword ? 'text' : 'password'"
                   autocomplete="new-password"
+                  :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showPassword = !showPassword"
                   :rules="editingId ? [] : rules.password"
               />
             </v-col>
@@ -148,6 +150,7 @@ const form = ref({
   role: 'STUDENT',
   password: ''
 })
+const showPassword = ref(false)
 
 const rules = {
   username: [(v: string) => !!v || 'Username không được để trống'],
@@ -202,6 +205,7 @@ const resetForm = () => {
     role: 'STUDENT',
     password: ''
   }
+  showPassword.value = false
 }
 
 const openCreateDialog = () => {
@@ -220,6 +224,7 @@ const openEditDialog = (u: UserSummary) => {
     role: splitRoles(u.role)[0] || 'STUDENT',
     password: ''
   }
+  showPassword.value = false
   dialogOpen.value = true
 }
 

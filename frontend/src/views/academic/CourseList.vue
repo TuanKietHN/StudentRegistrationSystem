@@ -175,7 +175,14 @@
               />
             </v-col>
             <v-col cols="12" md="8">
-              <v-switch v-model="form.active" label="Kích hoạt" inset />
+              <v-switch
+                v-model="form.active"
+                :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
+                inset
+                density="comfortable"
+                color="success"
+                hide-details
+              />
             </v-col>
           </v-row>
         </v-form>
@@ -275,6 +282,10 @@ const fetchCourses = async () => {
     const data = unwrapPageResponse<Course>(res)
     courses.value = data.data
     totalPages.value = data.totalPages
+  } catch (err: any) {
+    courses.value = []
+    totalPages.value = 1
+    uiStore.notify(err?.response?.data?.message || 'Không lấy được danh sách lớp học', 'error', 4000)
   } finally {
     loading.value = false
   }
@@ -302,7 +313,6 @@ const fetchSelectOptions = async () => {
       title: `${t.username} (${t.employeeCode})`,
       value: t.userId
     }))
-    if (!semesterFilterId.value && activeSemesterId.value) semesterFilterId.value = activeSemesterId.value
   } catch {
     teacherOptions.value = []
   }

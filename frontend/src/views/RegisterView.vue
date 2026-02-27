@@ -56,10 +56,12 @@
                 <v-text-field
                     v-model="password"
                     placeholder="Nhập mật khẩu mạnh"
-                    type="password"
+                    :type="showPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                     variant="outlined"
                     prepend-inner-icon="mdi-lock"
+                    :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click:append-inner="showPassword = !showPassword"
                     density="comfortable"
                     required
                     :rules="[v => !!v || 'Trường này không được để trống']"
@@ -71,10 +73,12 @@
                 <v-text-field
                     v-model="confirmPassword"
                     placeholder="Nhập lại mật khẩu"
-                    type="password"
+                    :type="showConfirmPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                     variant="outlined"
                     prepend-inner-icon="mdi-lock-check"
+                    :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click:append-inner="showConfirmPassword = !showConfirmPassword"
                     density="comfortable"
                     required
                     :rules="[v => !!v || 'Trường này không được để trống']"
@@ -136,6 +140,8 @@ const username = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 const role = ref<string | null>(null)
 const roles = ['STUDENT', 'TEACHER', 'ADMIN']
 

@@ -38,10 +38,12 @@
                 <v-text-field
                     v-model="password"
                     placeholder="Nhập mật khẩu của bạn"
-                    type="password"
+                    :type="showPassword ? 'text' : 'password'"
                     autocomplete="current-password"
                     variant="outlined"
                     prepend-inner-icon="mdi-lock"
+                    :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click:append-inner="showPassword = !showPassword"
                     density="comfortable"
                     required
                     :rules="[v => !!v || 'Trường này không được để trống']"
@@ -91,6 +93,7 @@ const uiStore = useUiStore()
 
 const username = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
 

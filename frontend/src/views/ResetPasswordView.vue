@@ -40,10 +40,12 @@
                 <v-text-field
                     v-model="newPassword"
                     placeholder="Nhập mật khẩu mới"
-                    type="password"
+                    :type="showNewPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                     variant="outlined"
                     prepend-inner-icon="mdi-lock"
+                    :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click:append-inner="showNewPassword = !showNewPassword"
                     density="comfortable"
                     required
                     :rules="[v => !!v || 'Trường này không được để trống']"
@@ -55,10 +57,12 @@
                 <v-text-field
                     v-model="confirmPassword"
                     placeholder="Nhập lại mật khẩu"
-                    type="password"
+                    :type="showConfirmPassword ? 'text' : 'password'"
                     autocomplete="new-password"
                     variant="outlined"
                     prepend-inner-icon="mdi-lock-check"
+                    :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click:append-inner="showConfirmPassword = !showConfirmPassword"
                     density="comfortable"
                     required
                     :rules="[v => !!v || 'Trường này không được để trống']"
@@ -101,6 +105,8 @@ const uiStore = useUiStore()
 const token = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 const loading = ref(false)
 const error = ref('')

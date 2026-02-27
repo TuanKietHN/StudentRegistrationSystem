@@ -98,7 +98,14 @@
               <v-textarea v-model="form.description" label="Mô tả" rows="3" auto-grow />
             </v-col>
             <v-col cols="12">
-              <v-switch v-model="form.active" label="Kích hoạt" inset />
+              <v-switch
+                v-model="form.active"
+                :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
+                inset
+                density="comfortable"
+                color="success"
+                hide-details
+              />
             </v-col>
           </v-row>
         </v-form>

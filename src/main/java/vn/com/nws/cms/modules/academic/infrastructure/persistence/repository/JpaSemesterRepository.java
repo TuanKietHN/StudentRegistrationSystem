@@ -7,13 +7,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.SemesterEntity;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Repository
 public interface JpaSemesterRepository extends JpaRepository<SemesterEntity, Long> {
     Optional<SemesterEntity> findByCode(String code);
     boolean existsByCode(String code);
-    Optional<SemesterEntity> findByActiveTrue();
+    Optional<SemesterEntity> findFirstByActiveTrueOrderByStartDateDesc();
+    Optional<SemesterEntity> findFirstByActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(LocalDate now1, LocalDate now2);
+    Page<SemesterEntity> findAllByActive(boolean active, Pageable pageable);
+    long countByActive(boolean active);
 
     @Query("SELECT s FROM SemesterEntity s WHERE (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:active IS NULL OR s.active = :active)")
     Page<SemesterEntity> search(String keyword, Boolean active, Pageable pageable);

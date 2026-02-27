@@ -270,8 +270,11 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         User user = userRepository.findByUsername(username)
                 .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new BusinessException("User not found"));
-        return studentRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new BusinessException("Chưa có hồ sơ sinh viên"));
+        return studentRepository.findByUserId(user.getId()).orElseGet(() -> studentRepository.save(Student.builder()
+                .user(user)
+                .studentCode("SV" + user.getId())
+                .active(true)
+                .build()));
     }
 
     private void assertEnrollmentWindowOpen(Course course) {

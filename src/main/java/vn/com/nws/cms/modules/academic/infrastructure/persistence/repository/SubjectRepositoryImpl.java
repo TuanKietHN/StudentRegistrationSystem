@@ -51,7 +51,18 @@ public class SubjectRepositoryImpl implements SubjectRepository {
 
     @Override
     public List<Subject> search(String keyword, Boolean active, int page, int size) {
-        return jpaSubjectRepository.search(keyword, active, PageRequest.of(page - 1, size))
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && active == null) {
+            return jpaSubjectRepository.findAll(PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(subjectMapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        if (normalizedKeyword == null) {
+            return jpaSubjectRepository.findAllByActive(active, PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(subjectMapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        return jpaSubjectRepository.search(normalizedKeyword, active, PageRequest.of(page - 1, size))
                 .getContent().stream()
                 .map(subjectMapper::toDomain)
                 .collect(Collectors.toList());
@@ -59,6 +70,13 @@ public class SubjectRepositoryImpl implements SubjectRepository {
 
     @Override
     public long count(String keyword, Boolean active) {
-        return jpaSubjectRepository.count(keyword, active);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && active == null) {
+            return jpaSubjectRepository.count();
+        }
+        if (normalizedKeyword == null) {
+            return jpaSubjectRepository.countByActive(active);
+        }
+        return jpaSubjectRepository.count(normalizedKeyword, active);
     }
 }

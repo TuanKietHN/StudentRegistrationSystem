@@ -15,6 +15,8 @@ const RegisterView = () => import('../views/RegisterView.vue')
 const StudentCourseRegistrationView = () => import('../views/student/CourseRegistrationView.vue')
 const StudentMyEnrollmentsView = () => import('../views/student/MyEnrollmentsView.vue')
 const TeacherHomeView = () => import('../views/teacher/TeacherHomeView.vue')
+const TeacherCoursesView = () => import('../views/teacher/TeacherCoursesView.vue')
+const TeacherCourseEnrollmentsView = () => import('../views/teacher/TeacherCourseEnrollmentsView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
 
 const router = createRouter({
@@ -45,6 +47,12 @@ const router = createRouter({
       meta: { guestOnly: true }
     },
     {
+      path: '/register',
+      name: 'Register',
+      component: RegisterView,
+      meta: { guestOnly: true }
+    },
+    {
       path: '/app/courses',
       name: 'StudentCourseRegistration',
       component: StudentCourseRegistrationView,
@@ -63,10 +71,16 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['TEACHER'], activeRoleRequired: 'TEACHER' }
     },
     {
-      path: '/admin/register',
-      name: 'AdminRegister',
-      component: RegisterView,
-      meta: { requiresAuth: true, roles: ['ADMIN'], activeRoleRequired: 'ADMIN' }
+      path: '/app/teacher/courses',
+      name: 'TeacherCourses',
+      component: TeacherCoursesView,
+      meta: { requiresAuth: true, roles: ['TEACHER'], activeRoleRequired: 'TEACHER' }
+    },
+    {
+      path: '/app/teacher/courses/:courseId/enrollments',
+      name: 'TeacherCourseEnrollments',
+      component: TeacherCourseEnrollmentsView,
+      meta: { requiresAuth: true, roles: ['TEACHER'], activeRoleRequired: 'TEACHER' }
     },
     {
       path: '/admin/departments',
@@ -105,7 +119,6 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['ADMIN'], activeRoleRequired: 'ADMIN' }
     },
 
-    { path: '/register', redirect: { name: 'AdminRegister' } },
     { path: '/users', redirect: { name: 'AdminUsers' } },
     { path: '/departments', redirect: { name: 'AdminDepartments' } },
     { path: '/teachers', redirect: { name: 'AdminTeachers' } },

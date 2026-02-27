@@ -204,8 +204,13 @@ const formatTimeSlots = (slots?: CourseTimeSlot[] | null) => {
 }
 
 const fetchMyEnrollments = async () => {
-  const res = await enrollmentService.getMyEnrollments()
-  myEnrollments.value = unwrapApiResponse<Enrollment[]>(res) || []
+  try {
+    const res = await enrollmentService.getMyEnrollments()
+    myEnrollments.value = unwrapApiResponse<Enrollment[]>(res) || []
+  } catch (err: any) {
+    myEnrollments.value = []
+    uiStore.notify(err?.response?.data?.message || 'Không lấy được danh sách đăng ký của bạn', 'error', 4000)
+  }
 }
 
 const fetchCourses = async () => {
@@ -228,8 +233,7 @@ const fetchCourses = async () => {
 }
 
 const reload = async () => {
-  await fetchMyEnrollments()
-  await fetchCourses()
+  await Promise.allSettled([fetchMyEnrollments(), fetchCourses()])
 }
 
 const changePage = async (p: number) => {

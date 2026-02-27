@@ -112,10 +112,18 @@ public class SemesterServiceImpl implements SemesterService {
     }
 
     private void deactivateAllSemesters() {
-        semesterRepository.findActiveSemester().ifPresent(s -> {
-            s.setActive(false);
-            semesterRepository.save(s);
-        });
+        int page = 1;
+        int size = 200;
+        while (true) {
+            List<Semester> actives = semesterRepository.search(null, true, page, size);
+            if (actives.isEmpty()) return;
+            for (Semester s : actives) {
+                s.setActive(false);
+                semesterRepository.save(s);
+            }
+            if (actives.size() < size) return;
+            page++;
+        }
     }
 
     private SemesterResponse toResponse(Semester semester) {

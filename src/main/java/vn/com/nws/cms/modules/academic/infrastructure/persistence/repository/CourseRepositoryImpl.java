@@ -63,6 +63,12 @@ public class CourseRepositoryImpl implements CourseRepository {
 
     @Override
     public List<Course> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, CourseLifecycleStatus status, int page, int size) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && semesterId == null && subjectId == null && teacherId == null && active == null && status == null) {
+            return jpaCourseRepository.findAll(PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(courseMapper::toDomain)
+                    .collect(Collectors.toList());
+        }
         Long teacherProfileId = null;
         if (teacherId != null) {
             teacherProfileId = jpaTeacherRepository.findByUserId(teacherId).map(t -> t.getId()).orElse(null);
@@ -70,14 +76,23 @@ public class CourseRepositoryImpl implements CourseRepository {
                 return List.of();
             }
         }
-        return jpaCourseRepository.search(keyword, semesterId, subjectId, teacherProfileId, active, status, PageRequest.of(page - 1, size))
-                .getContent().stream()
+        if (normalizedKeyword == null) {
+            return jpaCourseRepository.filter(semesterId, subjectId, teacherProfileId, active, status, PageRequest.of(page - 1, size))
+                    .getContent().stream()
+                    .map(courseMapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        return jpaCourseRepository.search(normalizedKeyword, semesterId, subjectId, teacherProfileId, active, status, PageRequest.of(page - 1, size)).getContent().stream()
                 .map(courseMapper::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
     public long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, CourseLifecycleStatus status) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && semesterId == null && subjectId == null && teacherId == null && active == null && status == null) {
+            return jpaCourseRepository.count();
+        }
         Long teacherProfileId = null;
         if (teacherId != null) {
             teacherProfileId = jpaTeacherRepository.findByUserId(teacherId).map(t -> t.getId()).orElse(null);
@@ -85,6 +100,9 @@ public class CourseRepositoryImpl implements CourseRepository {
                 return 0;
             }
         }
-        return jpaCourseRepository.count(keyword, semesterId, subjectId, teacherProfileId, active, status);
+        if (normalizedKeyword == null) {
+            return jpaCourseRepository.countFilter(semesterId, subjectId, teacherProfileId, active, status);
+        }
+        return jpaCourseRepository.count(normalizedKeyword, semesterId, subjectId, teacherProfileId, active, status);
     }
 }

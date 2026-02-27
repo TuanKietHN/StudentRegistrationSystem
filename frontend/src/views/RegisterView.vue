@@ -85,19 +85,6 @@
                 />
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Vai trò (tuỳ chọn)</label>
-                <v-select
-                    v-model="role"
-                    :items="roles"
-                    placeholder="Chọn vai trò"
-                    variant="outlined"
-                    prepend-inner-icon="mdi-briefcase"
-                    density="comfortable"
-                    clearable
-                />
-              </div>
-
               <v-btn
                   type="submit"
                   color="primary"
@@ -142,8 +129,6 @@ const password = ref('')
 const confirmPassword = ref('')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
-const role = ref<string | null>(null)
-const roles = ['STUDENT', 'TEACHER', 'ADMIN']
 
 const loading = ref(false)
 const error = ref('')
@@ -164,8 +149,7 @@ const handleRegister = async () => {
     await authService.register({
       username: username.value,
       email: email.value,
-      password: password.value,
-      role: role.value || undefined
+      password: password.value
     })
     success.value = 'Đăng ký thành công. Vui lòng đăng nhập.'
     uiStore.notify(success.value, 'success')

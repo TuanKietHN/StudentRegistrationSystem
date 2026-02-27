@@ -46,8 +46,15 @@ public class DepartmentRepositoryImpl implements DepartmentRepository {
 
     @Override
     public Page<Department> findAll(String keyword, Boolean active, Pageable pageable) {
-        return departmentJpaRepository.findAll(keyword, active, pageable)
-                .map(departmentMapper::toDomain);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+
+        if (normalizedKeyword == null && active == null) {
+            return departmentJpaRepository.findAll(pageable).map(departmentMapper::toDomain);
+        }
+        if (normalizedKeyword == null) {
+            return departmentJpaRepository.findAllByActive(active, pageable).map(departmentMapper::toDomain);
+        }
+        return departmentJpaRepository.findAll(normalizedKeyword, active, pageable).map(departmentMapper::toDomain);
     }
 
     @Override

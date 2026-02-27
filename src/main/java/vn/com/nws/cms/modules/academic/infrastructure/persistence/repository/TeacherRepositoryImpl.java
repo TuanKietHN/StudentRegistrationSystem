@@ -86,8 +86,11 @@ public class TeacherRepositoryImpl implements TeacherRepository {
 
     @Override
     public Page<Teacher> findAll(String keyword, Long departmentId, Boolean active, Pageable pageable) {
-        return teacherJpaRepository.findAll(keyword, departmentId, active, pageable)
-                .map(this::mapToDomain);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && departmentId == null && active == null) {
+            return teacherJpaRepository.findAll(pageable).map(this::mapToDomain);
+        }
+        return teacherJpaRepository.findAll(normalizedKeyword, departmentId, active, pageable).map(this::mapToDomain);
     }
 
     private Teacher mapToDomain(TeacherEntity entity) {

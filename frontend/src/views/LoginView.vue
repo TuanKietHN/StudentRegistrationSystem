@@ -73,7 +73,10 @@
 
           <!-- Footer -->
           <v-card-text class="login-footer">
-            <p class="footer-text">Liên hệ quản trị viên để được cấp tài khoản.</p>
+            <p class="footer-text">
+              Chưa có tài khoản?
+              <router-link to="/register" class="link">Tạo tài khoản</router-link>
+            </p>
           </v-card-text>
         </v-card>
       </v-col>

@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface JpaSubjectRepository extends JpaRepository<SubjectEntity, Long> {
     Optional<SubjectEntity> findByCode(String code);
     boolean existsByCode(String code);
+    Page<SubjectEntity> findAllByActive(boolean active, Pageable pageable);
+    long countByActive(boolean active);
 
     @Query("SELECT s FROM SubjectEntity s WHERE (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:active IS NULL OR s.active = :active)")
     Page<SubjectEntity> search(String keyword, Boolean active, Pageable pageable);

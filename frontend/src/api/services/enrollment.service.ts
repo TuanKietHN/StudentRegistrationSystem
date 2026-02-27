@@ -17,9 +17,16 @@ export interface EnrollmentCourse {
   }>
 }
 
+export interface EnrollmentStudent {
+  id: number
+  username: string
+  email?: string | null
+}
+
 export interface Enrollment {
   id: number
   course: EnrollmentCourse
+  student?: EnrollmentStudent
   status: string
   grade?: number | null
   createdAt?: string
@@ -35,6 +42,11 @@ export const enrollmentService = {
   },
   cancelEnrollment(id: number) {
     return api.delete(`/v1/enrollments/${id}`)
+  },
+  getCourseEnrollments(courseId: number) {
+    return api.get(`/v1/enrollments/course/${courseId}`)
+  },
+  updateEnrollment(id: number, payload: { status?: string; grade?: number | null }) {
+    return api.put(`/v1/enrollments/${id}`, payload)
   }
 }
-

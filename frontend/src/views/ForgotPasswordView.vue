@@ -78,11 +78,8 @@ const handleSubmit = async () => {
   success.value = ''
   loading.value = true
   try {
-    const res = await authService.forgotPassword({ email: email.value })
-    const token = res?.data?.data?.resetToken
-    success.value = token
-        ? `Token đặt lại mật khẩu (dev): ${token}`
-        : 'Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi.'
+    await authService.forgotPassword({ email: email.value })
+    success.value = 'Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi.'
     uiStore.notify(success.value, 'success', 5000)
   } catch (err: any) {
     if (err?.response?.data?.message) {

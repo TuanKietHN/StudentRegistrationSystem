@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import vn.com.nws.cms.common.dto.ApiResponse;
 import vn.com.nws.cms.modules.auth.api.dto.*;
@@ -19,6 +21,7 @@ import vn.com.nws.cms.modules.auth.application.PasswordService;
 import vn.com.nws.cms.modules.auth.application.RegistrationService;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -50,9 +53,19 @@ public class AuthController {
                 .body(ApiResponse.success("Đăng nhập thành công", result.tokenResponse()));
     }
 
+    @GetMapping("/me")
+    @Operation(summary = "Thông tin phiên", description = "Lấy thông tin user và quyền hiện tại từ access token")
+    public ResponseEntity<ApiResponse<AuthMeResponse>> me(Authentication authentication) {
+        List<String> authorities = authentication == null ? List.of() : authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+        String username = authentication == null ? null : authentication.getName();
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin phiên thành công",
+                AuthMeResponse.builder().username(username).authorities(authorities).build()));
+    }
+
     @PostMapping("/register")
     @Operation(summary = "Đăng ký", description = "Đăng ký tài khoản mới")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest registerRequest) {
         registrationService.register(registerRequest);
         return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công", null));

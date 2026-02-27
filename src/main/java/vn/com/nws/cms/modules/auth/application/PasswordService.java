@@ -34,8 +34,10 @@ public class PasswordService {
     private static final String REDIS_RESET_TOKEN_PREFIX = "auth:reset:";
 
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException("User with email " + request.getEmail() + " not found"));
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            return ForgotPasswordResponse.builder().resetToken(null).build();
+        }
 
         String resetToken = UUID.randomUUID().toString();
         String key = REDIS_RESET_TOKEN_PREFIX + resetToken;
@@ -55,7 +57,7 @@ public class PasswordService {
         }
 
         return ForgotPasswordResponse.builder()
-                .resetToken(returnResetToken ? resetToken : null)
+                .resetToken(null)
                 .build();
     }
 

@@ -8,6 +8,7 @@ import vn.com.nws.cms.modules.academic.domain.repository.SemesterRepository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.SemesterEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.SemesterMapper;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -51,7 +52,18 @@ public class SemesterRepositoryImpl implements SemesterRepository {
 
     @Override
     public List<Semester> search(String keyword, Boolean active, int page, int size) {
-        return jpaSemesterRepository.search(keyword, active, PageRequest.of(page - 1, size))
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && active == null) {
+            return jpaSemesterRepository.findAll(PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(semesterMapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        if (normalizedKeyword == null) {
+            return jpaSemesterRepository.findAllByActive(active, PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(semesterMapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        return jpaSemesterRepository.search(normalizedKeyword, active, PageRequest.of(page - 1, size))
                 .getContent().stream()
                 .map(semesterMapper::toDomain)
                 .collect(Collectors.toList());
@@ -59,11 +71,22 @@ public class SemesterRepositoryImpl implements SemesterRepository {
 
     @Override
     public long count(String keyword, Boolean active) {
-        return jpaSemesterRepository.count(keyword, active);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && active == null) {
+            return jpaSemesterRepository.count();
+        }
+        if (normalizedKeyword == null) {
+            return jpaSemesterRepository.countByActive(active);
+        }
+        return jpaSemesterRepository.count(normalizedKeyword, active);
     }
 
     @Override
     public Optional<Semester> findActiveSemester() {
-        return jpaSemesterRepository.findByActiveTrue().map(semesterMapper::toDomain);
+        LocalDate now = LocalDate.now();
+        return jpaSemesterRepository
+                .findFirstByActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(now, now)
+                .or(() -> jpaSemesterRepository.findFirstByActiveTrueOrderByStartDateDesc())
+                .map(semesterMapper::toDomain);
     }
 }

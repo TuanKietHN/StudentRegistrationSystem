@@ -85,6 +85,7 @@ onUnmounted(() => {
 
         <template v-if="activeRole === 'TEACHER'">
           <v-list-item title="Giảng dạy" :to="{ name: 'TeacherHome' }" prepend-icon="mdi-teach" />
+          <v-list-item title="Lớp tôi dạy" :to="{ name: 'TeacherCourses' }" prepend-icon="mdi-google-classroom" />
         </template>
 
         <v-divider class="my-2" />
@@ -94,12 +95,6 @@ onUnmounted(() => {
           title="Users"
           :to="{ name: 'AdminUsers' }"
           prepend-icon="mdi-account-group"
-        />
-        <v-list-item
-          v-if="activeRole === 'ADMIN'"
-          title="Đăng ký tài khoản"
-          :to="{ name: 'AdminRegister' }"
-          prepend-icon="mdi-account-plus"
         />
         <v-list-item
           v-if="activeRole === 'ADMIN'"

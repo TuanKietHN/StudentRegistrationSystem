@@ -32,7 +32,7 @@ public interface CourseTimeSlotJpaRepository extends JpaRepository<CourseTimeSlo
             JOIN EnrollmentEntity e ON e.course.id = c2.id
             WHERE e.student.id = :studentId
               AND c2.semester.id = :semesterId
-              AND e.status = 'ENROLLED'
+              AND e.status = vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus.ENROLLED
               AND c2.id <> :targetCourseId
               AND ts2.dayOfWeek = :dayOfWeek
               AND ts2.startTime < :endTime
@@ -47,4 +47,3 @@ public interface CourseTimeSlotJpaRepository extends JpaRepository<CourseTimeSlo
             @Param("endTime") LocalTime endTime
     );
 }
-

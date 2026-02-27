@@ -26,7 +26,7 @@ public class AuthRateLimitService {
     @Value("${cms.auth.ratelimit.login.user.window-seconds}")
     private long loginUserWindowSeconds;
 
-    public void checkLoginAllowed(String ip, String usernameOrEmail) {
+    public void recordLoginFailureOrThrow(String ip, String usernameOrEmail) {
         if (!allow("auth:rl:login:ip:" + ip, loginIpMax, loginIpWindowSeconds)) {
             throw new BusinessException("Bạn đang thao tác quá nhanh. Vui lòng thử lại sau.");
         }
@@ -34,6 +34,15 @@ public class AuthRateLimitService {
             if (!allow("auth:rl:login:user:" + usernameOrEmail.toLowerCase(), loginUserMax, loginUserWindowSeconds)) {
                 throw new BusinessException("Bạn đang thao tác quá nhanh. Vui lòng thử lại sau.");
             }
+        }
+    }
+
+    public void clearLoginCounters(String ip, String usernameOrEmail) {
+        if (ip != null && !ip.isBlank()) {
+            redisTemplate.delete("auth:rl:login:ip:" + ip);
+        }
+        if (usernameOrEmail != null && !usernameOrEmail.isBlank()) {
+            redisTemplate.delete("auth:rl:login:user:" + usernameOrEmail.toLowerCase());
         }
     }
 

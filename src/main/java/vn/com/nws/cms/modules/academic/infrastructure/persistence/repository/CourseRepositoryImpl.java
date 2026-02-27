@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.common.exception.BusinessException;
+import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
 import vn.com.nws.cms.modules.academic.domain.model.Course;
 import vn.com.nws.cms.modules.academic.domain.repository.CourseRepository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.CourseEntity;
@@ -61,7 +62,7 @@ public class CourseRepositoryImpl implements CourseRepository {
     }
 
     @Override
-    public List<Course> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, int page, int size) {
+    public List<Course> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, CourseLifecycleStatus status, int page, int size) {
         Long teacherProfileId = null;
         if (teacherId != null) {
             teacherProfileId = jpaTeacherRepository.findByUserId(teacherId).map(t -> t.getId()).orElse(null);
@@ -69,14 +70,14 @@ public class CourseRepositoryImpl implements CourseRepository {
                 return List.of();
             }
         }
-        return jpaCourseRepository.search(keyword, semesterId, subjectId, teacherProfileId, active, PageRequest.of(page - 1, size))
+        return jpaCourseRepository.search(keyword, semesterId, subjectId, teacherProfileId, active, status, PageRequest.of(page - 1, size))
                 .getContent().stream()
                 .map(courseMapper::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active) {
+    public long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, CourseLifecycleStatus status) {
         Long teacherProfileId = null;
         if (teacherId != null) {
             teacherProfileId = jpaTeacherRepository.findByUserId(teacherId).map(t -> t.getId()).orElse(null);
@@ -84,6 +85,6 @@ public class CourseRepositoryImpl implements CourseRepository {
                 return 0;
             }
         }
-        return jpaCourseRepository.count(keyword, semesterId, subjectId, teacherProfileId, active);
+        return jpaCourseRepository.count(keyword, semesterId, subjectId, teacherProfileId, active, status);
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -39,5 +40,13 @@ public interface StudentJpaRepository extends JpaRepository<StudentEntity, Long>
             @Param("active") Boolean active,
             Pageable pageable
     );
-}
 
+    @Query("""
+            SELECT s
+            FROM StudentEntity s
+            LEFT JOIN s.user u
+            WHERE s.adminClass.id = :adminClassId
+            ORDER BY s.studentCode ASC, u.username ASC
+            """)
+    List<StudentEntity> findByAdminClassId(@Param("adminClassId") Long adminClassId);
+}

@@ -7,15 +7,16 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class SubjectResponse {
+public class AdminClassResponse {
     private Long id;
-    private String name;
     private String code;
-    private Integer credit;
-    private String description;
+    private String name;
+    private Long departmentId;
+    private String departmentName;
+    private Integer intakeYear;
+    private String program;
     private boolean active;
-    private Short processWeight;
-    private Short examWeight;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

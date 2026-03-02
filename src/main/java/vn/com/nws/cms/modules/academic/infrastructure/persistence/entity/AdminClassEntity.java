@@ -6,37 +6,34 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
-import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.UserEntity;
 
 @Entity
-@Table(name = "students")
+@Table(name = "admin_classes")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class StudentEntity extends AuditEntity {
-
+public class AdminClassEntity extends AuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private UserEntity user;
+    @Column(nullable = false, unique = true)
+    private String code;
 
-    @Column(name = "student_code", nullable = false, unique = true)
-    private String studentCode;
+    @Column(nullable = false)
+    private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private DepartmentEntity department;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_class_id")
-    private AdminClassEntity adminClass;
+    @Column(name = "intake_year")
+    private Integer intakeYear;
 
-    private String phone;
+    private String program;
 
     @Column(nullable = false)
     private boolean active;
 }
+

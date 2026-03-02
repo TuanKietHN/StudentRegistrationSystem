@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-text>
-      <PageHeader title="Danh sách Lớp học">
+      <PageHeader title="Danh sách Lớp học phần">
         <template #actions>
           <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
         </template>
@@ -96,6 +96,7 @@
             </v-chip>
           </td>
           <td>
+            <v-btn size="small" variant="text" @click="goEnrollments(c.id)">DS sinh viên / Điểm</v-btn>
             <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(c)">Sửa</v-btn>
             <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(c)">Xóa</v-btn>
           </td>
@@ -205,6 +206,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { useLookupsStore } from '@/stores/lookups'
@@ -216,6 +218,7 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const authStore = useAuthStore()
+const router = useRouter()
 const uiStore = useUiStore()
 const lookupsStore = useLookupsStore()
 const isAdmin = computed(() => (authStore.currentUser?.role || '').split(',').includes('ADMIN'))
@@ -235,6 +238,10 @@ const semesterOptions = computed(() => lookupsStore.semesterOptions)
 const subjectOptions = computed(() => lookupsStore.subjectOptions)
 const activeSemesterId = computed(() => lookupsStore.activeSemesterId)
 const activeSemesterLabel = computed(() => lookupsStore.activeSemesterLabel)
+
+const goEnrollments = (courseId: number) => {
+  router.push({ name: 'AdminCourseEnrollments', params: { courseId } })
+}
 
 const activeOptions = [
   { title: 'Hoạt động', value: true },

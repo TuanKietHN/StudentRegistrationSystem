@@ -27,8 +27,14 @@ export interface Enrollment {
   id: number
   course: EnrollmentCourse
   student?: EnrollmentStudent
+  studentCode?: string | null
   status: string
   grade?: number | null
+  processScore?: number | null
+  examScore?: number | null
+  finalScore?: number | null
+  scoreLocked?: boolean
+  scoreOverridden?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -46,7 +52,17 @@ export const enrollmentService = {
   getCourseEnrollments(courseId: number) {
     return api.get(`/v1/enrollments/course/${courseId}`)
   },
-  updateEnrollment(id: number, payload: { status?: string; grade?: number | null }) {
+  updateEnrollment(
+    id: number,
+    payload: { status?: string; grade?: number | null; processScore?: number | null; examScore?: number | null; overrideReason?: string }
+  ) {
     return api.put(`/v1/enrollments/${id}`, payload)
+  },
+  importCourseGrades(courseId: number, file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/v1/enrollments/course/${courseId}/grades/import`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
   }
 }

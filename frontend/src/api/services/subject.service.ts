@@ -7,6 +7,8 @@ export interface Subject {
   credit: number
   description?: string
   active: boolean
+  processWeight?: number
+  examWeight?: number
 }
 
 export interface SubjectParams {
@@ -33,4 +35,3 @@ export const subjectService = {
     return api.delete(`/v1/subjects/${id}`)
   }
 }
-

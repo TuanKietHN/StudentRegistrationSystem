@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import vn.com.nws.cms.common.dto.ApiResponse;
 import vn.com.nws.cms.modules.academic.api.dto.*;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
@@ -43,8 +44,11 @@ public class EnrollmentController {
     @Operation(summary = "Cập nhật đăng ký", description = "Cập nhật trạng thái hoặc điểm số (Admin/Teacher)")
     public ResponseEntity<ApiResponse<EnrollmentResponse>> updateEnrollment(
             @PathVariable Long id,
+            Authentication authentication,
             @Valid @RequestBody EnrollmentUpdateRequest request) {
-        EnrollmentResponse response = enrollmentService.updateEnrollment(id, request);
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
+        EnrollmentResponse response = enrollmentService.updateEnrollment(id, authentication.getName(), isAdmin, isTeacher, request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật đăng ký thành công", response));
     }
 
@@ -76,8 +80,24 @@ public class EnrollmentController {
     @GetMapping("/course/{courseId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @Operation(summary = "Danh sách sinh viên trong lớp", description = "Lấy danh sách sinh viên đăng ký lớp học phần")
-    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getCourseEnrollments(@PathVariable Long courseId) {
-        List<EnrollmentResponse> response = enrollmentService.getCourseEnrollments(courseId);
+    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getCourseEnrollments(Authentication authentication, @PathVariable Long courseId) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
+        List<EnrollmentResponse> response = enrollmentService.getCourseEnrollments(courseId, authentication.getName(), isAdmin, isTeacher);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách sinh viên thành công", response));
+    }
+
+    @PostMapping(value = "/course/{courseId}/grades/import", consumes = {"multipart/form-data"})
+    @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
+    @Operation(summary = "Import điểm từ Excel", description = "Import điểm (quá trình/thi) vào lớp học phần. Teacher chỉ được import 1 lần (điểm đã khóa sẽ bị bỏ qua).")
+    public ResponseEntity<ApiResponse<GradesImportResultResponse>> importGrades(
+            Authentication authentication,
+            @PathVariable Long courseId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
+        GradesImportResultResponse response = enrollmentService.importCourseGrades(courseId, authentication.getName(), isAdmin, isTeacher, file);
+        return ResponseEntity.ok(ApiResponse.success("Import điểm thành công", response));
     }
 }

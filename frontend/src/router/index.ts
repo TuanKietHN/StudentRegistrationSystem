@@ -16,12 +16,17 @@ const SemesterList = () => import('../views/academic/SemesterList.vue')
 const SubjectList = () => import('../views/academic/SubjectList.vue')
 const CourseList = () => import('../views/academic/CourseList.vue')
 const UserList = () => import('../views/iam/UserList.vue')
+const AdminAdminClassesView = () => import('../views/admin/AdminAdminClassesView.vue')
+const AdminAdminClassStudentsView = () => import('../views/admin/AdminAdminClassStudentsView.vue')
+const AdminCourseEnrollmentsView = () => import('../views/admin/AdminCourseEnrollmentsView.vue')
 const StudentHomeView = () => import('../views/student/StudentHomeView.vue')
 const StudentCourseRegistrationView = () => import('../views/student/CourseRegistrationView.vue')
 const StudentMyEnrollmentsView = () => import('../views/student/MyEnrollmentsView.vue')
 const TeacherHomeView = () => import('../views/teacher/TeacherHomeView.vue')
 const TeacherCoursesView = () => import('../views/teacher/TeacherCoursesView.vue')
 const TeacherCourseEnrollmentsView = () => import('../views/teacher/TeacherCourseEnrollmentsView.vue')
+const TeacherAdminClassesView = () => import('../views/teacher/TeacherAdminClassesView.vue')
+const TeacherAdminClassStudentsView = () => import('../views/teacher/TeacherAdminClassStudentsView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
 
 const router = createRouter({
@@ -67,6 +72,9 @@ const router = createRouter({
         { path: 'semesters', name: 'AdminSemesters', component: SemesterList },
         { path: 'subjects', name: 'AdminSubjects', component: SubjectList },
         { path: 'courses', name: 'AdminCourses', component: CourseList },
+        { path: 'courses/:courseId/enrollments', name: 'AdminCourseEnrollments', component: AdminCourseEnrollmentsView },
+        { path: 'admin-classes', name: 'AdminAdminClasses', component: AdminAdminClassesView },
+        { path: 'admin-classes/:adminClassId/students', name: 'AdminAdminClassStudents', component: AdminAdminClassStudentsView },
         { path: 'users', name: 'AdminUsers', component: UserList }
       ]
     },
@@ -77,7 +85,9 @@ const router = createRouter({
       children: [
         { path: '', name: 'TeacherHome', component: TeacherHomeView },
         { path: 'courses', name: 'TeacherCourses', component: TeacherCoursesView },
-        { path: 'courses/:courseId/enrollments', name: 'TeacherCourseEnrollments', component: TeacherCourseEnrollmentsView }
+        { path: 'courses/:courseId/enrollments', name: 'TeacherCourseEnrollments', component: TeacherCourseEnrollmentsView },
+        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView },
+        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView }
       ]
     },
     {

@@ -36,6 +36,7 @@
           <th>Mã</th>
           <th>Tên</th>
           <th>Số tín chỉ</th>
+          <th>Tỷ lệ điểm</th>
           <th>Trạng thái</th>
           <th>Hành động</th>
         </tr>
@@ -46,6 +47,7 @@
           <td>{{ s.code }}</td>
           <td>{{ s.name }}</td>
           <td>{{ s.credit }}</td>
+          <td>{{ (s.processWeight ?? 40) }}-{{ (s.examWeight ?? 60) }}</td>
           <td>
             <v-chip :color="s.active ? 'green' : 'red'" variant="tonal" size="small">
               {{ s.active ? 'Hoạt động' : 'Ngưng' }}
@@ -57,7 +59,7 @@
           </td>
         </tr>
         <tr v-if="subjects.length === 0">
-          <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
+          <td colspan="7" class="text-center py-6">Không có dữ liệu</td>
         </tr>
         </tbody>
       </v-table>
@@ -92,6 +94,28 @@
                   min="0"
                   :rules="rules.credit"
                   required
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model.number="form.processWeight"
+                label="Tỷ lệ điểm quá trình (%)"
+                type="number"
+                min="0"
+                max="100"
+                :rules="rules.processWeight"
+                required
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model.number="form.examWeight"
+                label="Tỷ lệ điểm thi (%)"
+                type="number"
+                min="0"
+                max="100"
+                :rules="rules.examWeight"
+                required
               />
             </v-col>
             <v-col cols="12">
@@ -164,6 +188,8 @@ const form = ref({
   code: '',
   name: '',
   credit: 0,
+  processWeight: 40,
+  examWeight: 60,
   description: '',
   active: true
 })
@@ -171,7 +197,15 @@ const form = ref({
 const rules = {
   code: [(v: string) => !!v || 'Code is required'],
   name: [(v: string) => !!v || 'Name is required'],
-  credit: [(v: number) => v >= 0 || 'Credit must be >= 0']
+  credit: [(v: number) => v >= 0 || 'Credit must be >= 0'],
+  processWeight: [
+    (v: number) => v >= 0 && v <= 100 || 'Process weight must be 0..100',
+    (v: number) => (Number(v) + Number(form.value.examWeight)) === 100 || 'Tổng tỷ lệ phải = 100'
+  ],
+  examWeight: [
+    (v: number) => v >= 0 && v <= 100 || 'Exam weight must be 0..100',
+    (v: number) => (Number(v) + Number(form.value.processWeight)) === 100 || 'Tổng tỷ lệ phải = 100'
+  ]
 }
 
 const fetchSubjects = async () => {
@@ -211,6 +245,8 @@ const resetForm = () => {
     code: '',
     name: '',
     credit: 0,
+    processWeight: 40,
+    examWeight: 60,
     description: '',
     active: true
   }
@@ -230,6 +266,8 @@ const openEditDialog = (s: Subject) => {
     code: s.code,
     name: s.name,
     credit: s.credit,
+    processWeight: s.processWeight ?? 40,
+    examWeight: s.examWeight ?? 60,
     description: s.description || '',
     active: !!s.active
   }
@@ -247,6 +285,8 @@ const saveSubject = async () => {
       code: form.value.code,
       name: form.value.name,
       credit: form.value.credit,
+      processWeight: form.value.processWeight,
+      examWeight: form.value.examWeight,
       description: form.value.description || null,
       active: !!form.value.active
     }

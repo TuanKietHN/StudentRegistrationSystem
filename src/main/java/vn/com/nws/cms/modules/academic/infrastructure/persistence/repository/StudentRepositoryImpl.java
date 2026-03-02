@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.domain.model.Department;
 import vn.com.nws.cms.modules.academic.domain.model.Student;
 import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.AdminClassEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.DepartmentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.DepartmentMapper;
@@ -14,6 +15,7 @@ import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.Student
 import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.UserEntity;
 import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaUserRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,6 +25,7 @@ public class StudentRepositoryImpl implements StudentRepository {
     private final StudentJpaRepository jpaRepository;
     private final JpaUserRepository jpaUserRepository;
     private final DepartmentJpaRepository departmentJpaRepository;
+    private final JpaAdminClassRepository adminClassJpaRepository;
     private final StudentMapper studentMapper;
     private final DepartmentMapper departmentMapper;
 
@@ -60,6 +63,13 @@ public class StudentRepositoryImpl implements StudentRepository {
             entity.setDepartment(null);
         }
 
+        if (student.getAdminClass() != null && student.getAdminClass().getId() != null) {
+            AdminClassEntity adminClass = adminClassJpaRepository.findById(student.getAdminClass().getId()).orElse(null);
+            entity.setAdminClass(adminClass);
+        } else {
+            entity.setAdminClass(null);
+        }
+
         StudentEntity saved = jpaRepository.save(entity);
         return mapToDomain(saved);
     }
@@ -90,6 +100,11 @@ public class StudentRepositoryImpl implements StudentRepository {
     }
 
     @Override
+    public List<Student> findByAdminClassId(Long adminClassId) {
+        return jpaRepository.findByAdminClassId(adminClassId).stream().map(this::mapToDomain).toList();
+    }
+
+    @Override
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }
@@ -103,4 +118,3 @@ public class StudentRepositoryImpl implements StudentRepository {
         return student;
     }
 }
-

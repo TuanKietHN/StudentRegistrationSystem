@@ -43,6 +43,12 @@ public class SubjectEntity extends AuditEntity {
     
     @Column(name = "practice_hours")
     private Integer practiceHours;
+
+    @Column(name = "process_weight", nullable = false)
+    private Short processWeight;
+
+    @Column(name = "exam_weight", nullable = false)
+    private Short examWeight;
     
     // Note: prerequisite_subject_ids is BIGINT[] in Postgres. 
     // JPA handling of arrays can be complex. 

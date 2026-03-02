@@ -31,6 +31,7 @@
             <th>Điểm quá trình</th>
             <th>Điểm thi</th>
             <th>Điểm cuối</th>
+            <th>Lý do sửa</th>
             <th>Lưu</th>
           </tr>
         </thead>
@@ -60,7 +61,6 @@
                 min="0"
                 max="10"
                 step="0.1"
-                :disabled="e.scoreLocked"
                 @update:model-value="(v) => (draftProcess[e.id] = v)"
               />
             </td>
@@ -74,7 +74,6 @@
                 min="0"
                 max="10"
                 step="0.1"
-                :disabled="e.scoreLocked"
                 @update:model-value="(v) => (draftExam[e.id] = v)"
               />
             </td>
@@ -84,14 +83,24 @@
               <v-chip v-if="e.scoreLocked" class="ml-2" size="x-small" color="grey" variant="tonal">Khóa</v-chip>
               <v-chip v-if="e.scoreOverridden" class="ml-2" size="x-small" color="warning" variant="tonal">Đã sửa</v-chip>
             </td>
+            <td style="min-width: 220px">
+              <v-text-field
+                :model-value="draftReason[e.id] ?? ''"
+                density="compact"
+                variant="outlined"
+                hide-details
+                placeholder="Bắt buộc nếu sửa điểm đã khóa"
+                @update:model-value="(v) => (draftReason[e.id] = String(v))"
+              />
+            </td>
             <td>
-              <v-btn size="small" color="primary" variant="flat" :loading="savingId === e.id" @click="save(e.id)">
+              <v-btn size="small" color="primary" variant="flat" :loading="savingId === e.id" @click="save(e)">
                 Lưu
               </v-btn>
             </td>
           </tr>
           <tr v-if="enrollments.length === 0">
-            <td colspan="9" class="text-center py-6">Không có dữ liệu</td>
+            <td colspan="10" class="text-center py-6">Không có dữ liệu</td>
           </tr>
         </tbody>
       </v-table>
@@ -122,6 +131,7 @@ const statusOptions = ['ENROLLED', 'COMPLETED', 'DROPPED', 'CANCELLED']
 const draftStatus = reactive<Record<number, string>>({})
 const draftProcess = reactive<Record<number, any>>({})
 const draftExam = reactive<Record<number, any>>({})
+const draftReason = reactive<Record<number, string>>({})
 
 const reload = async () => {
   loading.value = true
@@ -133,25 +143,33 @@ const reload = async () => {
   }
 }
 
-const toGradeOrNull = (v: any): number | null => {
+const toScoreOrNull = (v: any): number | null => {
   if (v === '' || v === null || v === undefined) return null
   const n = Number(v)
   if (Number.isNaN(n)) return null
   return n
 }
 
-const save = async (enrollmentId: number) => {
-  savingId.value = enrollmentId
+const save = async (e: Enrollment) => {
+  savingId.value = e.id
   try {
-    const status = draftStatus[enrollmentId]
-    const processScore = toGradeOrNull(draftProcess[enrollmentId])
-    const examScore = toGradeOrNull(draftExam[enrollmentId])
+    const status = draftStatus[e.id]
+    const processScore = toScoreOrNull(draftProcess[e.id])
+    const examScore = toScoreOrNull(draftExam[e.id])
+    const overrideReason = (draftReason[e.id] || '').trim()
+
     const payload: any = { status }
     if (processScore != null || examScore != null) {
       payload.processScore = processScore
       payload.examScore = examScore
+      if (e.scoreLocked && !overrideReason) {
+        uiStore.notify('Cần nhập lý do khi sửa điểm đã khóa', 'warning', 4000)
+        return
+      }
+      if (e.scoreLocked) payload.overrideReason = overrideReason
     }
-    await enrollmentService.updateEnrollment(enrollmentId, payload)
+
+    await enrollmentService.updateEnrollment(e.id, payload)
     uiStore.notify('Lưu thành công', 'success')
     await reload()
   } catch (err: any) {
@@ -178,3 +196,4 @@ const importGrades = async () => {
 
 onMounted(() => reload())
 </script>
+

@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import vn.com.nws.cms.modules.academic.domain.model.Student;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface StudentRepository {
@@ -15,6 +16,6 @@ public interface StudentRepository {
     boolean existsByStudentCodeAndIdNot(String studentCode, Long id);
 
     Page<Student> findAll(String keyword, Long departmentId, Boolean active, Pageable pageable);
+    List<Student> findByAdminClassId(Long adminClassId);
     void deleteById(Long id);
 }
-

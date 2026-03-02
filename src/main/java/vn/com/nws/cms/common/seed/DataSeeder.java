@@ -32,6 +32,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final AdminClassRepository adminClassRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
     private final SemesterRepository semesterRepository;
@@ -63,6 +64,7 @@ public class DataSeeder implements CommandLineRunner {
 
         seedUsers();
         seedDepartments();
+        seedAdminClasses();
         seedTeacherProfiles();
         seedStudentProfiles();
         seedSemesters();
@@ -132,6 +134,38 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     // -------------------------------------------------------------------------
+    // Admin Classes (lớp hành chính)
+    // -------------------------------------------------------------------------
+
+    private void seedAdminClasses() {
+        Department cntt = getDepartmentByCode("CNTT");
+        Department qtkd = getDepartmentByCode("QTKD");
+
+        upsertAdminClass("CNTT-K25-01", "CNTT K25 - Lớp 01", cntt, 2025, "Đại học chính quy", true);
+        upsertAdminClass("CNTT-K25-02", "CNTT K25 - Lớp 02", cntt, 2025, "Đại học chính quy", true);
+        upsertAdminClass("QTKD-K25-01", "QTKD K25 - Lớp 01", qtkd, 2025, "Đại học chính quy", true);
+        log.info("Admin classes seeding done.");
+    }
+
+    private void upsertAdminClass(String code, String name, Department department, Integer intakeYear, String program, boolean active) {
+        adminClassRepository.findByCode(code).ifPresentOrElse(existing -> {
+            existing.setName(name);
+            existing.setDepartment(department);
+            existing.setIntakeYear(intakeYear);
+            existing.setProgram(program);
+            existing.setActive(active);
+            adminClassRepository.save(existing);
+        }, () -> adminClassRepository.save(AdminClass.builder()
+                .code(code)
+                .name(name)
+                .department(department)
+                .intakeYear(intakeYear)
+                .program(program)
+                .active(active)
+                .build()));
+    }
+
+    // -------------------------------------------------------------------------
     // Teachers
     // -------------------------------------------------------------------------
 
@@ -173,24 +207,27 @@ public class DataSeeder implements CommandLineRunner {
         Department cntt   = getDepartmentByCode("CNTT");
         Department ketoan = getDepartmentByCode("KETOAN");
 
-        upsertStudentProfile("student",   "SV0001", cntt,   "0911111111", true);
-        upsertStudentProfile("student2",  "SV0002", ketoan, "0922222222", true);
-        upsertStudentProfile("assistant", "SV0003", cntt,   "0933333333", true);
+        upsertStudentProfile("student",   "SV0001", cntt,   "CNTT-K25-01", "0911111111", true);
+        upsertStudentProfile("student2",  "SV0002", ketoan, null,          "0922222222", true);
+        upsertStudentProfile("assistant", "SV0003", cntt,   "CNTT-K25-02", "0933333333", true);
         log.info("Student profiles seeding done.");
     }
 
-    private void upsertStudentProfile(String username, String studentCode, Department department,
+    private void upsertStudentProfile(String username, String studentCode, Department department, String adminClassCode,
                                       String phone, boolean active) {
         if (!userRepository.existsByUsername(username)) return;
         User user = userRepository.findByUsername(username).orElseThrow();
+        AdminClass adminClass = adminClassCode == null ? null : adminClassRepository.findByCode(adminClassCode).orElse(null);
         studentRepository.findByUserId(user.getId()).ifPresentOrElse(existing -> {
             existing.setStudentCode(studentCode);
             existing.setDepartment(department);
+            existing.setAdminClass(adminClass);
             existing.setPhone(phone);
             existing.setActive(active);
             studentRepository.save(existing);
         }, () -> studentRepository.save(Student.builder()
                 .user(user).studentCode(studentCode).department(department)
+                .adminClass(adminClass)
                 .phone(phone).active(active).build()));
     }
 
@@ -236,7 +273,9 @@ public class DataSeeder implements CommandLineRunner {
         if (subjectRepository.existsByCode(code)) return;
         subjectRepository.save(Subject.builder()
                 .code(code).name(name).credits(credits).description(description)
-                .active(true).theoryHours(30).practiceHours(15).build());
+                .active(true).theoryHours(30).practiceHours(15)
+                .processWeight((short) 40).examWeight((short) 60)
+                .build());
         log.info("Seeded subject [{}]", code);
     }
 

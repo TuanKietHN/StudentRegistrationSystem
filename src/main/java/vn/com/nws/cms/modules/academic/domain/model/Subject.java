@@ -20,4 +20,6 @@ public class Subject extends AuditEntity {
     private Long departmentId;
     private Integer theoryHours;
     private Integer practiceHours;
+    private Short processWeight;
+    private Short examWeight;
 }

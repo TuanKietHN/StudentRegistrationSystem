@@ -51,12 +51,20 @@ public class SubjectServiceImpl implements SubjectService {
             throw new BusinessException("Subject code already exists");
         }
 
+        Short processWeight = request.getProcessWeight() == null ? 40 : request.getProcessWeight();
+        Short examWeight = request.getExamWeight() == null ? 60 : request.getExamWeight();
+        if ((processWeight + examWeight) != 100) {
+            throw new BusinessException("Tỷ lệ điểm không hợp lệ (process + exam phải = 100)");
+        }
+
         Subject subject = Subject.builder()
                 .name(request.getName())
                 .code(request.getCode())
                 .credits(request.getCredit())
                 .description(request.getDescription())
                 .active(request.isActive())
+                .processWeight(processWeight)
+                .examWeight(examWeight)
                 .build();
 
         subject = subjectRepository.save(subject);
@@ -80,6 +88,12 @@ public class SubjectServiceImpl implements SubjectService {
         if (request.getCredit() != null) subject.setCredits(request.getCredit());
         if (request.getDescription() != null) subject.setDescription(request.getDescription());
         if (request.getActive() != null) subject.setActive(request.getActive());
+        if (request.getProcessWeight() != null) subject.setProcessWeight(request.getProcessWeight());
+        if (request.getExamWeight() != null) subject.setExamWeight(request.getExamWeight());
+
+        if (subject.getProcessWeight() != null && subject.getExamWeight() != null && (subject.getProcessWeight() + subject.getExamWeight()) != 100) {
+            throw new BusinessException("Tỷ lệ điểm không hợp lệ (process + exam phải = 100)");
+        }
 
         subject = subjectRepository.save(subject);
         return toResponse(subject);
@@ -102,6 +116,8 @@ public class SubjectServiceImpl implements SubjectService {
                 .credit(subject.getCredits())
                 .description(subject.getDescription())
                 .active(subject.isActive())
+                .processWeight(subject.getProcessWeight())
+                .examWeight(subject.getExamWeight())
                 .createdAt(subject.getCreatedAt())
                 .updatedAt(subject.getUpdatedAt())
                 .build();

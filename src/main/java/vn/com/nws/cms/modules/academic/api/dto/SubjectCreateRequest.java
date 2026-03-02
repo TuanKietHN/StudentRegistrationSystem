@@ -1,6 +1,7 @@
 package vn.com.nws.cms.modules.academic.api.dto;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -19,4 +20,12 @@ public class SubjectCreateRequest {
 
     private String description;
     private boolean active;
+
+    @Min(value = 0, message = "Process weight must be between 0 and 100")
+    @Max(value = 100, message = "Process weight must be between 0 and 100")
+    private Short processWeight;
+
+    @Min(value = 0, message = "Exam weight must be between 0 and 100")
+    @Max(value = 100, message = "Exam weight must be between 0 and 100")
+    private Short examWeight;
 }

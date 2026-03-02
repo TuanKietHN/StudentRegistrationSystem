@@ -6,13 +6,13 @@ import vn.com.nws.cms.modules.academic.domain.model.Student;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
 import vn.com.nws.cms.modules.auth.infrastructure.persistence.mapper.UserMapper;
 
-@Mapper(componentModel = "spring", uses = {UserMapper.class})
+@Mapper(componentModel = "spring", uses = {UserMapper.class, DepartmentMapper.class, AdminClassMapper.class})
 public interface StudentMapper {
 
     Student toDomain(StudentEntity entity);
 
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "department", ignore = true)
+    @Mapping(target = "adminClass", ignore = true)
     StudentEntity toEntity(Student domain);
 }
-

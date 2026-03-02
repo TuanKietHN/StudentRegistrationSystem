@@ -5,18 +5,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
-import vn.com.nws.cms.modules.auth.domain.model.User;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Student extends AuditEntity {
+public class AdminClass extends AuditEntity {
     private Long id;
-    private User user;
-    private String studentCode;
+    private String code;
+    private String name;
     private Department department;
-    private AdminClass adminClass;
-    private String phone;
+    private Integer intakeYear;
+    private String program;
     private boolean active;
 }
+

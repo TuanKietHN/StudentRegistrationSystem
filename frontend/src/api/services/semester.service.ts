@@ -7,6 +7,7 @@ export interface Semester {
   startDate: string
   endDate: string
   active: boolean
+  secondaryActive?: boolean
 }
 
 export interface SemesterParams {
@@ -26,6 +27,9 @@ export const semesterService = {
   getActive() {
     return api.get('/v1/semesters/active')
   },
+  getActiveSecondary() {
+    return api.get('/v1/semesters/active-secondary')
+  },
   create(payload: any) {
     return api.post('/v1/semesters', payload)
   },
@@ -36,4 +40,3 @@ export const semesterService = {
     return api.delete(`/v1/semesters/${id}`)
   }
 }
-

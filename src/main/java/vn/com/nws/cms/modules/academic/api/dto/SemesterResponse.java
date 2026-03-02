@@ -15,6 +15,7 @@ public class SemesterResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private boolean active;
+    private boolean secondaryActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

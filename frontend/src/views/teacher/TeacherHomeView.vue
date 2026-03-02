@@ -41,7 +41,7 @@
           <v-card variant="outlined">
             <v-card-title class="text-subtitle-1">Thao tác nhanh</v-card-title>
             <v-card-text class="d-flex flex-wrap ga-2">
-              <v-btn color="primary" variant="flat" :to="{ name: 'TeacherCourses' }">Lớp tôi dạy</v-btn>
+              <v-btn color="primary" variant="flat" :to="{ name: 'TeacherCohorts' }">Lớp tôi dạy</v-btn>
             </v-card-text>
           </v-card>
         </v-col>
@@ -54,7 +54,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { unwrapPageResponse } from '@/api/response'
-import { courseService, type Course } from '@/api/services/course.service'
+import { cohortService, type Cohort } from '@/api/services/cohort.service'
 import { vnDayLabelFromIso } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
@@ -63,14 +63,14 @@ type ScheduleDay = { day: number; label: string; items: ScheduleItem[] }
 
 const authStore = useAuthStore()
 const loading = ref(false)
-const courses = ref<Course[]>([])
+const courses = ref<Cohort[]>([])
 
 const fetchAllActiveCourses = async () => {
-  const all: Course[] = []
+  const all: Cohort[] = []
   let page = 1
   while (true) {
-    const res = await courseService.getAll({ page, size: 200, active: true })
-    const data = unwrapPageResponse<Course>(res)
+    const res = await cohortService.getAll({ page, size: 200, active: true })
+    const data = unwrapPageResponse<Cohort>(res)
     all.push(...(data.data || []))
     const totalPages = data.totalPages || 1
     if (page >= totalPages) break

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "enrollments", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"course_id", "student_id"})
+        @UniqueConstraint(columnNames = {"cohort_id", "student_id"})
 })
 @Data
 @Builder
@@ -25,8 +25,8 @@ public class EnrollmentEntity extends AuditEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private CourseEntity course;
+    @JoinColumn(name = "cohort_id", nullable = false)
+    private CohortEntity cohort;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)

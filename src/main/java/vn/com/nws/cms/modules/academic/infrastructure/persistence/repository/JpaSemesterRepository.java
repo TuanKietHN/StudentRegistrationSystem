@@ -16,6 +16,7 @@ public interface JpaSemesterRepository extends JpaRepository<SemesterEntity, Lon
     boolean existsByCode(String code);
     Optional<SemesterEntity> findFirstByActiveTrueOrderByStartDateDesc();
     Optional<SemesterEntity> findFirstByActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(LocalDate now1, LocalDate now2);
+    Optional<SemesterEntity> findFirstBySecondaryActiveTrueOrderByStartDateDesc();
     Page<SemesterEntity> findAllByActive(boolean active, Pageable pageable);
     long countByActive(boolean active);
 
@@ -24,4 +25,10 @@ public interface JpaSemesterRepository extends JpaRepository<SemesterEntity, Lon
 
     @Query("SELECT COUNT(s) FROM SemesterEntity s WHERE (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:active IS NULL OR s.active = :active)")
     long count(String keyword, Boolean active);
+
+    @Query("SELECT s FROM SemesterEntity s WHERE s.secondaryActive = true AND (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<SemesterEntity> searchSecondaryActive(String keyword, Pageable pageable);
+
+    @Query("SELECT COUNT(s) FROM SemesterEntity s WHERE s.secondaryActive = true AND (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    long countSecondaryActive(String keyword);
 }

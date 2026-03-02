@@ -1,0 +1,3 @@
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS registration_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+

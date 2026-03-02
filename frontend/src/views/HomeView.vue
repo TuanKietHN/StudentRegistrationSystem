@@ -70,7 +70,7 @@
 
       <!-- Subjects -->
       <v-col cols="12" sm="6" md="4">
-        <router-link to="/subjects" class="module-link">
+        <router-link to="/classes" class="module-link">
           <v-card class="module-card subject-card">
             <div class="module-icon subject-icon">
               <v-icon size="40" color="white">mdi-book-open-page-variant</v-icon>
@@ -90,14 +90,14 @@
 
       <!-- Courses -->
       <v-col cols="12" sm="6" md="4">
-        <router-link to="/courses" class="module-link">
+        <router-link to="/cohorts" class="module-link">
           <v-card class="module-card course-card">
             <div class="module-icon course-icon">
               <v-icon size="40" color="white">mdi-google-classroom</v-icon>
             </div>
-            <v-card-title class="module-title">Lớp Học</v-card-title>
+            <v-card-title class="module-title">Lớp Học Phần</v-card-title>
             <v-card-text class="module-description">
-              Quản lý lớp học theo học kỳ, môn và giảng viên
+              Quản lý lớp học phần theo học kỳ, môn và giảng viên
             </v-card-text>
             <div class="module-action">
               <v-btn size="small" variant="text" color="primary" append-icon="mdi-arrow-right">

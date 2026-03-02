@@ -15,8 +15,8 @@
       <v-list-item title="Giảng viên" :to="{ name: 'AdminTeachers' }" prepend-icon="mdi-account-tie" />
       <v-list-item title="Lớp hành chính" :to="{ name: 'AdminAdminClasses' }" prepend-icon="mdi-account-multiple" />
       <v-list-item title="Học kỳ" :to="{ name: 'AdminSemesters' }" prepend-icon="mdi-calendar-range" />
-      <v-list-item title="Môn học" :to="{ name: 'AdminSubjects' }" prepend-icon="mdi-book-open-page-variant" />
-      <v-list-item title="Lớp học" :to="{ name: 'AdminCourses' }" prepend-icon="mdi-google-classroom" />
+      <v-list-item title="Môn học" :to="{ name: 'AdminClasses' }" prepend-icon="mdi-book-open-page-variant" />
+      <v-list-item title="Lớp học phần" :to="{ name: 'AdminCohorts' }" prepend-icon="mdi-google-classroom" />
     </v-list>
   </v-navigation-drawer>
 

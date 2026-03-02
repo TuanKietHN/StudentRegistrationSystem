@@ -37,7 +37,8 @@
           <th>Tên</th>
           <th>Bắt đầu</th>
           <th>Kết thúc</th>
-          <th>Trạng thái</th>
+          <th>HK chính</th>
+          <th>HK phụ</th>
           <th>Hành động</th>
         </tr>
         </thead>
@@ -54,12 +55,17 @@
             </v-chip>
           </td>
           <td>
+            <v-chip :color="s.secondaryActive ? 'green' : 'red'" variant="tonal" size="small">
+              {{ s.secondaryActive ? 'Hoạt động' : 'Ngưng' }}
+            </v-chip>
+          </td>
+          <td>
             <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(s)">Sửa</v-btn>
             <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(s)">Xóa</v-btn>
           </td>
         </tr>
         <tr v-if="semesters.length === 0">
-          <td colspan="7" class="text-center py-6">Không có dữ liệu</td>
+          <td colspan="8" class="text-center py-6">Không có dữ liệu</td>
         </tr>
         </tbody>
       </v-table>
@@ -80,11 +86,6 @@
       <v-card-text>
         <v-form ref="formRef" @submit.prevent="saveSemester">
           <v-row>
-            <v-col cols="12" v-if="willDeactivateOtherSemester">
-              <v-alert color="info" variant="tonal" density="compact">
-                Chỉ có 1 học kỳ được “Hoạt động”. Bật “Kích hoạt” sẽ tự chuyển học kỳ đang hoạt động sang “Ngưng”.
-              </v-alert>
-            </v-col>
             <v-col cols="12" md="6">
               <v-text-field v-model="form.code" label="Mã học kỳ" :rules="rules.code" required />
             </v-col>
@@ -112,7 +113,17 @@
             <v-col cols="12">
               <v-switch
                 v-model="form.active"
-                :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
+                :label="form.active ? 'Học kỳ chính: Hoạt động' : 'Học kỳ chính: Ngưng'"
+                inset
+                density="comfortable"
+                color="success"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-switch
+                v-model="form.secondaryActive"
+                :label="form.secondaryActive ? 'Học kỳ phụ: Hoạt động' : 'Học kỳ phụ: Ngưng'"
                 inset
                 density="comfortable"
                 color="success"
@@ -177,7 +188,8 @@ const form = ref({
   name: '',
   startDate: '',
   endDate: '',
-  active: false
+  active: false,
+  secondaryActive: false
 })
 
 const rules = {
@@ -225,16 +237,10 @@ const resetForm = () => {
     name: '',
     startDate: '',
     endDate: '',
-    active: false
+    active: false,
+    secondaryActive: false
   }
 }
-
-const activeSemester = computed(() => semesters.value.find(s => !!s.active) || null)
-const willDeactivateOtherSemester = computed(() => {
-  if (!form.value.active) return false
-  if (!activeSemester.value) return false
-  return activeSemester.value.id !== editingId.value
-})
 
 const openCreateDialog = () => {
   if (!isAdmin.value) return
@@ -251,7 +257,8 @@ const openEditDialog = (s: Semester) => {
     name: s.name,
     startDate: s.startDate,
     endDate: s.endDate,
-    active: !!s.active
+    active: !!s.active,
+    secondaryActive: !!s.secondaryActive
   }
   dialogOpen.value = true
 }
@@ -268,7 +275,8 @@ const saveSemester = async () => {
       name: form.value.name,
       startDate: form.value.startDate,
       endDate: form.value.endDate,
-      active: !!form.value.active
+      active: !!form.value.active,
+      secondaryActive: !!form.value.secondaryActive
     }
     if (editingId.value) {
       await semesterService.update(editingId.value, payload)

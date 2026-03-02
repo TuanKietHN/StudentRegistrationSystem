@@ -6,15 +6,16 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.api.dto.*;
-import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.CohortLifecycleStatus;
 import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
-import vn.com.nws.cms.modules.academic.domain.model.Course;
+import vn.com.nws.cms.modules.academic.domain.model.Cohort;
 import vn.com.nws.cms.modules.academic.domain.model.Enrollment;
 import vn.com.nws.cms.modules.academic.domain.model.Student;
-import vn.com.nws.cms.modules.academic.domain.repository.CourseRepository;
-import vn.com.nws.cms.modules.academic.domain.repository.CourseTimeSlotRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.CohortRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.CohortTimeSlotRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.EnrollmentRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.AttendanceRecordJpaRepository;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 import vn.com.nws.cms.modules.iam.api.dto.UserResponse;
@@ -33,10 +34,12 @@ import java.util.stream.Collectors;
 public class EnrollmentServiceImpl implements EnrollmentService {
 
     private final EnrollmentRepository enrollmentRepository;
-    private final CourseRepository courseRepository;
+    private final CohortRepository cohortRepository;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
-    private final CourseTimeSlotRepository courseTimeSlotRepository;
+    private final CohortTimeSlotRepository cohortTimeSlotRepository;
+    private final AttendanceService attendanceService;
+    private final AttendanceRecordJpaRepository attendanceRecordJpaRepository;
 
     /**
      * REQUIRES_NEW: Luôn tạo transaction độc lập, suspend TX cha nếu có.
@@ -53,14 +56,14 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public EnrollmentResponse enrollStudent(EnrollmentCreateRequest request) {
-        Course course = courseRepository.findById(request.getCourseId())
-                .orElseThrow(() -> new BusinessException("Course not found"));
+        Cohort cohort = cohortRepository.findById(request.getCourseId())
+                .orElseThrow(() -> new BusinessException("Cohort not found"));
 
         // request.getStudentId() = student profile id
         Student studentProfile = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"));
 
-        return enrollInternal(course, studentProfile);
+        return enrollInternal(cohort, studentProfile, true);
     }
 
     /**
@@ -70,45 +73,50 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional
     public EnrollmentResponse enrollSelf(String username, EnrollmentSelfRequest request) {
-        Course course = courseRepository.findById(request.getCourseId())
-                .orElseThrow(() -> new BusinessException("Course not found"));
+        Cohort cohort = cohortRepository.findById(request.getCourseId())
+                .orElseThrow(() -> new BusinessException("Cohort not found"));
         Student studentProfile = resolveStudentByUsername(username);
-        return enrollInternal(course, studentProfile);
+        return enrollInternal(cohort, studentProfile, false);
     }
 
-    private EnrollmentResponse enrollInternal(Course course, Student studentProfile) {
+    private EnrollmentResponse enrollInternal(Cohort cohort, Student studentProfile, boolean bypassEnrollmentWindow) {
         // --- Business rule checks ---
-        if (!course.isActive()) {
-            throw new BusinessException("Course is not active");
+        if (!cohort.isActive()) {
+            throw new BusinessException("Cohort is not active");
         }
 
-        if (course.getStatus() != null && course.getStatus() != CourseLifecycleStatus.OPEN) {
-            throw new BusinessException("Course is not open for enrollment");
+        if (cohort.getStatus() != null && cohort.getStatus() != CohortLifecycleStatus.OPEN) {
+            throw new BusinessException("Cohort is not open for enrollment");
         }
 
-        assertEnrollmentWindowOpen(course);
+        if (!bypassEnrollmentWindow) {
+            if (!cohort.isRegistrationEnabled()) {
+                throw new BusinessException("Lớp học phần đang đóng đăng ký");
+            }
+            assertEnrollmentWindowOpen(cohort);
+        }
 
         if (!studentProfile.isActive()) {
             throw new BusinessException("Hồ sơ sinh viên không hoạt động");
         }
 
         // Check trùng enrollment theo studentProfileId — khớp với EnrollmentEntity.student (StudentEntity)
-        if (enrollmentRepository.existsByCourseIdAndStudentId(course.getId(), studentProfile.getId())) {
+        if (enrollmentRepository.existsByCourseIdAndStudentId(cohort.getId(), studentProfile.getId())) {
             throw new BusinessException("Student already enrolled in this course");
         }
 
-        if (course.getCurrentStudents() >= course.getMaxStudents()) {
-            throw new BusinessException("Course is full");
+        if (cohort.getCurrentStudents() >= cohort.getMaxStudents()) {
+            throw new BusinessException("Cohort is full");
         }
 
         // --- Schedule conflict check ---
-        var slots = courseTimeSlotRepository.findByCourseId(course.getId());
+        var slots = cohortTimeSlotRepository.findByCohortId(cohort.getId());
         if (!slots.isEmpty()) {
             for (var slot : slots) {
-                boolean conflict = courseTimeSlotRepository.existsStudentScheduleConflict(
+                boolean conflict = cohortTimeSlotRepository.existsStudentScheduleConflict(
                         studentProfile.getId(),
-                        course.getSemester().getId(),
-                        course.getId(),
+                        cohort.getSemester().getId(),
+                        cohort.getId(),
                         slot.getDayOfWeek(),
                         slot.getStartTime(),
                         slot.getEndTime()
@@ -120,11 +128,11 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         }
 
         // --- Persist ---
-        course.setCurrentStudents(course.getCurrentStudents() + 1);
-        courseRepository.save(course);
+        cohort.setCurrentStudents(cohort.getCurrentStudents() + 1);
+        cohortRepository.save(cohort);
 
         Enrollment enrollment = Enrollment.builder()
-                .course(course)
+                .cohort(cohort)
                 .student(studentProfile)
                 .status(EnrollmentStatus.ENROLLED)
                 .build();
@@ -139,16 +147,16 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         Enrollment enrollment = enrollmentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Enrollment not found"));
 
-        Course course = enrollment.getCourse();
+        Cohort cohort = enrollment.getCohort();
         if (isTeacher) {
-            assertTeacherOwnsCourse(username, course);
+            assertTeacherOwnsCohort(username, cohort);
         }
 
         if (request.getStatus() != null) {
             if (request.getStatus() == EnrollmentStatus.DROPPED
                     && enrollment.getStatus() != EnrollmentStatus.DROPPED) {
-                course.setCurrentStudents(Math.max(0, course.getCurrentStudents() - 1));
-                courseRepository.save(course);
+                cohort.setCurrentStudents(Math.max(0, cohort.getCurrentStudents() - 1));
+                cohortRepository.save(cohort);
             }
             enrollment.setStatus(request.getStatus());
         }
@@ -168,7 +176,11 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 throw new BusinessException("Cần nhập đủ điểm quá trình và điểm thi");
             }
 
-            BigDecimal finalScore = calculateFinalScore(course, processScore, examScore);
+            if (!isAdmin && request.getExamScore() != null && attendanceService.isExamBanned(cohort.getId(), enrollment.getId())) {
+                throw new BusinessException("Sinh viên bị cấm thi do vắng quá 20% tổng số tiết");
+            }
+
+            BigDecimal finalScore = calculateFinalScore(cohort, processScore, examScore);
 
             if (isAdmin && enrollment.isScoreLocked()) {
                 if (!enrollment.isScoreOverridden()) {
@@ -206,8 +218,10 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         Enrollment enrollment = enrollmentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Enrollment not found"));
 
-        Course course = enrollment.getCourse();
-        assertEnrollmentWindowOpen(course);
+        Cohort cohort = enrollment.getCohort();
+        if (!isAdmin) {
+            assertEnrollmentWindowOpen(cohort);
+        }
 
         if (!isAdmin) {
             User currentUser = userRepository.findByUsername(username)
@@ -222,8 +236,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             }
         }
 
-        course.setCurrentStudents(Math.max(0, course.getCurrentStudents() - 1));
-        courseRepository.save(course);
+        cohort.setCurrentStudents(Math.max(0, cohort.getCurrentStudents() - 1));
+        cohortRepository.save(cohort);
+        attendanceRecordJpaRepository.deleteByEnrollmentId(id);
         enrollmentRepository.deleteById(id);
     }
 
@@ -247,9 +262,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getCourseEnrollments(Long courseId, String username, boolean isAdmin, boolean isTeacher) {
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new BusinessException("Course not found"));
+        Cohort cohort = cohortRepository.findById(courseId).orElseThrow(() -> new BusinessException("Cohort not found"));
         if (isTeacher) {
-            assertTeacherOwnsCourse(username, course);
+            assertTeacherOwnsCohort(username, cohort);
         }
         return enrollmentRepository.findByCourseId(courseId).stream()
                 .map(this::toResponse)
@@ -262,9 +277,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         if (!isAdmin && !isTeacher) {
             throw new BusinessException("Không có quyền import điểm");
         }
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new BusinessException("Course not found"));
+        Cohort course = cohortRepository.findById(courseId).orElseThrow(() -> new BusinessException("Cohort not found"));
         if (isTeacher) {
-            assertTeacherOwnsCourse(username, course);
+            assertTeacherOwnsCohort(username, course);
         }
 
         if (file == null || file.isEmpty()) {
@@ -383,14 +398,14 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     // -------------------------------------------------------------------------
 
     private EnrollmentResponse toResponse(Enrollment enrollment) {
-        Course course    = enrollment.getCourse();
-        List<CourseTimeSlotResponse> timeSlots = courseTimeSlotRepository.findByCourseId(course.getId())
-                .stream().map(CourseTimeSlotResponse::fromDomain).toList();
+        Cohort cohort = enrollment.getCohort();
+        List<CohortTimeSlotResponse> timeSlots = cohortTimeSlotRepository.findByCohortId(cohort.getId())
+                .stream().map(CohortTimeSlotResponse::fromDomain).toList();
 
         return EnrollmentResponse.builder()
                 .id(enrollment.getId())
                 .status(enrollment.getStatus())
-                .grade(enrollment.getFinalScore() != null ? enrollment.getFinalScore().doubleValue() : enrollment.getGrade())
+                .grade(enrollment.getFinalScore() != null ? Double.valueOf(enrollment.getFinalScore().doubleValue()) : enrollment.getGrade())
                 .processScore(enrollment.getProcessScore())
                 .examScore(enrollment.getExamScore())
                 .finalScore(enrollment.getFinalScore())
@@ -398,42 +413,46 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 .scoreOverridden(enrollment.isScoreOverridden())
                 .createdAt(enrollment.getCreatedAt())
                 .updatedAt(enrollment.getUpdatedAt())
-                .course(CourseResponse.builder()
-                        .id(course.getId())
-                        .name(course.getName())
-                        .code(course.getCode())
-                        .maxStudents(course.getMaxStudents())
-                        .currentStudents(course.getCurrentStudents())
-                        .active(course.isActive())
-                        .enrollmentStartDate(course.getEnrollmentStartDate())
-                        .enrollmentEndDate(course.getEnrollmentEndDate())
-                        .semester(course.getSemester() != null
+                .cohort(CohortResponse.builder()
+                        .id(cohort.getId())
+                        .name(cohort.getName())
+                        .code(cohort.getCode())
+                        .maxStudents(cohort.getMaxStudents())
+                        .currentStudents(cohort.getCurrentStudents())
+                        .active(cohort.isActive())
+                        .status(cohort.getStatus())
+                        .minStudents(cohort.getMinStudents())
+                        .canceledAt(cohort.getCanceledAt())
+                        .canceledReason(cohort.getCanceledReason())
+                        .mergedIntoCohortId(cohort.getMergedIntoCohortId())
+                        .semester(cohort.getSemester() != null
                                 ? SemesterResponse.builder()
-                                .id(course.getSemester().getId())
-                                .name(course.getSemester().getName())
-                                .code(course.getSemester().getCode())
+                                .id(cohort.getSemester().getId())
+                                .name(cohort.getSemester().getName())
+                                .code(cohort.getSemester().getCode())
                                 .build()
                                 : null)
-                        .subject(course.getSubject() != null
-                                ? SubjectResponse.builder()
-                                .id(course.getSubject().getId())
-                                .name(course.getSubject().getName())
-                                .code(course.getSubject().getCode())
-                                .credit(course.getSubject().getCredits())
-                                .processWeight(course.getSubject().getProcessWeight())
-                                .examWeight(course.getSubject().getExamWeight())
+                        .clazz(cohort.getClazz() != null
+                                ? ClassResponse.builder()
+                                .id(cohort.getClazz().getId())
+                                .name(cohort.getClazz().getName())
+                                .code(cohort.getClazz().getCode())
+                                .credit(cohort.getClazz().getCredits())
+                                .processWeight(cohort.getClazz().getProcessWeight())
+                                .examWeight(cohort.getClazz().getExamWeight())
                                 .build()
                                 : null)
-                        .teacher(course.getTeacher() != null
+                        .teacher(cohort.getTeacher() != null
                                 ? UserResponse.builder()
-                                .id(course.getTeacher().getId())
-                                .username(course.getTeacher().getUsername())
-                                .email(course.getTeacher().getEmail())
-                                .role(course.getTeacher().getRoles().stream()
-                                        .map(Enum::name)
-                                        .collect(Collectors.joining(",")))
+                                .id(cohort.getTeacher().getId())
+                                .username(cohort.getTeacher().getUsername())
+                                .email(cohort.getTeacher().getEmail())
+                                .role(cohort.getTeacher().getRoles().stream().map(Enum::name).collect(Collectors.joining(",")))
                                 .build()
                                 : null)
+                        .enrollmentStartDate(cohort.getEnrollmentStartDate())
+                        .enrollmentEndDate(cohort.getEnrollmentEndDate())
+                        .registrationEnabled(cohort.isRegistrationEnabled())
                         .timeSlots(timeSlots)
                         .build())
                 .student(enrollment.getStudent() != null
@@ -445,24 +464,38 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                         .build()
                         : null)
                 .studentCode(enrollment.getStudent() != null ? enrollment.getStudent().getStudentCode() : null)
+                .studentPhone(enrollment.getStudent() != null ? enrollment.getStudent().getPhone() : null)
+                .studentActive(enrollment.getStudent() != null ? enrollment.getStudent().isActive() : null)
+                .studentDepartmentCode(enrollment.getStudent() != null && enrollment.getStudent().getDepartment() != null
+                        ? enrollment.getStudent().getDepartment().getCode()
+                        : null)
+                .studentDepartmentName(enrollment.getStudent() != null && enrollment.getStudent().getDepartment() != null
+                        ? enrollment.getStudent().getDepartment().getName()
+                        : null)
+                .studentAdminClassCode(enrollment.getStudent() != null && enrollment.getStudent().getAdminClass() != null
+                        ? enrollment.getStudent().getAdminClass().getCode()
+                        : null)
+                .studentAdminClassName(enrollment.getStudent() != null && enrollment.getStudent().getAdminClass() != null
+                        ? enrollment.getStudent().getAdminClass().getName()
+                        : null)
                 .build();
     }
 
-    private void assertTeacherOwnsCourse(String username, Course course) {
+    private void assertTeacherOwnsCohort(String username, Cohort cohort) {
         User currentUser = userRepository.findByUsername(username)
                 .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new BusinessException("User not found"));
-        if (course.getTeacher() == null || course.getTeacher().getId() == null || !course.getTeacher().getId().equals(currentUser.getId())) {
+        if (cohort.getTeacher() == null || cohort.getTeacher().getId() == null || !cohort.getTeacher().getId().equals(currentUser.getId())) {
             throw new BusinessException("Bạn không có quyền thao tác lớp học phần này");
         }
     }
 
-    private BigDecimal calculateFinalScore(Course course, BigDecimal processScore, BigDecimal examScore) {
+    private BigDecimal calculateFinalScore(Cohort cohort, BigDecimal processScore, BigDecimal examScore) {
         short processWeight = 40;
         short examWeight = 60;
-        if (course.getSubject() != null) {
-            if (course.getSubject().getProcessWeight() != null) processWeight = course.getSubject().getProcessWeight();
-            if (course.getSubject().getExamWeight() != null) examWeight = course.getSubject().getExamWeight();
+        if (cohort.getClazz() != null) {
+            if (cohort.getClazz().getProcessWeight() != null) processWeight = cohort.getClazz().getProcessWeight();
+            if (cohort.getClazz().getExamWeight() != null) examWeight = cohort.getClazz().getExamWeight();
         }
         BigDecimal hundred = BigDecimal.valueOf(100);
         BigDecimal p = processScore.multiply(BigDecimal.valueOf(processWeight)).divide(hundred);
@@ -521,9 +554,9 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                 .build()));
     }
 
-    private void assertEnrollmentWindowOpen(Course course) {
-        LocalDate start = course.getEnrollmentStartDate();
-        LocalDate end   = course.getEnrollmentEndDate();
+    private void assertEnrollmentWindowOpen(Cohort cohort) {
+        LocalDate start = cohort.getEnrollmentStartDate();
+        LocalDate end   = cohort.getEnrollmentEndDate();
         if (start == null || end == null) {
             throw new BusinessException("Ngoài thời gian mở đăng ký");
         }

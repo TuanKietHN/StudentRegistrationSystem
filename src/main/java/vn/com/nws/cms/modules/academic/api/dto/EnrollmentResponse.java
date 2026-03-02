@@ -12,9 +12,15 @@ import java.time.LocalDateTime;
 @Builder
 public class EnrollmentResponse {
     private Long id;
-    private CourseResponse course;
+    private CohortResponse cohort;
     private UserResponse student;
     private String studentCode;
+    private String studentPhone;
+    private Boolean studentActive;
+    private String studentDepartmentCode;
+    private String studentDepartmentName;
+    private String studentAdminClassCode;
+    private String studentAdminClassName;
     private EnrollmentStatus status;
     private Double grade;
     private BigDecimal processScore;

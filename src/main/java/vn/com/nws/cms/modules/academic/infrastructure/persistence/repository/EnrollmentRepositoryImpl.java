@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.domain.model.Enrollment;
 import vn.com.nws.cms.modules.academic.domain.repository.EnrollmentRepository;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.CohortEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.EnrollmentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.EnrollmentMapper;
@@ -20,6 +21,7 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
     private final JpaEnrollmentRepository jpaEnrollmentRepository;
     private final EnrollmentMapper enrollmentMapper;
     private final StudentJpaRepository studentJpaRepository;
+    private final JpaCohortRepository cohortJpaRepository;
 
     @Override
     public Enrollment save(Enrollment enrollment) {
@@ -28,6 +30,11 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
             StudentEntity studentEntity = studentJpaRepository.findById(enrollment.getStudent().getId())
                     .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"));
             entity.setStudent(studentEntity);
+        }
+        if (enrollment.getCohort() != null && enrollment.getCohort().getId() != null) {
+            CohortEntity cohortEntity = cohortJpaRepository.findById(enrollment.getCohort().getId())
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy lớp học phần"));
+            entity.setCohort(cohortEntity);
         }
         if (enrollment.getId() != null) {
             entity.setId(enrollment.getId());
@@ -48,12 +55,12 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
 
     @Override
     public boolean existsByCourseIdAndStudentId(Long courseId, Long studentId) {
-        return jpaEnrollmentRepository.existsByCourseIdAndStudentId(courseId, studentId);
+        return jpaEnrollmentRepository.existsByCohortIdAndStudentId(courseId, studentId);
     }
 
     @Override
     public List<Enrollment> findByCourseId(Long courseId) {
-        return jpaEnrollmentRepository.findByCourseId(courseId).stream()
+        return jpaEnrollmentRepository.findByCohortId(courseId).stream()
                 .map(enrollmentMapper::toDomain)
                 .collect(Collectors.toList());
     }
@@ -67,6 +74,6 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
 
     @Override
     public long countByCourseId(Long courseId) {
-        return jpaEnrollmentRepository.countByCourseId(courseId);
+        return jpaEnrollmentRepository.countByCohortId(courseId);
     }
 }

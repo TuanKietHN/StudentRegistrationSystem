@@ -14,6 +14,8 @@ public interface SemesterRepository {
     
     List<Semester> search(String keyword, Boolean active, int page, int size);
     long count(String keyword, Boolean active);
+    List<Semester> searchSecondaryActive(String keyword, int page, int size);
     
     Optional<Semester> findActiveSemester();
+    Optional<Semester> findSecondaryActiveSemester();
 }

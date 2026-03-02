@@ -54,6 +54,9 @@ public class SemesterServiceImpl implements SemesterService {
         if (request.isActive()) {
             deactivateAllSemesters();
         }
+        if (request.isSecondaryActive()) {
+            deactivateAllSecondarySemesters();
+        }
 
         Semester semester = Semester.builder()
                 .name(request.getName())
@@ -61,6 +64,7 @@ public class SemesterServiceImpl implements SemesterService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .active(request.isActive())
+                .secondaryActive(request.isSecondaryActive())
                 .build();
 
         semester = semesterRepository.save(semester);
@@ -91,6 +95,13 @@ public class SemesterServiceImpl implements SemesterService {
             semester.setActive(request.getActive());
         }
 
+        if (request.getSecondaryActive() != null) {
+            if (request.getSecondaryActive() && !semester.isSecondaryActive()) {
+                deactivateAllSecondarySemesters();
+            }
+            semester.setSecondaryActive(request.getSecondaryActive());
+        }
+
         semester = semesterRepository.save(semester);
         return toResponse(semester);
     }
@@ -111,6 +122,13 @@ public class SemesterServiceImpl implements SemesterService {
         return toResponse(semester);
     }
 
+    @Override
+    public SemesterResponse getSecondaryActiveSemester() {
+        Semester semester = semesterRepository.findSecondaryActiveSemester()
+                .orElseThrow(() -> new BusinessException("No secondary active semester found"));
+        return toResponse(semester);
+    }
+
     private void deactivateAllSemesters() {
         int page = 1;
         int size = 200;
@@ -126,6 +144,21 @@ public class SemesterServiceImpl implements SemesterService {
         }
     }
 
+    private void deactivateAllSecondarySemesters() {
+        int page = 1;
+        int size = 200;
+        while (true) {
+            List<Semester> actives = semesterRepository.searchSecondaryActive(null, page, size);
+            if (actives.isEmpty()) return;
+            for (Semester s : actives) {
+                s.setSecondaryActive(false);
+                semesterRepository.save(s);
+            }
+            if (actives.size() < size) return;
+            page++;
+        }
+    }
+
     private SemesterResponse toResponse(Semester semester) {
         return SemesterResponse.builder()
                 .id(semester.getId())
@@ -134,6 +167,7 @@ public class SemesterServiceImpl implements SemesterService {
                 .startDate(semester.getStartDate())
                 .endDate(semester.getEndDate())
                 .active(semester.isActive())
+                .secondaryActive(semester.isSecondaryActive())
                 .createdAt(semester.getCreatedAt())
                 .updatedAt(semester.getUpdatedAt())
                 .build();

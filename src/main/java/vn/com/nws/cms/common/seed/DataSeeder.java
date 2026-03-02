@@ -12,14 +12,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import vn.com.nws.cms.domain.enums.RoleType;
 import vn.com.nws.cms.modules.academic.api.dto.EnrollmentCreateRequest;
-import vn.com.nws.cms.modules.academic.domain.enums.CourseLifecycleStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.AttendanceStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.CohortLifecycleStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
 import vn.com.nws.cms.modules.academic.domain.model.*;
 import vn.com.nws.cms.modules.academic.domain.repository.*;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -36,10 +40,12 @@ public class DataSeeder implements CommandLineRunner {
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
     private final SemesterRepository semesterRepository;
-    private final SubjectRepository subjectRepository;
-    private final CourseRepository courseRepository;
-    private final CourseTimeSlotRepository courseTimeSlotRepository;
+    private final ClassRepository classRepository;
+    private final CohortRepository cohortRepository;
+    private final CohortTimeSlotRepository cohortTimeSlotRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceSessionRepository attendanceSessionRepository;
+    private final AttendanceRecordRepository attendanceRecordRepository;
     private final EnrollmentService enrollmentService;
     private final PasswordEncoder passwordEncoder;
 
@@ -68,10 +74,12 @@ public class DataSeeder implements CommandLineRunner {
         seedTeacherProfiles();
         seedStudentProfiles();
         seedSemesters();
-        seedSubjects();
-        seedCourses();
-        seedCourseTimeSlots();
+        seedClasses();
+        seedCohorts();
+        seedCohortTimeSlots();
         seedEnrollments();
+        seedEnrollmentGrades();
+        seedAttendance();
 
         log.info("=== Data Seeder completed successfully ===");
     }
@@ -81,13 +89,13 @@ public class DataSeeder implements CommandLineRunner {
     // -------------------------------------------------------------------------
 
     private void seedUsers() {
-        seedUserIfNotExists("manager",   "manager@nws.com.vn",   "manager123",   Set.of(RoleType.TEACHER, RoleType.ADMIN));
-        seedUserIfNotExists("admin",     "admin@nws.com.vn",     "admin123",     Set.of(RoleType.ADMIN));
-        seedUserIfNotExists("teacher",   "teacher@nws.com.vn",   "teacher123",   Set.of(RoleType.TEACHER));
-        seedUserIfNotExists("teacher2",  "teacher2@nws.com.vn",  "teacher123",   Set.of(RoleType.TEACHER));
-        seedUserIfNotExists("student",   "student@nws.com.vn",   "student123",   Set.of(RoleType.STUDENT));
-        seedUserIfNotExists("student2",  "student2@nws.com.vn",  "student123",   Set.of(RoleType.STUDENT));
-        seedUserIfNotExists("assistant", "assistant@nws.com.vn", "assistant123", Set.of(RoleType.TEACHER, RoleType.STUDENT));
+        seedUserIfNotExists("nguyen.quang.huy", "manager@nws.com.vn",   "manager123",   Set.of(RoleType.TEACHER, RoleType.ADMIN));
+        seedUserIfNotExists("le.minh.anh",      "admin@nws.com.vn",     "admin123",     Set.of(RoleType.ADMIN));
+        seedUserIfNotExists("pham.thi.hoa",     "teacher@nws.com.vn",   "teacher123",   Set.of(RoleType.TEACHER));
+        seedUserIfNotExists("do.duc.long",      "teacher2@nws.com.vn",  "teacher123",   Set.of(RoleType.TEACHER));
+        seedUserIfNotExists("nguyen.van.an",    "student@nws.com.vn",   "student123",   Set.of(RoleType.STUDENT));
+        seedUserIfNotExists("tran.thi.binh",    "student2@nws.com.vn",  "student123",   Set.of(RoleType.STUDENT));
+        seedUserIfNotExists("vu.quoc.khanh",    "assistant@nws.com.vn", "assistant123", Set.of(RoleType.TEACHER, RoleType.STUDENT));
         log.info("Users seeding done.");
     }
 
@@ -173,10 +181,10 @@ public class DataSeeder implements CommandLineRunner {
         Department cntt = getDepartmentByCode("CNTT");
         Department qtkd = getDepartmentByCode("QTKD");
 
-        upsertTeacherProfile("teacher",   "GV0001", cntt, "Java/Spring Boot", "Giảng viên",    true);
-        upsertTeacherProfile("teacher2",  "GV0002", qtkd, "Quản trị",         "Giảng viên",    true);
-        upsertTeacherProfile("manager",   "GV0003", cntt, "Quản lý đào tạo",  "Trưởng bộ môn", true);
-        upsertTeacherProfile("assistant", "GV0004", cntt, "Fullstack",        "Trợ giảng",     true);
+        upsertTeacherProfile("pham.thi.hoa",  "GV0001", cntt, "Java/Spring Boot", "Giảng viên",    true);
+        upsertTeacherProfile("do.duc.long",   "GV0002", qtkd, "Quản trị",         "Giảng viên",    true);
+        upsertTeacherProfile("nguyen.quang.huy", "GV0003", cntt, "Quản lý đào tạo",  "Trưởng bộ môn", true);
+        upsertTeacherProfile("vu.quoc.khanh", "GV0004", cntt, "Fullstack",        "Trợ giảng",     true);
         log.info("Teacher profiles seeding done.");
     }
 
@@ -207,9 +215,9 @@ public class DataSeeder implements CommandLineRunner {
         Department cntt   = getDepartmentByCode("CNTT");
         Department ketoan = getDepartmentByCode("KETOAN");
 
-        upsertStudentProfile("student",   "SV0001", cntt,   "CNTT-K25-01", "0911111111", true);
-        upsertStudentProfile("student2",  "SV0002", ketoan, null,          "0922222222", true);
-        upsertStudentProfile("assistant", "SV0003", cntt,   "CNTT-K25-02", "0933333333", true);
+        upsertStudentProfile("nguyen.van.an", "SV0001", cntt,   "CNTT-K25-01", "0911111111", true);
+        upsertStudentProfile("tran.thi.binh", "SV0002", ketoan, null,          "0922222222", true);
+        upsertStudentProfile("vu.quoc.khanh", "SV0003", cntt,   "CNTT-K25-02", "0933333333", true);
         log.info("Student profiles seeding done.");
     }
 
@@ -237,60 +245,61 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedSemesters() {
         upsertSemester("HK2_2526", "Học kỳ 2 2025-2026",
-                LocalDate.of(2026, 1, 10), LocalDate.of(2026, 6, 15), true);
+                LocalDate.of(2026, 1, 10), LocalDate.of(2026, 6, 15), true, false);
         upsertSemester("HK1_2526", "Học kỳ 1 2025-2026",
-                LocalDate.of(2025, 9, 1), LocalDate.of(2026, 1, 5), false);
+                LocalDate.of(2025, 9, 1), LocalDate.of(2026, 1, 5), false, false);
         upsertSemester("HK_HE_2526", "Học kỳ hè 2025-2026",
-                LocalDate.of(2026, 6, 20), LocalDate.of(2026, 8, 5), false);
+                LocalDate.of(2026, 6, 20), LocalDate.of(2026, 8, 5), false, false);
         upsertSemester("HK_PHU_2526", "Kỳ học phụ 2025-2026",
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 15), false);
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 15), false, true);
         log.info("Semesters seeding done.");
     }
 
-    private void upsertSemester(String code, String name, LocalDate start, LocalDate end, boolean active) {
+    private void upsertSemester(String code, String name, LocalDate start, LocalDate end, boolean active, boolean secondaryActive) {
         semesterRepository.findByCode(code).ifPresentOrElse(existing -> {
             existing.setName(name);
             existing.setStartDate(start);
             existing.setEndDate(end);
             existing.setActive(active);
+            existing.setSecondaryActive(secondaryActive);
             semesterRepository.save(existing);
         }, () -> semesterRepository.save(Semester.builder()
-                .code(code).name(name).startDate(start).endDate(end).active(active).build()));
+                .code(code).name(name).startDate(start).endDate(end).active(active).secondaryActive(secondaryActive).build()));
     }
 
     // -------------------------------------------------------------------------
-    // Subjects
+    // Classes
     // -------------------------------------------------------------------------
 
-    private void seedSubjects() {
-        seedSubjectIfNotExists("JAVA001", "Lập trình Java căn bản",       3, "Môn học cung cấp kiến thức nền tảng về ngôn ngữ lập trình Java.");
-        seedSubjectIfNotExists("WEB002",  "Lập trình Web với Spring Boot", 4, "Xây dựng ứng dụng web hiện đại sử dụng Spring Boot framework.");
-        seedSubjectIfNotExists("DB003",   "Cơ sở dữ liệu",                 3, "Kiến thức về thiết kế và quản trị cơ sở dữ liệu quan hệ.");
-        log.info("Subjects seeding done.");
+    private void seedClasses() {
+        seedClassIfNotExists("JAVA001", "Lập trình Java căn bản",       3, "Môn học cung cấp kiến thức nền tảng về ngôn ngữ lập trình Java.");
+        seedClassIfNotExists("WEB002",  "Lập trình Web với Spring Boot", 4, "Xây dựng ứng dụng web hiện đại sử dụng Spring Boot framework.");
+        seedClassIfNotExists("DB003",   "Cơ sở dữ liệu",                 3, "Kiến thức về thiết kế và quản trị cơ sở dữ liệu quan hệ.");
+        log.info("Classes seeding done.");
     }
 
-    private void seedSubjectIfNotExists(String code, String name, int credits, String description) {
-        if (subjectRepository.existsByCode(code)) return;
-        subjectRepository.save(Subject.builder()
+    private void seedClassIfNotExists(String code, String name, int credits, String description) {
+        if (classRepository.existsByCode(code)) return;
+        classRepository.save(CourseClass.builder()
                 .code(code).name(name).credits(credits).description(description)
                 .active(true).theoryHours(30).practiceHours(15)
                 .processWeight((short) 40).examWeight((short) 60)
                 .build());
-        log.info("Seeded subject [{}]", code);
+        log.info("Seeded class [{}]", code);
     }
 
     // -------------------------------------------------------------------------
-    // Courses
+    // Cohorts
     // -------------------------------------------------------------------------
 
-    private void seedCourses() {
+    private void seedCohorts() {
         Semester semester = semesterRepository.findByCode("HK2_2526")
                 .orElseThrow(() -> new IllegalStateException("Semester HK2_2526 not found"));
         Semester shortTerm = semesterRepository.findByCode("HK_PHU_2526")
                 .orElseThrow(() -> new IllegalStateException("Semester HK_PHU_2526 not found"));
 
-        User t1 = userRepository.findByUsername("teacher").orElseThrow();
-        User t2 = userRepository.findByUsername("teacher2").orElseThrow();
+        User t1 = userRepository.findByEmail("teacher@nws.com.vn").orElseThrow();
+        User t2 = userRepository.findByEmail("teacher2@nws.com.vn").orElseThrow();
 
         LocalDate now = LocalDate.now();
 
@@ -300,47 +309,48 @@ public class DataSeeder implements CommandLineRunner {
         seedCourseIfNotExists("DB003_HK2_01", "Lớp CSDL 01 - HK2", 70, 0, true, now.minusDays(3), now.plusDays(18), semester, "DB003", t2);
         seedCourseIfNotExists("WEB002_PHU_01", "Lớp Web - Kỳ phụ", 45, 0, true, now.minusDays(10), now.plusDays(7), shortTerm, "WEB002", t2);
 
-        log.info("Courses seeding done.");
+        log.info("Cohorts seeding done.");
     }
 
     private void seedCourseIfNotExists(String code, String name, int maxStudents, int currentStudents,
                                        boolean active, LocalDate enrollStart, LocalDate enrollEnd,
                                        Semester semester, String subjectCode, User teacher) {
-        if (courseRepository.findByCode(code).isPresent()) return;
-        Subject subject = subjectRepository.findByCode(subjectCode)
-                .orElseThrow(() -> new IllegalStateException("Subject not found: " + subjectCode));
-        courseRepository.save(Course.builder()
+        if (cohortRepository.findByCode(code).isPresent()) return;
+        CourseClass clazz = classRepository.findByCode(subjectCode)
+                .orElseThrow(() -> new IllegalStateException("Class not found: " + subjectCode));
+        cohortRepository.save(Cohort.builder()
                 .name(name).code(code).maxStudents(maxStudents).minStudents(0)
-                .currentStudents(currentStudents).active(active).status(CourseLifecycleStatus.OPEN)
+                .currentStudents(currentStudents).active(active).status(CohortLifecycleStatus.OPEN)
                 .enrollmentStartDate(enrollStart).enrollmentEndDate(enrollEnd)
-                .semester(semester).subject(subject).teacher(teacher).build());
+                .registrationEnabled(true)
+                .semester(semester).clazz(clazz).teacher(teacher).build());
     }
 
     // -------------------------------------------------------------------------
-    // Course Time Slots
+    // Cohort Time Slots
     // -------------------------------------------------------------------------
 
-    private void seedCourseTimeSlots() {
-        upsertCourseTimeSlots("JAVA001_HK2_01", List.of(slot(1, "08:00", "10:00"), slot(3, "08:00", "10:00")));
-        upsertCourseTimeSlots("JAVA001_HK2_02", List.of(slot(2, "10:00", "12:00"), slot(4, "10:00", "12:00")));
-        upsertCourseTimeSlots("WEB002_HK2_01", List.of(slot(1, "13:00", "15:00"), slot(3, "13:00", "15:00"), slot(5, "13:00", "15:00")));
-        upsertCourseTimeSlots("DB003_HK2_01", List.of(slot(2, "13:00", "15:00"), slot(6, "08:00", "10:00")));
-        upsertCourseTimeSlots("WEB002_PHU_01", List.of(slot(6, "10:00", "12:00"), slot(7, "10:00", "12:00")));
-        log.info("Course time slots seeding done.");
+    private void seedCohortTimeSlots() {
+        upsertCohortTimeSlots("JAVA001_HK2_01", List.of(slot(1, "08:00", "10:30"), slot(3, "08:00", "10:30")));
+        upsertCohortTimeSlots("JAVA001_HK2_02", List.of(slot(2, "10:00", "12:30"), slot(4, "10:00", "12:30")));
+        upsertCohortTimeSlots("WEB002_HK2_01", List.of(slot(1, "13:00", "15:30"), slot(3, "13:00", "15:30"), slot(5, "13:00", "15:30")));
+        upsertCohortTimeSlots("DB003_HK2_01", List.of(slot(2, "13:00", "15:30"), slot(6, "08:00", "10:30")));
+        upsertCohortTimeSlots("WEB002_PHU_01", List.of(slot(6, "10:00", "12:30"), slot(7, "10:00", "12:30")));
+        log.info("Cohort time slots seeding done.");
     }
 
-    private CourseTimeSlot slot(int isoDayOfWeek, String start, String end) {
-        return CourseTimeSlot.builder()
+    private CohortTimeSlot slot(int isoDayOfWeek, String start, String end) {
+        return CohortTimeSlot.builder()
                 .dayOfWeek((short) isoDayOfWeek)
                 .startTime(LocalTime.parse(start))
                 .endTime(LocalTime.parse(end))
                 .build();
     }
 
-    private void upsertCourseTimeSlots(String courseCode, List<CourseTimeSlot> slots) {
-        Course course = courseRepository.findByCode(courseCode).orElseThrow();
-        slots.forEach(s -> s.setCourseId(course.getId()));
-        courseTimeSlotRepository.replaceCourseTimeSlots(course.getId(), slots);
+    private void upsertCohortTimeSlots(String cohortCode, List<CohortTimeSlot> slots) {
+        Cohort cohort = cohortRepository.findByCode(cohortCode).orElseThrow();
+        slots.forEach(s -> s.setCohortId(cohort.getId()));
+        cohortTimeSlotRepository.replaceCohortTimeSlots(cohort.getId(), slots);
     }
 
     // -------------------------------------------------------------------------
@@ -348,15 +358,15 @@ public class DataSeeder implements CommandLineRunner {
     // -------------------------------------------------------------------------
 
     private void seedEnrollments() {
-        Course java = courseRepository.findByCode("JAVA001_HK2_01").orElseThrow();
-        Course web  = courseRepository.findByCode("WEB002_HK2_01").orElseThrow();
-        Course db   = courseRepository.findByCode("DB003_HK2_01").orElseThrow();
+        Cohort java = cohortRepository.findByCode("JAVA001_HK2_01").orElseThrow();
+        Cohort web  = cohortRepository.findByCode("WEB002_HK2_01").orElseThrow();
+        Cohort db   = cohortRepository.findByCode("DB003_HK2_01").orElseThrow();
 
         // Lấy studentProfileId (student.getId()) — KHÔNG phải userId
         // EnrollmentCreateRequest.studentId = student profile id, khớp với EnrollmentEntity.student (StudentEntity)
-        Student s1 = studentRepository.findByUserId(userRepository.findByUsername("student").orElseThrow().getId()).orElseThrow();
-        Student s2 = studentRepository.findByUserId(userRepository.findByUsername("student2").orElseThrow().getId()).orElseThrow();
-        Student s3 = studentRepository.findByUserId(userRepository.findByUsername("assistant").orElseThrow().getId()).orElseThrow();
+        Student s1 = studentRepository.findByUserId(userRepository.findByEmail("student@nws.com.vn").orElseThrow().getId()).orElseThrow();
+        Student s2 = studentRepository.findByUserId(userRepository.findByEmail("student2@nws.com.vn").orElseThrow().getId()).orElseThrow();
+        Student s3 = studentRepository.findByUserId(userRepository.findByEmail("assistant@nws.com.vn").orElseThrow().getId()).orElseThrow();
 
         enrollIfNotExists(java.getId(), s1.getId());
         enrollIfNotExists(web.getId(),  s2.getId());
@@ -364,6 +374,82 @@ public class DataSeeder implements CommandLineRunner {
         enrollIfNotExists(db.getId(),   s1.getId());
 
         log.info("Enrollments seeding done.");
+    }
+
+    private void seedEnrollmentGrades() {
+        Cohort javaCourse = cohortRepository.findByCode("JAVA001_HK2_01").orElseThrow();
+        Cohort web  = cohortRepository.findByCode("WEB002_HK2_01").orElseThrow();
+        Cohort db   = cohortRepository.findByCode("DB003_HK2_01").orElseThrow();
+
+        seedCourseGradesIfEmpty(javaCourse.getId());
+        seedCourseGradesIfEmpty(web.getId());
+        seedCourseGradesIfEmpty(db.getId());
+
+        log.info("Grades seeding done.");
+    }
+
+    private void seedAttendance() {
+        Cohort javaCourse = cohortRepository.findByCode("JAVA001_HK2_01").orElseThrow();
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(javaCourse.getId()).stream()
+                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED)
+                .toList();
+        if (enrollments.isEmpty()) return;
+
+        for (int i = 1; i <= 6; i++) {
+            final int dayIndex = i;
+            LocalDate d = LocalDate.now().minusDays(i);
+            AttendanceSession session = attendanceSessionRepository.findByCourseIdAndSessionDate(javaCourse.getId(), d)
+                    .orElseGet(() -> attendanceSessionRepository.save(AttendanceSession.builder()
+                            .cohortId(javaCourse.getId())
+                            .sessionDate(d)
+                            .periods((short) 3)
+                            .createdByUserId(javaCourse.getTeacher() != null ? javaCourse.getTeacher().getId() : null)
+                            .build()));
+
+            List<AttendanceRecord> existing = attendanceRecordRepository.findBySessionId(session.getId());
+            Set<Long> existingEnrollmentIds = existing.stream().map(AttendanceRecord::getEnrollmentId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
+            List<AttendanceRecord> toCreate = enrollments.stream()
+                    .filter(e -> e.getId() != null && !existingEnrollmentIds.contains(e.getId()))
+                    .map(e -> AttendanceRecord.builder()
+                            .sessionId(session.getId())
+                            .enrollmentId(e.getId())
+                            .studentId(e.getStudent() != null ? e.getStudent().getId() : null)
+                            .status(sampleAttendanceStatus(e.getId(), dayIndex))
+                            .markedAt(LocalDateTime.now())
+                            .build())
+                    .filter(r -> r.getStudentId() != null)
+                    .toList();
+            if (!toCreate.isEmpty()) {
+                attendanceRecordRepository.saveAll(toCreate);
+            }
+        }
+        log.info("Attendance seeding done.");
+    }
+
+    private AttendanceStatus sampleAttendanceStatus(Long enrollmentId, int dayIndex) {
+        long v = (enrollmentId + dayIndex) % 10;
+        if (v == 0) return AttendanceStatus.EXCUSED;
+        if (v <= 2) return AttendanceStatus.ABSENT;
+        if (v <= 5) return AttendanceStatus.LATE;
+        return AttendanceStatus.PRESENT;
+    }
+
+    private void seedCourseGradesIfEmpty(Long courseId) {
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        for (Enrollment e : enrollments) {
+            if (e.getProcessScore() != null || e.getExamScore() != null || e.getFinalScore() != null) continue;
+            double base = 6.5 + ((e.getId() % 7) * 0.4);
+            BigDecimal process = BigDecimal.valueOf(Math.min(10, Math.max(0, base))).setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal exam = BigDecimal.valueOf(Math.min(10, Math.max(0, base + 0.8))).setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal finalScore = process.multiply(BigDecimal.valueOf(40)).add(exam.multiply(BigDecimal.valueOf(60)))
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            e.setProcessScore(process);
+            e.setExamScore(exam);
+            e.setFinalScore(finalScore);
+            e.setScoreLocked(true);
+            e.setScoredAt(LocalDateTime.now());
+            enrollmentRepository.save(e);
+        }
     }
 
     /**

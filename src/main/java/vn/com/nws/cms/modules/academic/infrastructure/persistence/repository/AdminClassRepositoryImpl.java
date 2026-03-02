@@ -2,6 +2,7 @@ package vn.com.nws.cms.modules.academic.infrastructure.persistence.repository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.domain.model.AdminClass;
@@ -10,6 +11,8 @@ import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.AdminCl
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.DepartmentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.AdminClassMapper;
 
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Repository
@@ -74,8 +77,21 @@ public class AdminClassRepositoryImpl implements AdminClassRepository {
 
     @Override
     public Page<AdminClass> search(String keyword, Long departmentId, Integer intakeYear, Boolean active, Pageable pageable) {
-        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
-        return jpaRepository.search(normalizedKeyword, departmentId, intakeYear, active, pageable).map(adminClassMapper::toDomain);
+        List<AdminClassEntity> base = jpaRepository.searchNoKeywordList(departmentId, intakeYear, active);
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase(Locale.ROOT);
+        List<AdminClassEntity> filtered = normalizedKeyword == null
+                ? base
+                : base.stream()
+                .filter(c -> (c.getCode() != null && c.getCode().toLowerCase(Locale.ROOT).contains(normalizedKeyword))
+                        || (c.getName() != null && c.getName().toLowerCase(Locale.ROOT).contains(normalizedKeyword)))
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        if (start >= filtered.size()) {
+            return new PageImpl<AdminClassEntity>(List.of(), pageable, filtered.size()).map(adminClassMapper::toDomain);
+        }
+        int end = Math.min(start + pageable.getPageSize(), filtered.size());
+        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size()).map(adminClassMapper::toDomain);
     }
 
     @Override
@@ -83,4 +99,3 @@ public class AdminClassRepositoryImpl implements AdminClassRepository {
         jpaRepository.deleteById(id);
     }
 }
-

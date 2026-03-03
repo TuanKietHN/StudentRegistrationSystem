@@ -2,6 +2,7 @@ package vn.com.nws.cms.modules.auth.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import vn.com.nws.cms.common.exception.BusinessException;
@@ -27,22 +28,30 @@ public class AuthRateLimitService {
     private long loginUserWindowSeconds;
 
     public void recordLoginFailureOrThrow(String ip, String usernameOrEmail) {
-        if (!allow("auth:rl:login:ip:" + ip, loginIpMax, loginIpWindowSeconds)) {
-            throw new BusinessException("Bạn đang thao tác quá nhanh. Vui lòng thử lại sau.");
-        }
-        if (usernameOrEmail != null && !usernameOrEmail.isBlank()) {
-            if (!allow("auth:rl:login:user:" + usernameOrEmail.toLowerCase(), loginUserMax, loginUserWindowSeconds)) {
+        try {
+            if (!allow("auth:rl:login:ip:" + ip, loginIpMax, loginIpWindowSeconds)) {
                 throw new BusinessException("Bạn đang thao tác quá nhanh. Vui lòng thử lại sau.");
             }
+            if (usernameOrEmail != null && !usernameOrEmail.isBlank()) {
+                if (!allow("auth:rl:login:user:" + usernameOrEmail.toLowerCase(), loginUserMax, loginUserWindowSeconds)) {
+                    throw new BusinessException("Bạn đang thao tác quá nhanh. Vui lòng thử lại sau.");
+                }
+            }
+        } catch (RedisConnectionFailureException e) {
+            throw new BusinessException("Hệ thống đang bận (Redis). Vui lòng thử lại sau.");
         }
     }
 
     public void clearLoginCounters(String ip, String usernameOrEmail) {
-        if (ip != null && !ip.isBlank()) {
-            redisTemplate.delete("auth:rl:login:ip:" + ip);
-        }
-        if (usernameOrEmail != null && !usernameOrEmail.isBlank()) {
-            redisTemplate.delete("auth:rl:login:user:" + usernameOrEmail.toLowerCase());
+        try {
+            if (ip != null && !ip.isBlank()) {
+                redisTemplate.delete("auth:rl:login:ip:" + ip);
+            }
+            if (usernameOrEmail != null && !usernameOrEmail.isBlank()) {
+                redisTemplate.delete("auth:rl:login:user:" + usernameOrEmail.toLowerCase());
+            }
+        } catch (RedisConnectionFailureException e) {
+            throw new BusinessException("Hệ thống đang bận (Redis). Vui lòng thử lại sau.");
         }
     }
 
@@ -57,3 +66,4 @@ public class AuthRateLimitService {
         return count <= max;
     }
 }
+

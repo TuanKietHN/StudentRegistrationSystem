@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.domain.model.Department;
 import vn.com.nws.cms.modules.academic.domain.model.Teacher;
@@ -28,6 +29,7 @@ public class TeacherRepositoryImpl implements TeacherRepository {
     private final DepartmentMapper departmentMapper;
 
     @Override
+    @Transactional
     public Teacher save(Teacher teacher) {
         TeacherEntity entity = teacherMapper.toEntity(teacher);
         if (teacher.getId() != null) {
@@ -55,21 +57,25 @@ public class TeacherRepositoryImpl implements TeacherRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Teacher> findById(Long id) {
         return teacherJpaRepository.findById(id).map(this::mapToDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Teacher> findByUserId(Long userId) {
         return teacherJpaRepository.findByUserId(userId).map(this::mapToDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Teacher> findByEmployeeCode(String employeeCode) {
         return teacherJpaRepository.findByEmployeeCode(employeeCode).map(this::mapToDomain);
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id) {
         teacherJpaRepository.deleteById(id);
     }
@@ -85,6 +91,7 @@ public class TeacherRepositoryImpl implements TeacherRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<Teacher> findAll(String keyword, Long departmentId, Boolean active, Pageable pageable) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
         if (normalizedKeyword == null && departmentId == null && active == null) {

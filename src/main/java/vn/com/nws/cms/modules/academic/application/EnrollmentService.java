@@ -12,7 +12,7 @@ public interface EnrollmentService {
     
     List<EnrollmentResponse> getStudentEnrollments(Long studentId);
     List<EnrollmentResponse> getMyEnrollments(String username);
-    List<EnrollmentResponse> getCourseEnrollments(Long courseId, String username, boolean isAdmin, boolean isTeacher);
+    List<EnrollmentResponse> getSectionEnrollments(Long sectionId, String username, boolean isAdmin, boolean isTeacher);
 
-    GradesImportResultResponse importCourseGrades(Long courseId, String username, boolean isAdmin, boolean isTeacher, org.springframework.web.multipart.MultipartFile file);
+    GradesImportResultResponse importSectionGrades(Long sectionId, String username, boolean isAdmin, boolean isTeacher, org.springframework.web.multipart.MultipartFile file);
 }

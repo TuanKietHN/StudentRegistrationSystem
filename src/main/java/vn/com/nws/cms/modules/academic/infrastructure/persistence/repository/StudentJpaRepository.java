@@ -45,8 +45,8 @@ public interface StudentJpaRepository extends JpaRepository<StudentEntity, Long>
             SELECT s
             FROM StudentEntity s
             LEFT JOIN s.user u
-            WHERE s.adminClass.id = :adminClassId
+            WHERE s.studentClass.id = :studentClassId
             ORDER BY s.studentCode ASC, u.username ASC
             """)
-    List<StudentEntity> findByAdminClassId(@Param("adminClassId") Long adminClassId);
+    List<StudentEntity> findByStudentClassId(@Param("studentClassId") Long studentClassId);
 }

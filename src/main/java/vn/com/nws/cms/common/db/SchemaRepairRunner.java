@@ -45,10 +45,6 @@ public class SchemaRepairRunner implements CommandLineRunner {
                     repairedAcademicRenames |= tryExecute(st, "UPDATE enrollments SET cohort_id = course_id WHERE cohort_id IS NULL");
                 }
 
-                if (tableExists(conn, "attendance_sessions") && columnExists(conn, "attendance_sessions", "course_id") && !columnExists(conn, "attendance_sessions", "cohort_id")) {
-                    repairedAcademicRenames |= tryExecute(st, "ALTER TABLE attendance_sessions ADD COLUMN cohort_id BIGINT");
-                    repairedAcademicRenames |= tryExecute(st, "UPDATE attendance_sessions SET cohort_id = course_id WHERE cohort_id IS NULL");
-                }
             }
 
             if (repairedAdminClasses) {

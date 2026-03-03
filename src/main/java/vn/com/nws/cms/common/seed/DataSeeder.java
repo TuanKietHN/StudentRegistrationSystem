@@ -2,31 +2,43 @@ package vn.com.nws.cms.common.seed;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.com.nws.cms.domain.enums.RoleType;
 import vn.com.nws.cms.modules.academic.api.dto.EnrollmentCreateRequest;
-import vn.com.nws.cms.modules.academic.domain.enums.AttendanceStatus;
-import vn.com.nws.cms.modules.academic.domain.enums.CohortLifecycleStatus;
+import vn.com.nws.cms.modules.academic.api.dto.EnrollmentUpdateRequest;
 import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.SectionLifecycleStatus;
 import vn.com.nws.cms.modules.academic.domain.model.*;
 import vn.com.nws.cms.modules.academic.domain.repository.*;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
+/**
+ * DataSeeder - Khởi tạo dữ liệu mẫu tiếng Việt cho môi trường dev/test.
+ *
+ * Kích hoạt: spring.profiles.active=dev + cms.seed.enabled=true
+ *
+ * Tài khoản được tạo:
+ *  - admin@nws.com.vn       / Admin@123      (ROLE_ADMIN)
+ *  - giaovu@nws.com.vn      / Teacher@123    (ROLE_ADMIN + ROLE_TEACHER)
+ *  - phamthihoa@nws.com.vn  / Teacher@123    (ROLE_TEACHER) — dạy CNTT
+ *  - doduchung@nws.com.vn   / Teacher@123    (ROLE_TEACHER) — dạy QTKD
+ *  - nguyenhuuphuc@nws.com.vn / Teacher@123  (ROLE_TEACHER) — dạy CNTT
+ *  - student@nws.com.vn     / Student@123    (ROLE_STUDENT)
+ *  - + 9 sinh viên mẫu khác
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -34,228 +46,384 @@ import java.util.*;
 @ConditionalOnProperty(name = "cms.seed.enabled", havingValue = "true")
 public class DataSeeder implements CommandLineRunner {
 
+    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+
     private final DepartmentRepository departmentRepository;
-    private final AdminClassRepository adminClassRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
+
     private final SemesterRepository semesterRepository;
-    private final ClassRepository classRepository;
+    private final SubjectRepository subjectRepository;
+    private final SectionRepository sectionRepository;
+    private final SectionTimeSlotRepository sectionTimeSlotRepository;
+
     private final CohortRepository cohortRepository;
-    private final CohortTimeSlotRepository cohortTimeSlotRepository;
-    private final EnrollmentRepository enrollmentRepository;
-    private final AttendanceSessionRepository attendanceSessionRepository;
-    private final AttendanceRecordRepository attendanceRecordRepository;
+    private final StudentClassRepository studentClassRepository;
+
     private final EnrollmentService enrollmentService;
-    private final PasswordEncoder passwordEncoder;
+    private final EnrollmentRepository enrollmentRepository;
+    private final PlatformTransactionManager transactionManager;
 
-    /**
-     * @Transactional phải đặt tại run() — không phải tại từng seedXxx() method.
-     *
-     * Lý do: Các method nội bộ (seedXxx()) được gọi qua `this`, không qua Spring proxy,
-     * nên @Transactional trên chúng hoàn toàn vô hiệu → LazyInitializationException.
-     * Chỉ method được gọi qua proxy (run()) mới áp dụng được @Transactional.
-     *
-     * Tại sao không bị UnexpectedRollbackException như lần đầu?
-     * → enrollmentService.enrollStudent() dùng REQUIRES_NEW:
-     *   - Suspend TX của run(), tạo TX con độc lập
-     *   - Exception trong enrollStudent() chỉ rollback TX con đó
-     *   - TX của run() KHÔNG bị mark rollback-only
-     *   - enrollIfNotExists() catch exception → run() tiếp tục và commit bình thường
-     */
+    // =========================================================================
+    //  ENTRY POINT
+    // =========================================================================
+
     @Override
-    @Transactional
     public void run(String... args) {
-        log.info("=== Starting Data Seeder ===");
+        log.info("========== [DataSeeder] Bắt đầu khởi tạo dữ liệu mẫu ==========");
 
-        seedUsers();
-        seedDepartments();
-        seedAdminClasses();
-        seedTeacherProfiles();
-        seedStudentProfiles();
-        seedSemesters();
-        seedClasses();
-        seedCohorts();
-        seedCohortTimeSlots();
-        seedEnrollments();
-        seedEnrollmentGrades();
-        seedAttendance();
+        TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(s -> seedUsers());
+        tx.executeWithoutResult(s -> seedDepartments());
+        tx.executeWithoutResult(s -> seedTeacherProfiles());
+        tx.executeWithoutResult(s -> seedCohorts());
+        tx.executeWithoutResult(s -> seedStudentClasses());
+        tx.executeWithoutResult(s -> seedStudentProfiles());
+        tx.executeWithoutResult(s -> seedSemesters());
+        tx.executeWithoutResult(s -> seedSubjects());
+        tx.executeWithoutResult(s -> seedSections());
+        tx.executeWithoutResult(s -> seedSectionTimeSlots());
+        tx.executeWithoutResult(s -> seedEnrollments());
+        tx.executeWithoutResult(s -> seedEnrollmentGrades());
 
-        log.info("=== Data Seeder completed successfully ===");
+        log.info("========== [DataSeeder] Hoàn thành khởi tạo dữ liệu mẫu ==========");
     }
 
-    // -------------------------------------------------------------------------
-    // Users
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    //  1. USERS
+    // =========================================================================
 
     private void seedUsers() {
-        seedUserIfNotExists("nguyen.quang.huy", "manager@nws.com.vn",   "manager123",   Set.of(RoleType.TEACHER, RoleType.ADMIN));
-        seedUserIfNotExists("le.minh.anh",      "admin@nws.com.vn",     "admin123",     Set.of(RoleType.ADMIN));
-        seedUserIfNotExists("pham.thi.hoa",     "teacher@nws.com.vn",   "teacher123",   Set.of(RoleType.TEACHER));
-        seedUserIfNotExists("do.duc.long",      "teacher2@nws.com.vn",  "teacher123",   Set.of(RoleType.TEACHER));
-        seedUserIfNotExists("nguyen.van.an",    "student@nws.com.vn",   "student123",   Set.of(RoleType.STUDENT));
-        seedUserIfNotExists("tran.thi.binh",    "student2@nws.com.vn",  "student123",   Set.of(RoleType.STUDENT));
-        seedUserIfNotExists("vu.quoc.khanh",    "assistant@nws.com.vn", "assistant123", Set.of(RoleType.TEACHER, RoleType.STUDENT));
-        log.info("Users seeding done.");
+        log.info("[Seeder] Tạo tài khoản người dùng...");
+
+        // Quản trị viên
+        upsertUser("le.minh.anh",       "admin@nws.com.vn",         "Admin@123",    Set.of(RoleType.ADMIN));
+
+        // Giáo vụ (admin + teacher)
+        upsertUser("nguyen.quang.huy",   "giaovu@nws.com.vn",        "Teacher@123",  Set.of(RoleType.TEACHER));
+
+        // Giảng viên CNTT
+        upsertUser("pham.thi.hoa",       "phamthihoa@nws.com.vn",    "Teacher@123",  Set.of(RoleType.TEACHER));
+        upsertUser("nguyen.huu.phuc",    "nguyenhuuphuc@nws.com.vn", "Teacher@123",  Set.of(RoleType.TEACHER));
+        upsertUser("tran.van.duc",       "tranvanduc@nws.com.vn",    "Teacher@123",  Set.of(RoleType.TEACHER));
+
+        // Giảng viên QTKD
+        upsertUser("do.duc.hung",        "doduchung@nws.com.vn",     "Teacher@123",  Set.of(RoleType.TEACHER));
+        upsertUser("vo.thi.lan",         "vothilan@nws.com.vn",      "Teacher@123",  Set.of(RoleType.TEACHER));
+
+        // Sinh viên
+        upsertUser("nguyen.van.an",      "student@nws.com.vn",       "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("tran.thi.binh",      "tranthihinh@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("le.quoc.cuong",      "lequoccuong@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("pham.ngoc.diem",     "phamngocidiem@nws.com.vn", "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("hoang.van.em",       "hoangvanem@nws.com.vn",    "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("nguyen.thi.phuong",  "nguyenthiphuong@nws.com.vn","Student@123", Set.of(RoleType.STUDENT));
+        upsertUser("bui.duc.giang",      "buiducgiang@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("do.thi.huyen",       "dothihuyen@nws.com.vn",    "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("cao.van.ien",        "caovanien@nws.com.vn",     "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("mai.thi.khanh",      "maithikhanh@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
     }
 
-    private void seedUserIfNotExists(String username, String email, String rawPassword, Set<RoleType> roles) {
-        userRepository.findByEmail(email).ifPresentOrElse(existing -> {
+    private void upsertUser(String username, String email, String rawPassword, Set<RoleType> roles) {
+        userRepository.findByEmail(email)
+                .or(() -> userRepository.findByUsername(username))
+                .ifPresentOrElse(existing -> {
             existing.setUsername(username);
+            existing.setEmail(email);
             existing.setPassword(passwordEncoder.encode(rawPassword));
             existing.setRoles(roles);
             userRepository.save(existing);
-            log.info("Updated seed user [{}]", email);
+            log.debug("  [User] Cập nhật: {}", email);
         }, () -> {
             userRepository.save(User.builder()
-                    .username(username).email(email)
+                    .username(username)
+                    .email(email)
                     .password(passwordEncoder.encode(rawPassword))
-                    .roles(roles).build());
-            log.info("Seeded user [{}]", email);
+                    .roles(roles)
+                    .build());
+            log.debug("  [User] Tạo mới: {}", email);
         });
     }
 
-    // -------------------------------------------------------------------------
-    // Departments
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    //  2. DEPARTMENTS
+    // =========================================================================
 
     private void seedDepartments() {
-        seedDepartmentIfNotExists("CNTT",   "Công nghệ thông tin", "Khoa Công nghệ thông tin", true);
-        seedDepartmentIfNotExists("QTKD",   "Quản trị kinh doanh", "Khoa Quản trị kinh doanh", true);
-        seedDepartmentIfNotExists("KETOAN", "Kế toán",             "Khoa Kế toán",              true);
-        log.info("Departments seeding done.");
+        log.info("[Seeder] Tạo khoa/bộ môn...");
+        upsertDepartment("CNTT",   "Công nghệ Thông tin",  "Đào tạo lập trình, mạng máy tính, AI, an ninh mạng");
+        upsertDepartment("QTKD",   "Quản trị Kinh doanh",  "Đào tạo quản trị, marketing, kinh doanh quốc tế");
+        upsertDepartment("KETOAN", "Kế toán - Kiểm toán",  "Đào tạo kế toán doanh nghiệp, kiểm toán, tài chính");
+        upsertDepartment("NGOAINGU","Ngoại ngữ",            "Đào tạo tiếng Anh, tiếng Nhật, tiếng Hàn, tiếng Trung");
+        upsertDepartment("DIENTEN","Điện tử - Viễn thông",  "Đào tạo kỹ thuật điện tử, viễn thông, IoT");
     }
 
-    private void seedDepartmentIfNotExists(String code, String name, String description, boolean active) {
+    private void upsertDepartment(String code, String name, String description) {
         boolean exists = departmentRepository.findAll().stream()
                 .anyMatch(d -> code.equalsIgnoreCase(d.getCode()));
-        if (exists) return;
+        if (exists) {
+            log.debug("  [Department] Đã tồn tại: {}", code);
+            return;
+        }
         departmentRepository.save(Department.builder()
-                .code(code).name(name).description(description).active(active).build());
+                .code(code)
+                .name(name)
+                .description(description)
+                .active(true)
+                .build());
+        log.debug("  [Department] Tạo mới: {}", code);
     }
 
-    private Department getDepartmentByCode(String code) {
+    private Department departmentByCode(String code) {
         return departmentRepository.findAll().stream()
                 .filter(d -> code.equalsIgnoreCase(d.getCode()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Department not found: " + code));
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy khoa: " + code));
     }
 
-    // -------------------------------------------------------------------------
-    // Admin Classes (lớp hành chính)
-    // -------------------------------------------------------------------------
-
-    private void seedAdminClasses() {
-        Department cntt = getDepartmentByCode("CNTT");
-        Department qtkd = getDepartmentByCode("QTKD");
-
-        upsertAdminClass("CNTT-K25-01", "CNTT K25 - Lớp 01", cntt, 2025, "Đại học chính quy", true);
-        upsertAdminClass("CNTT-K25-02", "CNTT K25 - Lớp 02", cntt, 2025, "Đại học chính quy", true);
-        upsertAdminClass("QTKD-K25-01", "QTKD K25 - Lớp 01", qtkd, 2025, "Đại học chính quy", true);
-        log.info("Admin classes seeding done.");
-    }
-
-    private void upsertAdminClass(String code, String name, Department department, Integer intakeYear, String program, boolean active) {
-        adminClassRepository.findByCode(code).ifPresentOrElse(existing -> {
-            existing.setName(name);
-            existing.setDepartment(department);
-            existing.setIntakeYear(intakeYear);
-            existing.setProgram(program);
-            existing.setActive(active);
-            adminClassRepository.save(existing);
-        }, () -> adminClassRepository.save(AdminClass.builder()
-                .code(code)
-                .name(name)
-                .department(department)
-                .intakeYear(intakeYear)
-                .program(program)
-                .active(active)
-                .build()));
-    }
-
-    // -------------------------------------------------------------------------
-    // Teachers
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    //  3. TEACHER PROFILES
+    // =========================================================================
 
     private void seedTeacherProfiles() {
-        Department cntt = getDepartmentByCode("CNTT");
-        Department qtkd = getDepartmentByCode("QTKD");
+        log.info("[Seeder] Tạo hồ sơ giảng viên...");
 
-        upsertTeacherProfile("pham.thi.hoa",  "GV0001", cntt, "Java/Spring Boot", "Giảng viên",    true);
-        upsertTeacherProfile("do.duc.long",   "GV0002", qtkd, "Quản trị",         "Giảng viên",    true);
-        upsertTeacherProfile("nguyen.quang.huy", "GV0003", cntt, "Quản lý đào tạo",  "Trưởng bộ môn", true);
-        upsertTeacherProfile("vu.quoc.khanh", "GV0004", cntt, "Fullstack",        "Trợ giảng",     true);
-        log.info("Teacher profiles seeding done.");
+        Department cntt    = departmentByCode("CNTT");
+        Department qtkd    = departmentByCode("QTKD");
+        Department ketoan  = departmentByCode("KETOAN");
+
+        upsertTeacher("phamthihoa@nws.com.vn",     "GV0001", cntt,   "Java, Spring Boot, Microservices",   "Thạc sĩ - Giảng viên",          "Phòng 301 - Tòa A", "T2,T4: 8:00-11:00",  "0901000001");
+        upsertTeacher("nguyenhuuphuc@nws.com.vn",  "GV0002", cntt,   "Python, Machine Learning, AI",       "Tiến sĩ - Giảng viên chính",     "Phòng 302 - Tòa A", "T3,T5: 9:00-12:00",  "0901000002");
+        upsertTeacher("tranvanduc@nws.com.vn",     "GV0003", cntt,   "Cơ sở dữ liệu, Data Engineering",   "Thạc sĩ - Giảng viên",          "Phòng 303 - Tòa A", "T2,T6: 14:00-17:00", "0901000003");
+        upsertTeacher("doduchung@nws.com.vn",      "GV0004", qtkd,   "Quản trị chiến lược, Marketing",     "Thạc sĩ - Giảng viên",          "Phòng 201 - Tòa B", "T3,T5: 8:00-11:00",  "0901000004");
+        upsertTeacher("vothilan@nws.com.vn",       "GV0005", ketoan, "Kế toán doanh nghiệp, Kiểm toán",    "Thạc sĩ - Giảng viên",          "Phòng 202 - Tòa B", "T2,T4: 13:00-16:00", "0901000005");
+        upsertTeacher("giaovu@nws.com.vn",         "GV0006", cntt,   "Quản lý đào tạo, Giám sát học vụ",   "Thạc sĩ - Trưởng bộ môn",       "Phòng 101 - Tòa A", "T2-T6: 8:00-12:00",  "0901000006");
     }
 
-    private void upsertTeacherProfile(String username, String employeeCode, Department department,
-                                      String specialization, String title, boolean active) {
-        if (!userRepository.existsByUsername(username)) return;
-        User user = userRepository.findByUsername(username).orElseThrow();
-        teacherRepository.findByUserId(user.getId()).ifPresentOrElse(existing -> {
+    private void upsertTeacher(String email, String employeeCode, Department department,
+                               String specialization, String title, String officeLocation,
+                               String officeHours, String phone) {
+        User user = userByEmail(email);
+        teacherRepository.findByUserId(user.getId())
+                .or(() -> teacherRepository.findByEmployeeCode(employeeCode))
+                .ifPresentOrElse(existing -> {
+            existing.setUser(user);
             existing.setEmployeeCode(employeeCode);
             existing.setDepartment(department);
             existing.setSpecialization(specialization);
             existing.setTitle(title);
-            existing.setActive(active);
+            existing.setOfficeLocation(officeLocation);
+            existing.setOfficeHours(officeHours);
+            existing.setPhone(phone);
+            existing.setActive(true);
             teacherRepository.save(existing);
-        }, () -> teacherRepository.save(Teacher.builder()
-                .user(user).employeeCode(employeeCode).department(department)
-                .specialization(specialization).title(title)
-                .bio("Demo teacher profile").officeLocation("Tầng 3 - Phòng 301")
-                .officeHours("T2-T6 9:00-11:00").phone("0900000000").active(active)
-                .build()));
+            log.debug("  [Teacher] Cập nhật: {} - {}", employeeCode, email);
+        }, () -> {
+            teacherRepository.save(Teacher.builder()
+                    .user(user)
+                    .employeeCode(employeeCode)
+                    .department(department)
+                    .specialization(specialization)
+                    .title(title)
+                    .bio("Giảng viên " + department.getName())
+                    .officeLocation(officeLocation)
+                    .officeHours(officeHours)
+                    .phone(phone)
+                    .active(true)
+                    .build());
+            log.debug("  [Teacher] Tạo mới: {} - {}", employeeCode, email);
+        });
     }
 
-    // -------------------------------------------------------------------------
-    // Students
-    // -------------------------------------------------------------------------
+    private Teacher teacherByEmail(String email) {
+        User user = userByEmail(email);
+        return teacherRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy hồ sơ giảng viên: " + email));
+    }
+
+    // =========================================================================
+    //  4. COHORTS (niên khóa)
+    // =========================================================================
+
+    private void seedCohorts() {
+        log.info("[Seeder] Tạo niên khóa...");
+        upsertCohort("COHORT_2022", "Niên khóa 2022-2026", 2022, 2026, true);
+        upsertCohort("COHORT_2023", "Niên khóa 2023-2027", 2023, 2027, true);
+        upsertCohort("COHORT_2024", "Niên khóa 2024-2028", 2024, 2028, true);
+        upsertCohort("COHORT_2025", "Niên khóa 2025-2029", 2025, 2029, true);
+    }
+
+    private void upsertCohort(String code, String name, int startYear, int endYear, boolean active) {
+        if (cohortRepository.findByCode(code).isPresent()) {
+            log.debug("  [Cohort] Đã tồn tại: {}", code);
+            return;
+        }
+        cohortRepository.save(Cohort.builder()
+                .code(code)
+                .name(name)
+                .startYear(startYear)
+                .endYear(endYear)
+                .active(active)
+                .build());
+        log.debug("  [Cohort] Tạo mới: {}", code);
+    }
+
+    private Cohort cohortByCode(String code) {
+        return cohortRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy niên khóa: " + code));
+    }
+
+    // =========================================================================
+    //  5. STUDENT CLASSES (lớp hành chính)
+    // =========================================================================
+
+    private void seedStudentClasses() {
+        log.info("[Seeder] Tạo lớp hành chính...");
+
+        Department cntt    = departmentByCode("CNTT");
+        Department qtkd    = departmentByCode("QTKD");
+        Department ketoan  = departmentByCode("KETOAN");
+
+        Cohort k22 = cohortByCode("COHORT_2022");
+        Cohort k23 = cohortByCode("COHORT_2023");
+        Cohort k24 = cohortByCode("COHORT_2024");
+        Cohort k25 = cohortByCode("COHORT_2025");
+
+        // CNTT
+        upsertStudentClass("CNTT-K22-01", "CNTT K22 - Lớp 01", cntt, k22, 2022, "Đại học chính quy");
+        upsertStudentClass("CNTT-K22-02", "CNTT K22 - Lớp 02", cntt, k22, 2022, "Đại học chính quy");
+        upsertStudentClass("CNTT-K23-01", "CNTT K23 - Lớp 01", cntt, k23, 2023, "Đại học chính quy");
+        upsertStudentClass("CNTT-K23-02", "CNTT K23 - Lớp 02", cntt, k23, 2023, "Đại học chính quy");
+        upsertStudentClass("CNTT-K24-01", "CNTT K24 - Lớp 01", cntt, k24, 2024, "Đại học chính quy");
+        upsertStudentClass("CNTT-K25-01", "CNTT K25 - Lớp 01", cntt, k25, 2025, "Đại học chính quy");
+        upsertStudentClass("CNTT-K25-02", "CNTT K25 - Lớp 02", cntt, k25, 2025, "Đại học chính quy");
+
+        // QTKD
+        upsertStudentClass("QTKD-K24-01", "QTKD K24 - Lớp 01", qtkd, k24, 2024, "Đại học chính quy");
+        upsertStudentClass("QTKD-K25-01", "QTKD K25 - Lớp 01", qtkd, k25, 2025, "Đại học chính quy");
+
+        // Kế toán
+        upsertStudentClass("KETOAN-K25-01", "Kế toán K25 - Lớp 01", ketoan, k25, 2025, "Đại học chính quy");
+    }
+
+    private void upsertStudentClass(String code, String name, Department department,
+                                    Cohort cohort, Integer intakeYear, String program) {
+        studentClassRepository.findByCode(code).ifPresentOrElse(existing -> {
+            existing.setName(name);
+            existing.setDepartment(department);
+            existing.setCohort(cohort);
+            existing.setIntakeYear(intakeYear);
+            existing.setProgram(program);
+            existing.setActive(true);
+            studentClassRepository.save(existing);
+            log.debug("  [StudentClass] Cập nhật: {}", code);
+        }, () -> {
+            studentClassRepository.save(StudentClass.builder()
+                    .code(code)
+                    .name(name)
+                    .department(department)
+                    .cohort(cohort)
+                    .intakeYear(intakeYear)
+                    .program(program)
+                    .active(true)
+                    .build());
+            log.debug("  [StudentClass] Tạo mới: {}", code);
+        });
+    }
+
+    private StudentClass studentClassByCode(String code) {
+        return studentClassRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy lớp hành chính: " + code));
+    }
+
+    // =========================================================================
+    //  6. STUDENT PROFILES
+    // =========================================================================
 
     private void seedStudentProfiles() {
-        Department cntt   = getDepartmentByCode("CNTT");
-        Department ketoan = getDepartmentByCode("KETOAN");
+        log.info("[Seeder] Tạo hồ sơ sinh viên...");
 
-        upsertStudentProfile("nguyen.van.an", "SV0001", cntt,   "CNTT-K25-01", "0911111111", true);
-        upsertStudentProfile("tran.thi.binh", "SV0002", ketoan, null,          "0922222222", true);
-        upsertStudentProfile("vu.quoc.khanh", "SV0003", cntt,   "CNTT-K25-02", "0933333333", true);
-        log.info("Student profiles seeding done.");
+        Department cntt   = departmentByCode("CNTT");
+        Department qtkd   = departmentByCode("QTKD");
+        Department ketoan = departmentByCode("KETOAN");
+
+        StudentClass cnttK25_01 = studentClassByCode("CNTT-K25-01");
+        StudentClass cnttK25_02 = studentClassByCode("CNTT-K25-02");
+        StudentClass qtkdK25_01 = studentClassByCode("QTKD-K25-01");
+        StudentClass ketoanK25  = studentClassByCode("KETOAN-K25-01");
+        StudentClass cnttK24_01 = studentClassByCode("CNTT-K24-01");
+
+        // Gán sinh viên vào lớp hành chính
+        upsertStudent("student@nws.com.vn",          "SV2500001", cntt,   cnttK25_01, "0901111111");
+        upsertStudent("tranthihinh@nws.com.vn",      "SV2500002", cntt,   cnttK25_01, "0901111112");
+        upsertStudent("lequoccuong@nws.com.vn",       "SV2500003", cntt,   cnttK25_01, "0901111113");
+        upsertStudent("phamngocidiem@nws.com.vn",     "SV2500004", cntt,   cnttK25_02, "0901111114");
+        upsertStudent("hoangvanem@nws.com.vn",        "SV2500005", cntt,   cnttK25_02, "0901111115");
+        upsertStudent("nguyenthiphuong@nws.com.vn",   "SV2500006", qtkd,   qtkdK25_01, "0901111116");
+        upsertStudent("buiducgiang@nws.com.vn",       "SV2500007", qtkd,   qtkdK25_01, "0901111117");
+        upsertStudent("dothihuyen@nws.com.vn",        "SV2500008", ketoan, ketoanK25,  "0901111118");
+        upsertStudent("caovanien@nws.com.vn",         "SV2400001", cntt,   cnttK24_01, "0901111119");
+        upsertStudent("maithikhanh@nws.com.vn",       "SV2400002", cntt,   cnttK24_01, "0901111120");
     }
 
-    private void upsertStudentProfile(String username, String studentCode, Department department, String adminClassCode,
-                                      String phone, boolean active) {
-        if (!userRepository.existsByUsername(username)) return;
-        User user = userRepository.findByUsername(username).orElseThrow();
-        AdminClass adminClass = adminClassCode == null ? null : adminClassRepository.findByCode(adminClassCode).orElse(null);
+    private void upsertStudent(String email, String studentCode, Department department,
+                               StudentClass studentClass, String phone) {
+        User user = userByEmail(email);
         studentRepository.findByUserId(user.getId()).ifPresentOrElse(existing -> {
             existing.setStudentCode(studentCode);
             existing.setDepartment(department);
-            existing.setAdminClass(adminClass);
+            existing.setStudentClass(studentClass);
             existing.setPhone(phone);
-            existing.setActive(active);
+            existing.setActive(true);
             studentRepository.save(existing);
-        }, () -> studentRepository.save(Student.builder()
-                .user(user).studentCode(studentCode).department(department)
-                .adminClass(adminClass)
-                .phone(phone).active(active).build()));
+            log.debug("  [Student] Cập nhật: {} - {}", studentCode, email);
+        }, () -> {
+            studentRepository.save(Student.builder()
+                    .user(user)
+                    .studentCode(studentCode)
+                    .department(department)
+                    .studentClass(studentClass)
+                    .phone(phone)
+                    .active(true)
+                    .build());
+            log.debug("  [Student] Tạo mới: {} - {}", studentCode, email);
+        });
     }
 
-    // -------------------------------------------------------------------------
-    // Semesters
-    // -------------------------------------------------------------------------
+    private Student studentByEmail(String email) {
+        return studentRepository.findByUserId(userByEmail(email).getId())
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy hồ sơ sinh viên: " + email));
+    }
+
+    // =========================================================================
+    //  7. SEMESTERS
+    // =========================================================================
 
     private void seedSemesters() {
+        log.info("[Seeder] Tạo học kỳ...");
+        // Học kỳ quá khứ
+        upsertSemester("HK1_2324", "Học kỳ 1 2023-2024",
+                LocalDate.of(2023, 9,  1), LocalDate.of(2024, 1, 15), false, false);
+        upsertSemester("HK2_2324", "Học kỳ 2 2023-2024",
+                LocalDate.of(2024, 2,  1), LocalDate.of(2024, 6, 30), false, false);
+        upsertSemester("HK1_2425", "Học kỳ 1 2024-2025",
+                LocalDate.of(2024, 9,  1), LocalDate.of(2025, 1, 15), false, false);
+        // Học kỳ hiện tại (active = true)
+        upsertSemester("HK2_2425", "Học kỳ 2 2024-2025",
+                LocalDate.of(2025, 2,  1), LocalDate.of(2025, 6, 30), false, false);
+        upsertSemester("HK1_2526", "Học kỳ 1 2025-2026",
+                LocalDate.of(2025, 9,  1), LocalDate.of(2026, 1, 15), false, false);
+        // Học kỳ đang diễn ra (active)
         upsertSemester("HK2_2526", "Học kỳ 2 2025-2026",
                 LocalDate.of(2026, 1, 10), LocalDate.of(2026, 6, 15), true, false);
-        upsertSemester("HK1_2526", "Học kỳ 1 2025-2026",
-                LocalDate.of(2025, 9, 1), LocalDate.of(2026, 1, 5), false, false);
-        upsertSemester("HK_HE_2526", "Học kỳ hè 2025-2026",
-                LocalDate.of(2026, 6, 20), LocalDate.of(2026, 8, 5), false, false);
-        upsertSemester("HK_PHU_2526", "Kỳ học phụ 2025-2026",
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 15), false, true);
-        log.info("Semesters seeding done.");
+        // Kỳ phụ (secondary_active)
+        upsertSemester("HK_PHU_2526", "Kỳ học phụ Hè 2025-2026",
+                LocalDate.of(2026, 3,  1), LocalDate.of(2026, 4, 30), false, true);
     }
 
-    private void upsertSemester(String code, String name, LocalDate start, LocalDate end, boolean active, boolean secondaryActive) {
+    private void upsertSemester(String code, String name, LocalDate start, LocalDate end,
+                                boolean active, boolean secondaryActive) {
         semesterRepository.findByCode(code).ifPresentOrElse(existing -> {
             existing.setName(name);
             existing.setStartDate(start);
@@ -263,212 +431,442 @@ public class DataSeeder implements CommandLineRunner {
             existing.setActive(active);
             existing.setSecondaryActive(secondaryActive);
             semesterRepository.save(existing);
-        }, () -> semesterRepository.save(Semester.builder()
-                .code(code).name(name).startDate(start).endDate(end).active(active).secondaryActive(secondaryActive).build()));
+            log.debug("  [Semester] Cập nhật: {}", code);
+        }, () -> {
+            semesterRepository.save(Semester.builder()
+                    .code(code)
+                    .name(name)
+                    .startDate(start)
+                    .endDate(end)
+                    .active(active)
+                    .secondaryActive(secondaryActive)
+                    .build());
+            log.debug("  [Semester] Tạo mới: {}", code);
+        });
     }
 
-    // -------------------------------------------------------------------------
-    // Classes
-    // -------------------------------------------------------------------------
-
-    private void seedClasses() {
-        seedClassIfNotExists("JAVA001", "Lập trình Java căn bản",       3, "Môn học cung cấp kiến thức nền tảng về ngôn ngữ lập trình Java.");
-        seedClassIfNotExists("WEB002",  "Lập trình Web với Spring Boot", 4, "Xây dựng ứng dụng web hiện đại sử dụng Spring Boot framework.");
-        seedClassIfNotExists("DB003",   "Cơ sở dữ liệu",                 3, "Kiến thức về thiết kế và quản trị cơ sở dữ liệu quan hệ.");
-        log.info("Classes seeding done.");
+    private Semester semesterByCode(String code) {
+        return semesterRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy học kỳ: " + code));
     }
 
-    private void seedClassIfNotExists(String code, String name, int credits, String description) {
-        if (classRepository.existsByCode(code)) return;
-        classRepository.save(CourseClass.builder()
-                .code(code).name(name).credits(credits).description(description)
-                .active(true).theoryHours(30).practiceHours(15)
-                .processWeight((short) 40).examWeight((short) 60)
-                .build());
-        log.info("Seeded class [{}]", code);
+    // =========================================================================
+    //  8. SUBJECTS (môn học)
+    // =========================================================================
+
+    private void seedSubjects() {
+        log.info("[Seeder] Tạo môn học...");
+
+        Department cntt   = departmentByCode("CNTT");
+        Department qtkd   = departmentByCode("QTKD");
+        Department ketoan = departmentByCode("KETOAN");
+
+        // Môn CNTT
+        upsertSubject("JAVA001",   "Lập trình Java cơ bản",             3, cntt,   "Nền tảng lập trình hướng đối tượng với Java",             (short)40, (short)60);
+        upsertSubject("JAVA002",   "Lập trình Java nâng cao",            3, cntt,   "Collections, Generics, Concurrency, Java 17+ features",   (short)40, (short)60);
+        upsertSubject("WEB001",    "Lập trình Web với Spring Boot",       4, cntt,   "REST API, Spring Security, JPA, microservices cơ bản",    (short)50, (short)50);
+        upsertSubject("DB001",     "Cơ sở dữ liệu",                      3, cntt,   "Mô hình quan hệ, SQL, thiết kế CSDL",                     (short)40, (short)60);
+        upsertSubject("DB002",     "Cơ sở dữ liệu nâng cao",             3, cntt,   "Stored procedures, indexing, query optimization",         (short)40, (short)60);
+        upsertSubject("NET001",    "Mạng máy tính",                       3, cntt,   "TCP/IP, giao thức mạng, bảo mật cơ bản",                  (short)30, (short)70);
+        upsertSubject("AI001",     "Trí tuệ nhân tạo",                    3, cntt,   "Machine learning, neural networks, ứng dụng AI",          (short)50, (short)50);
+        upsertSubject("MATH001",   "Toán rời rạc",                        3, cntt,   "Logic, tập hợp, đồ thị, thuật toán cơ bản",               (short)30, (short)70);
+        upsertSubject("SE001",     "Kỹ thuật phần mềm",                   3, cntt,   "SDLC, Agile, thiết kế hệ thống, kiểm thử phần mềm",      (short)50, (short)50);
+
+        // Môn QTKD
+        upsertSubject("MKT001",    "Marketing căn bản",                   3, qtkd,   "4P, phân tích thị trường, hành vi người tiêu dùng",       (short)50, (short)50);
+        upsertSubject("MGMT001",   "Quản trị học",                        3, qtkd,   "Lý thuyết quản trị, lập kế hoạch, tổ chức",               (short)40, (short)60);
+        upsertSubject("FIN001",    "Tài chính doanh nghiệp",               3, qtkd,   "Nguồn vốn, quản lý tài chính, đầu tư",                    (short)40, (short)60);
+
+        // Môn Kế toán
+        upsertSubject("ACC001",    "Nguyên lý kế toán",                   3, ketoan, "Nguyên tắc kế toán, hệ thống tài khoản, BCTC",           (short)40, (short)60);
+        upsertSubject("ACC002",    "Kế toán tài chính",                   3, ketoan, "Kế toán theo chuẩn VAS, lập báo cáo tài chính",           (short)40, (short)60);
     }
 
-    // -------------------------------------------------------------------------
-    // Cohorts
-    // -------------------------------------------------------------------------
-
-    private void seedCohorts() {
-        Semester semester = semesterRepository.findByCode("HK2_2526")
-                .orElseThrow(() -> new IllegalStateException("Semester HK2_2526 not found"));
-        Semester shortTerm = semesterRepository.findByCode("HK_PHU_2526")
-                .orElseThrow(() -> new IllegalStateException("Semester HK_PHU_2526 not found"));
-
-        User t1 = userRepository.findByEmail("teacher@nws.com.vn").orElseThrow();
-        User t2 = userRepository.findByEmail("teacher2@nws.com.vn").orElseThrow();
-
-        LocalDate now = LocalDate.now();
-
-        seedCourseIfNotExists("JAVA001_HK2_01", "Lớp Java 01 - HK2", 60, 0, true, now.minusDays(5), now.plusDays(20), semester, "JAVA001", t1);
-        seedCourseIfNotExists("JAVA001_HK2_02", "Lớp Java 02 - HK2", 60, 0, true, now.minusDays(5), now.plusDays(20), semester, "JAVA001", t2);
-        seedCourseIfNotExists("WEB002_HK2_01", "Lớp Web 01 - HK2", 50, 0, true, now.minusDays(3), now.plusDays(18), semester, "WEB002", t1);
-        seedCourseIfNotExists("DB003_HK2_01", "Lớp CSDL 01 - HK2", 70, 0, true, now.minusDays(3), now.plusDays(18), semester, "DB003", t2);
-        seedCourseIfNotExists("WEB002_PHU_01", "Lớp Web - Kỳ phụ", 45, 0, true, now.minusDays(10), now.plusDays(7), shortTerm, "WEB002", t2);
-
-        log.info("Cohorts seeding done.");
+    private void upsertSubject(String code, String name, int credits, Department department,
+                               String description, short processWeight, short examWeight) {
+        subjectRepository.findByCode(code).ifPresentOrElse(existing -> {
+            existing.setName(name);
+            existing.setCredits(credits);
+            existing.setDepartmentId(department != null ? department.getId() : null);
+            existing.setDescription(description);
+            existing.setActive(true);
+            existing.setProcessWeight(processWeight);
+            existing.setExamWeight(examWeight);
+            subjectRepository.save(existing);
+            log.debug("  [Subject] Cập nhật: {}", code);
+        }, () -> {
+            subjectRepository.save(Subject.builder()
+                    .code(code)
+                    .name(name)
+                    .credits(credits)
+                    .departmentId(department != null ? department.getId() : null)
+                    .description(description)
+                    .active(true)
+                    .processWeight(processWeight)
+                    .examWeight(examWeight)
+                    .build());
+            log.debug("  [Subject] Tạo mới: {}", code);
+        });
     }
 
-    private void seedCourseIfNotExists(String code, String name, int maxStudents, int currentStudents,
-                                       boolean active, LocalDate enrollStart, LocalDate enrollEnd,
-                                       Semester semester, String subjectCode, User teacher) {
-        if (cohortRepository.findByCode(code).isPresent()) return;
-        CourseClass clazz = classRepository.findByCode(subjectCode)
-                .orElseThrow(() -> new IllegalStateException("Class not found: " + subjectCode));
-        cohortRepository.save(Cohort.builder()
-                .name(name).code(code).maxStudents(maxStudents).minStudents(0)
-                .currentStudents(currentStudents).active(active).status(CohortLifecycleStatus.OPEN)
-                .enrollmentStartDate(enrollStart).enrollmentEndDate(enrollEnd)
-                .registrationEnabled(true)
-                .semester(semester).clazz(clazz).teacher(teacher).build());
+    private Subject subjectByCode(String code) {
+        return subjectRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy môn học: " + code));
     }
 
-    // -------------------------------------------------------------------------
-    // Cohort Time Slots
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    //  9. SECTIONS (lớp học phần)
+    //  *** QUAN TRỌNG: teacher phải là Teacher entity (teachers.id),
+    //                  KHÔNG phải User entity. ***
+    // =========================================================================
 
-    private void seedCohortTimeSlots() {
-        upsertCohortTimeSlots("JAVA001_HK2_01", List.of(slot(1, "08:00", "10:30"), slot(3, "08:00", "10:30")));
-        upsertCohortTimeSlots("JAVA001_HK2_02", List.of(slot(2, "10:00", "12:30"), slot(4, "10:00", "12:30")));
-        upsertCohortTimeSlots("WEB002_HK2_01", List.of(slot(1, "13:00", "15:30"), slot(3, "13:00", "15:30"), slot(5, "13:00", "15:30")));
-        upsertCohortTimeSlots("DB003_HK2_01", List.of(slot(2, "13:00", "15:30"), slot(6, "08:00", "10:30")));
-        upsertCohortTimeSlots("WEB002_PHU_01", List.of(slot(6, "10:00", "12:30"), slot(7, "10:00", "12:30")));
-        log.info("Cohort time slots seeding done.");
+    private void seedSections() {
+        log.info("[Seeder] Tạo lớp học phần...");
+
+        Semester hk2_2526 = semesterByCode("HK2_2526");
+        Semester hk_phu   = semesterByCode("HK_PHU_2526");
+        Semester hk1_2526 = semesterByCode("HK1_2526");
+        Semester hk2_2425 = semesterByCode("HK2_2425");
+
+        // ---- Lấy USER của giảng viên (Section.teacher là User; repository sẽ map sang teacher profile) ----
+        User gvHoa   = userByEmail("phamthihoa@nws.com.vn");     // Java/Spring
+        User gvPhuc  = userByEmail("nguyenhuuphuc@nws.com.vn");  // AI/Python
+        User gvDuc   = userByEmail("tranvanduc@nws.com.vn");     // DB
+        User gvHung  = userByEmail("doduchung@nws.com.vn");      // QTKD
+        User gvLan   = userByEmail("vothilan@nws.com.vn");       // Kế toán
+        User gvVu    = userByEmail("giaovu@nws.com.vn");         // Giáo vụ dạy bù
+
+        // ===== HK2 2025-2026 (đang diễn ra — active) =====
+
+        // Java cho K25
+        upsertSection("JAVA001_HK2_2526_01", "Lập trình Java CB - Nhóm 01",
+                hk2_2526, subjectByCode("JAVA001"), gvHoa, 40, 5, true);
+        upsertSection("JAVA001_HK2_2526_02", "Lập trình Java CB - Nhóm 02",
+                hk2_2526, subjectByCode("JAVA001"), gvHoa, 40, 5, true);
+
+        // Java nâng cao cho K24
+        upsertSection("JAVA002_HK2_2526_01", "Lập trình Java NC - Nhóm 01",
+                hk2_2526, subjectByCode("JAVA002"), gvHoa, 35, 5, true);
+
+        // Web Spring Boot
+        upsertSection("WEB001_HK2_2526_01",  "Lập trình Web Spring Boot - Nhóm 01",
+                hk2_2526, subjectByCode("WEB001"), gvHoa, 45, 5, true);
+        upsertSection("WEB001_HK2_2526_02",  "Lập trình Web Spring Boot - Nhóm 02",
+                hk2_2526, subjectByCode("WEB001"), gvPhuc, 45, 5, true);
+
+        // Cơ sở dữ liệu
+        upsertSection("DB001_HK2_2526_01",   "Cơ sở dữ liệu - Nhóm 01",
+                hk2_2526, subjectByCode("DB001"), gvDuc, 50, 5, true);
+        upsertSection("DB002_HK2_2526_01",   "CSDL nâng cao - Nhóm 01",
+                hk2_2526, subjectByCode("DB002"), gvDuc, 35, 5, true);
+
+        // AI
+        upsertSection("AI001_HK2_2526_01",   "Trí tuệ nhân tạo - Nhóm 01",
+                hk2_2526, subjectByCode("AI001"), gvPhuc, 40, 5, true);
+
+        // QTKD
+        upsertSection("MKT001_HK2_2526_01",  "Marketing CB - Nhóm 01",
+                hk2_2526, subjectByCode("MKT001"), gvHung, 45, 5, true);
+        upsertSection("FIN001_HK2_2526_01",  "Tài chính doanh nghiệp - Nhóm 01",
+                hk2_2526, subjectByCode("FIN001"), gvHung, 40, 5, true);
+
+        // Kế toán
+        upsertSection("ACC001_HK2_2526_01",  "Nguyên lý kế toán - Nhóm 01",
+                hk2_2526, subjectByCode("ACC001"), gvLan, 45, 5, true);
+
+        // ===== Kỳ học phụ (secondary_active) =====
+        upsertSection("JAVA001_PHU_2526_01", "Java CB - Kỳ phụ Hè",
+                hk_phu, subjectByCode("JAVA001"), gvVu, 30, 5, true);
+        upsertSection("DB001_PHU_2526_01",   "CSDL - Kỳ phụ Hè",
+                hk_phu, subjectByCode("DB001"), gvDuc, 30, 5, true);
+
+        // ===== HK1 2025-2026 (đã kết thúc — dữ liệu lịch sử) =====
+        upsertSection("JAVA001_HK1_2526_01", "Lập trình Java CB - Nhóm 01",
+                hk1_2526, subjectByCode("JAVA001"), gvHoa, 40, 5, false);
+        upsertSection("DB001_HK1_2526_01",   "Cơ sở dữ liệu - Nhóm 01",
+                hk1_2526, subjectByCode("DB001"), gvDuc, 50, 5, false);
+        upsertSection("NET001_HK1_2526_01",  "Mạng máy tính - Nhóm 01",
+                hk1_2526, subjectByCode("NET001"), gvPhuc, 40, 5, false);
+        upsertSection("MGMT001_HK2_2425_01", "Quản trị học - Nhóm 01",
+                hk2_2425, subjectByCode("MGMT001"), gvHung, 45, 5, false);
     }
 
-    private CohortTimeSlot slot(int isoDayOfWeek, String start, String end) {
-        return CohortTimeSlot.builder()
+    private void upsertSection(String code, String name, Semester semester, Subject subject,
+                               User teacher, int maxStudents, int minStudents, boolean active) {
+        sectionRepository.findByCode(code).ifPresentOrElse(existing -> {
+            existing.setName(name);
+            existing.setSemester(semester);
+            existing.setSubject(subject);
+            existing.setTeacher(teacher);
+            existing.setMaxStudents(maxStudents);
+            existing.setMinStudents(minStudents);
+            existing.setActive(active);
+            existing.setStatus(SectionLifecycleStatus.OPEN);
+            existing.setRegistrationEnabled(active);
+            existing.setEnrollmentStartDate(LocalDate.now().minusDays(10));
+            existing.setEnrollmentEndDate(LocalDate.now().plusDays(60));
+            sectionRepository.save(existing);
+            log.debug("  [Section] Cập nhật: {}", code);
+        }, () -> {
+            sectionRepository.save(Section.builder()
+                    .code(code)
+                    .name(name)
+                    .semester(semester)
+                    .subject(subject)
+                    .teacher(teacher)
+                    .maxStudents(maxStudents)
+                    .currentStudents(0)
+                    .minStudents(minStudents)
+                    .active(active)
+                    .status(SectionLifecycleStatus.OPEN)
+                    .registrationEnabled(active)
+                    .enrollmentStartDate(LocalDate.now().minusDays(10))
+                    .enrollmentEndDate(LocalDate.now().plusDays(60))
+                    .build());
+            log.debug("  [Section] Tạo mới: {}", code);
+        });
+    }
+
+    private Section sectionByCode(String code) {
+        return sectionRepository.findByCode(code)
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy lớp học phần: " + code));
+    }
+
+    // =========================================================================
+    //  10. SECTION TIME SLOTS (lịch học)
+    //  Thứ: 1=CN, 2=T2, 3=T3, 4=T4, 5=T5, 6=T6, 7=T7 (ISO: 1=T2...7=CN)
+    //  Dùng chuẩn ISO: 1=Thứ Hai, 2=Thứ Ba, ..., 5=Thứ Sáu, 6=Thứ Bảy, 7=Chủ Nhật
+    // =========================================================================
+
+    private void seedSectionTimeSlots() {
+        log.info("[Seeder] Tạo lịch học...");
+
+        // JAVA001 - Nhóm 01: T2 và T4 sáng
+        replaceSectionSlots("JAVA001_HK2_2526_01", List.of(
+                slot(1, "07:30", "10:45"),
+                slot(3, "07:30", "10:45")
+        ));
+        // JAVA001 - Nhóm 02: T3 và T5 chiều
+        replaceSectionSlots("JAVA001_HK2_2526_02", List.of(
+                slot(2, "13:00", "16:15"),
+                slot(4, "13:00", "16:15")
+        ));
+        // JAVA002 NC: T2 chiều và T5 chiều
+        replaceSectionSlots("JAVA002_HK2_2526_01", List.of(
+                slot(1, "13:00", "16:15"),
+                slot(4, "13:00", "16:15")
+        ));
+        // WEB001 - Nhóm 01: T3 sáng và T5 sáng
+        replaceSectionSlots("WEB001_HK2_2526_01", List.of(
+                slot(2, "07:30", "10:45"),
+                slot(4, "07:30", "10:45")
+        ));
+        // WEB001 - Nhóm 02: T3 chiều và T5 chiều
+        replaceSectionSlots("WEB001_HK2_2526_02", List.of(
+                slot(2, "13:00", "16:15"),
+                slot(4, "13:00", "16:15")
+        ));
+        // DB001 - Nhóm 01: T2 sáng và T4 chiều
+        replaceSectionSlots("DB001_HK2_2526_01", List.of(
+                slot(1, "07:30", "10:45"),
+                slot(3, "13:00", "16:15")
+        ));
+        // DB002 NC: T6 sáng
+        replaceSectionSlots("DB002_HK2_2526_01", List.of(
+                slot(5, "07:30", "12:00")
+        ));
+        // AI001: T5 sáng và T7
+        replaceSectionSlots("AI001_HK2_2526_01", List.of(
+                slot(4, "07:30", "10:45"),
+                slot(6, "07:30", "10:45")
+        ));
+        // MKT001: T2 chiều và T4 chiều
+        replaceSectionSlots("MKT001_HK2_2526_01", List.of(
+                slot(1, "13:00", "16:15"),
+                slot(3, "13:00", "16:15")
+        ));
+        // FIN001: T3 sáng và T5 sáng
+        replaceSectionSlots("FIN001_HK2_2526_01", List.of(
+                slot(2, "07:30", "10:45"),
+                slot(4, "07:30", "10:45")
+        ));
+        // ACC001: T4 sáng
+        replaceSectionSlots("ACC001_HK2_2526_01", List.of(
+                slot(3, "07:30", "10:45"),
+                slot(5, "13:00", "16:15")
+        ));
+        // Kỳ phụ: T7 và CN
+        replaceSectionSlots("JAVA001_PHU_2526_01", List.of(
+                slot(6, "07:30", "11:30"),
+                slot(7, "07:30", "11:30")
+        ));
+        replaceSectionSlots("DB001_PHU_2526_01", List.of(
+                slot(6, "13:00", "17:00")
+        ));
+    }
+
+    private SectionTimeSlot slot(int isoDayOfWeek, String start, String end) {
+        return SectionTimeSlot.builder()
                 .dayOfWeek((short) isoDayOfWeek)
                 .startTime(LocalTime.parse(start))
                 .endTime(LocalTime.parse(end))
                 .build();
     }
 
-    private void upsertCohortTimeSlots(String cohortCode, List<CohortTimeSlot> slots) {
-        Cohort cohort = cohortRepository.findByCode(cohortCode).orElseThrow();
-        slots.forEach(s -> s.setCohortId(cohort.getId()));
-        cohortTimeSlotRepository.replaceCohortTimeSlots(cohort.getId(), slots);
+    private void replaceSectionSlots(String sectionCode, List<SectionTimeSlot> slots) {
+        Section section = sectionByCode(sectionCode);
+        slots.forEach(s -> s.setSectionId(section.getId()));
+        sectionTimeSlotRepository.replaceSectionTimeSlots(section.getId(), slots);
+        log.debug("  [TimeSlot] Cập nhật lịch: {} ({} tiết/tuần)", sectionCode, slots.size());
     }
 
-    // -------------------------------------------------------------------------
-    // Enrollments
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    //  11. ENROLLMENTS (đăng ký học)
+    // =========================================================================
 
     private void seedEnrollments() {
-        Cohort java = cohortRepository.findByCode("JAVA001_HK2_01").orElseThrow();
-        Cohort web  = cohortRepository.findByCode("WEB002_HK2_01").orElseThrow();
-        Cohort db   = cohortRepository.findByCode("DB003_HK2_01").orElseThrow();
+        log.info("[Seeder] Tạo đăng ký học...");
 
-        // Lấy studentProfileId (student.getId()) — KHÔNG phải userId
-        // EnrollmentCreateRequest.studentId = student profile id, khớp với EnrollmentEntity.student (StudentEntity)
-        Student s1 = studentRepository.findByUserId(userRepository.findByEmail("student@nws.com.vn").orElseThrow().getId()).orElseThrow();
-        Student s2 = studentRepository.findByUserId(userRepository.findByEmail("student2@nws.com.vn").orElseThrow().getId()).orElseThrow();
-        Student s3 = studentRepository.findByUserId(userRepository.findByEmail("assistant@nws.com.vn").orElseThrow().getId()).orElseThrow();
+        // Lấy Student profile
+        Student sv1  = studentByEmail("student@nws.com.vn");           // Nguyễn Văn An
+        Student sv2  = studentByEmail("tranthihinh@nws.com.vn");       // Trần Thị Bình
+        Student sv3  = studentByEmail("lequoccuong@nws.com.vn");       // Lê Quốc Cường
+        Student sv4  = studentByEmail("phamngocidiem@nws.com.vn");     // Phạm Ngọc Diễm
+        Student sv5  = studentByEmail("hoangvanem@nws.com.vn");        // Hoàng Văn Em
+        Student sv6  = studentByEmail("nguyenthiphuong@nws.com.vn");   // Nguyễn Thị Phương
+        Student sv7  = studentByEmail("buiducgiang@nws.com.vn");       // Bùi Đức Giang
+        Student sv8  = studentByEmail("dothihuyen@nws.com.vn");        // Đỗ Thị Huyền
+        Student sv9  = studentByEmail("caovanien@nws.com.vn");         // Cao Văn Iên (K24)
+        Student sv10 = studentByEmail("maithikhanh@nws.com.vn");       // Mai Thị Khánh (K24)
 
-        enrollIfNotExists(java.getId(), s1.getId());
-        enrollIfNotExists(web.getId(),  s2.getId());
-        enrollIfNotExists(db.getId(),   s3.getId());
-        enrollIfNotExists(db.getId(),   s1.getId());
+        // ===== JAVA001 HK2_2526 Nhóm 01 — nhiều SV để thấy đủ dữ liệu =====
+        enrollIfNotExists("JAVA001_HK2_2526_01", sv1);
+        enrollIfNotExists("JAVA001_HK2_2526_01", sv2);
+        enrollIfNotExists("JAVA001_HK2_2526_01", sv3);
 
-        log.info("Enrollments seeding done.");
+        // ===== JAVA001 HK2_2526 Nhóm 02 =====
+        enrollIfNotExists("JAVA001_HK2_2526_02", sv4);
+        enrollIfNotExists("JAVA001_HK2_2526_02", sv5);
+
+        // ===== JAVA002 nâng cao (K24) =====
+        enrollIfNotExists("JAVA002_HK2_2526_01", sv9);
+        enrollIfNotExists("JAVA002_HK2_2526_01", sv10);
+
+        // ===== WEB Spring Boot Nhóm 01 =====
+        enrollIfNotExists("WEB001_HK2_2526_01", sv1);
+        enrollIfNotExists("WEB001_HK2_2526_01", sv3);
+        enrollIfNotExists("WEB001_HK2_2526_01", sv9);
+
+        // ===== DB001 =====
+        enrollIfNotExists("DB001_HK2_2526_01", sv2);
+        enrollIfNotExists("DB001_HK2_2526_01", sv4);
+        enrollIfNotExists("DB001_HK2_2526_01", sv10);
+
+        // ===== AI001 =====
+        enrollIfNotExists("AI001_HK2_2526_01", sv3);
+        enrollIfNotExists("AI001_HK2_2526_01", sv5);
+
+        // ===== Marketing =====
+        enrollIfNotExists("MKT001_HK2_2526_01", sv6);
+        enrollIfNotExists("MKT001_HK2_2526_01", sv7);
+
+        // ===== Tài chính =====
+        enrollIfNotExists("FIN001_HK2_2526_01", sv6);
+        enrollIfNotExists("FIN001_HK2_2526_01", sv7);
+
+        // ===== Kế toán =====
+        enrollIfNotExists("ACC001_HK2_2526_01", sv8);
+
+        // ===== Kỳ phụ =====
+        enrollIfNotExists("JAVA001_PHU_2526_01", sv2);
+        enrollIfNotExists("DB001_PHU_2526_01",   sv5);
     }
 
-    private void seedEnrollmentGrades() {
-        Cohort javaCourse = cohortRepository.findByCode("JAVA001_HK2_01").orElseThrow();
-        Cohort web  = cohortRepository.findByCode("WEB002_HK2_01").orElseThrow();
-        Cohort db   = cohortRepository.findByCode("DB003_HK2_01").orElseThrow();
-
-        seedCourseGradesIfEmpty(javaCourse.getId());
-        seedCourseGradesIfEmpty(web.getId());
-        seedCourseGradesIfEmpty(db.getId());
-
-        log.info("Grades seeding done.");
-    }
-
-    private void seedAttendance() {
-        Cohort javaCourse = cohortRepository.findByCode("JAVA001_HK2_01").orElseThrow();
-        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(javaCourse.getId()).stream()
-                .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED)
-                .toList();
-        if (enrollments.isEmpty()) return;
-
-        for (int i = 1; i <= 6; i++) {
-            final int dayIndex = i;
-            LocalDate d = LocalDate.now().minusDays(i);
-            AttendanceSession session = attendanceSessionRepository.findByCourseIdAndSessionDate(javaCourse.getId(), d)
-                    .orElseGet(() -> attendanceSessionRepository.save(AttendanceSession.builder()
-                            .cohortId(javaCourse.getId())
-                            .sessionDate(d)
-                            .periods((short) 3)
-                            .createdByUserId(javaCourse.getTeacher() != null ? javaCourse.getTeacher().getId() : null)
-                            .build()));
-
-            List<AttendanceRecord> existing = attendanceRecordRepository.findBySessionId(session.getId());
-            Set<Long> existingEnrollmentIds = existing.stream().map(AttendanceRecord::getEnrollmentId).filter(Objects::nonNull).collect(java.util.stream.Collectors.toSet());
-            List<AttendanceRecord> toCreate = enrollments.stream()
-                    .filter(e -> e.getId() != null && !existingEnrollmentIds.contains(e.getId()))
-                    .map(e -> AttendanceRecord.builder()
-                            .sessionId(session.getId())
-                            .enrollmentId(e.getId())
-                            .studentId(e.getStudent() != null ? e.getStudent().getId() : null)
-                            .status(sampleAttendanceStatus(e.getId(), dayIndex))
-                            .markedAt(LocalDateTime.now())
-                            .build())
-                    .filter(r -> r.getStudentId() != null)
-                    .toList();
-            if (!toCreate.isEmpty()) {
-                attendanceRecordRepository.saveAll(toCreate);
-            }
-        }
-        log.info("Attendance seeding done.");
-    }
-
-    private AttendanceStatus sampleAttendanceStatus(Long enrollmentId, int dayIndex) {
-        long v = (enrollmentId + dayIndex) % 10;
-        if (v == 0) return AttendanceStatus.EXCUSED;
-        if (v <= 2) return AttendanceStatus.ABSENT;
-        if (v <= 5) return AttendanceStatus.LATE;
-        return AttendanceStatus.PRESENT;
-    }
-
-    private void seedCourseGradesIfEmpty(Long courseId) {
-        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
-        for (Enrollment e : enrollments) {
-            if (e.getProcessScore() != null || e.getExamScore() != null || e.getFinalScore() != null) continue;
-            double base = 6.5 + ((e.getId() % 7) * 0.4);
-            BigDecimal process = BigDecimal.valueOf(Math.min(10, Math.max(0, base))).setScale(2, java.math.RoundingMode.HALF_UP);
-            BigDecimal exam = BigDecimal.valueOf(Math.min(10, Math.max(0, base + 0.8))).setScale(2, java.math.RoundingMode.HALF_UP);
-            BigDecimal finalScore = process.multiply(BigDecimal.valueOf(40)).add(exam.multiply(BigDecimal.valueOf(60)))
-                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
-            e.setProcessScore(process);
-            e.setExamScore(exam);
-            e.setFinalScore(finalScore);
-            e.setScoreLocked(true);
-            e.setScoredAt(LocalDateTime.now());
-            enrollmentRepository.save(e);
-        }
-    }
-
-    /**
-     * TX của run() bị suspend bởi REQUIRES_NEW trong enrollmentService.enrollStudent().
-     * Exception chỉ rollback TX con → TX của run() tiếp tục bình thường.
-     */
-    private boolean enrollIfNotExists(Long courseId, Long studentProfileId) {
-        if (enrollmentRepository.existsByCourseIdAndStudentId(courseId, studentProfileId)) {
-            return false;
+    private void enrollIfNotExists(String sectionCode, Student student) {
+        Section section = sectionByCode(sectionCode);
+        if (enrollmentRepository.existsBySectionIdAndStudentId(section.getId(), student.getId())) {
+            log.debug("  [Enrollment] Đã tồn tại: {} - SV#{}", sectionCode, student.getStudentCode());
+            return;
         }
         EnrollmentCreateRequest req = new EnrollmentCreateRequest();
-        req.setCourseId(courseId);
-        req.setStudentId(studentProfileId);
+        req.setSectionId(section.getId());
+        req.setStudentId(student.getId());
         try {
             enrollmentService.enrollStudent(req);
-            return true;
+            log.debug("  [Enrollment] Đăng ký: {} - SV#{}", sectionCode, student.getStudentCode());
         } catch (Exception e) {
-            log.warn("Seed enrollment skipped: {}", e.getMessage());
-            return false;
+            log.warn("  [Enrollment] Lỗi đăng ký {} - SV#{}: {}", sectionCode, student.getStudentCode(), e.getMessage());
         }
+    }
+
+    // =========================================================================
+    //  12. GRADES (nhập điểm mẫu cho HK đã kết thúc + HK hiện tại)
+    // =========================================================================
+
+    private void seedEnrollmentGrades() {
+        log.info("[Seeder] Nhập điểm mẫu...");
+
+        // Nhập điểm cho JAVA001 HK2_2526 Nhóm 01
+        enterGrade("JAVA001_HK2_2526_01", "student@nws.com.vn",        8.5, 7.0);
+        enterGrade("JAVA001_HK2_2526_01", "tranthihinh@nws.com.vn",    7.0, 6.5);
+        enterGrade("JAVA001_HK2_2526_01", "lequoccuong@nws.com.vn",    9.0, 8.5);
+
+        // Điểm JAVA002 (K24 - đã có điểm quá trình)
+        enterGrade("JAVA002_HK2_2526_01", "caovanien@nws.com.vn",      8.0, 8.5);
+        enterGrade("JAVA002_HK2_2526_01", "maithikhanh@nws.com.vn",    7.5, 9.0);
+
+        // Điểm WEB001
+        enterGrade("WEB001_HK2_2526_01",  "student@nws.com.vn",        7.0, 7.5);
+        enterGrade("WEB001_HK2_2526_01",  "lequoccuong@nws.com.vn",    8.5, 8.0);
+
+        // Điểm DB001
+        enterGrade("DB001_HK2_2526_01",   "tranthihinh@nws.com.vn",    6.5, 7.0);
+        enterGrade("DB001_HK2_2526_01",   "phamngocidiem@nws.com.vn",  8.0, 7.5);
+
+        // Marketing
+        enterGrade("MKT001_HK2_2526_01",  "nguyenthiphuong@nws.com.vn", 8.0, 8.5);
+        enterGrade("MKT001_HK2_2526_01",  "buiducgiang@nws.com.vn",     7.5, 7.0);
+
+        // Kế toán
+        enterGrade("ACC001_HK2_2526_01",  "dothihuyen@nws.com.vn",      9.0, 8.0);
+    }
+
+    private void enterGrade(String sectionCode, String studentEmail, double processScore, double examScore) {
+        try {
+            Section section = sectionByCode(sectionCode);
+            Student student = studentByEmail(studentEmail);
+
+            List<Enrollment> enrollments = enrollmentRepository.findBySectionId(section.getId());
+            Enrollment enrollment = enrollments.stream()
+                    .filter(e -> e.getStudent().getId().equals(student.getId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (enrollment == null) {
+                log.debug("  [Grade] Không tìm thấy enrollment: {} - {}", sectionCode, studentEmail);
+                return;
+            }
+            if (enrollment.isScoreLocked()) {
+                log.debug("  [Grade] Điểm đã khóa: {} - {}", sectionCode, studentEmail);
+                return;
+            }
+
+            EnrollmentUpdateRequest req = new EnrollmentUpdateRequest();
+            req.setProcessScore(processScore);
+            req.setExamScore(examScore);
+            enrollmentService.updateEnrollment(enrollment.getId(), "admin@nws.com.vn", true, false, req);
+            log.debug("  [Grade] Nhập điểm: {} - {} (QT:{} | Thi:{})", sectionCode, studentEmail, processScore, examScore);
+        } catch (Exception e) {
+            log.warn("  [Grade] Lỗi nhập điểm {} - {}: {}", sectionCode, studentEmail, e.getMessage());
+        }
+    }
+
+    // =========================================================================
+    //  HELPERS
+    // =========================================================================
+
+    private User userByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("Không tìm thấy tài khoản: " + email));
     }
 }

@@ -7,9 +7,9 @@ import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.domain.model.Department;
 import vn.com.nws.cms.modules.academic.domain.model.Student;
 import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
-import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.AdminClassEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.DepartmentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentClassEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.DepartmentMapper;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.StudentMapper;
 import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.UserEntity;
@@ -25,7 +25,7 @@ public class StudentRepositoryImpl implements StudentRepository {
     private final StudentJpaRepository jpaRepository;
     private final JpaUserRepository jpaUserRepository;
     private final DepartmentJpaRepository departmentJpaRepository;
-    private final JpaAdminClassRepository adminClassJpaRepository;
+    private final JpaStudentClassRepository studentClassJpaRepository;
     private final StudentMapper studentMapper;
     private final DepartmentMapper departmentMapper;
 
@@ -63,11 +63,11 @@ public class StudentRepositoryImpl implements StudentRepository {
             entity.setDepartment(null);
         }
 
-        if (student.getAdminClass() != null && student.getAdminClass().getId() != null) {
-            AdminClassEntity adminClass = adminClassJpaRepository.findById(student.getAdminClass().getId()).orElse(null);
-            entity.setAdminClass(adminClass);
+        if (student.getStudentClass() != null && student.getStudentClass().getId() != null) {
+            StudentClassEntity studentClass = studentClassJpaRepository.findById(student.getStudentClass().getId()).orElse(null);
+            entity.setStudentClass(studentClass);
         } else {
-            entity.setAdminClass(null);
+            entity.setStudentClass(null);
         }
 
         StudentEntity saved = jpaRepository.save(entity);
@@ -101,7 +101,7 @@ public class StudentRepositoryImpl implements StudentRepository {
 
     @Override
     public List<Student> findByAdminClassId(Long adminClassId) {
-        return jpaRepository.findByAdminClassId(adminClassId).stream().map(this::mapToDomain).toList();
+        return jpaRepository.findByStudentClassId(adminClassId).stream().map(this::mapToDomain).toList();
     }
 
     @Override

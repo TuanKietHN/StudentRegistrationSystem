@@ -3,8 +3,6 @@ package vn.com.nws.cms.modules.academic.infrastructure.persistence.repository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
-import vn.com.nws.cms.common.exception.BusinessException;
-import vn.com.nws.cms.modules.academic.domain.enums.CohortLifecycleStatus;
 import vn.com.nws.cms.modules.academic.domain.model.Cohort;
 import vn.com.nws.cms.modules.academic.domain.repository.CohortRepository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.CohortEntity;
@@ -19,7 +17,6 @@ import java.util.stream.Collectors;
 public class CohortRepositoryImpl implements CohortRepository {
 
     private final JpaCohortRepository jpaRepository;
-    private final JpaTeacherRepository jpaTeacherRepository;
     private final CohortMapper mapper;
 
     @Override
@@ -27,15 +24,6 @@ public class CohortRepositoryImpl implements CohortRepository {
         CohortEntity entity = mapper.toEntity(cohort);
         if (cohort.getId() != null) {
             entity.setId(cohort.getId());
-        }
-        if (cohort.getTeacher() != null && cohort.getTeacher().getId() != null) {
-            Long teacherUserId = cohort.getTeacher().getId();
-            Long teacherProfileId = jpaTeacherRepository.findByUserId(teacherUserId)
-                    .map(t -> t.getId())
-                    .orElseThrow(() -> new BusinessException("Teacher profile not found"));
-            entity.setTeacherId(teacherProfileId);
-        } else {
-            entity.setTeacherId(null);
         }
         return mapper.toDomain(jpaRepository.save(entity));
     }
@@ -61,45 +49,24 @@ public class CohortRepositoryImpl implements CohortRepository {
     }
 
     @Override
-    public List<Cohort> search(String keyword, Long semesterId, Long classId, Long teacherId, Boolean active, CohortLifecycleStatus status, int page, int size) {
+    public List<Cohort> search(String keyword, Integer startYear, Integer endYear, Boolean active, int page, int size) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
-        if (normalizedKeyword == null && semesterId == null && classId == null && teacherId == null && active == null && status == null) {
+        if (normalizedKeyword == null && startYear == null && endYear == null && active == null) {
             return jpaRepository.findAll(PageRequest.of(page - 1, size)).getContent().stream()
                     .map(mapper::toDomain)
                     .collect(Collectors.toList());
         }
-        Long teacherProfileId = null;
-        if (teacherId != null) {
-            teacherProfileId = jpaTeacherRepository.findByUserId(teacherId).map(t -> t.getId()).orElse(null);
-            if (teacherProfileId == null) {
-                return List.of();
-            }
-        }
-        if (normalizedKeyword == null) {
-            return jpaRepository.search(null, semesterId, classId, teacherProfileId, active, status, PageRequest.of(page - 1, size))
-                    .getContent().stream()
-                    .map(mapper::toDomain)
-                    .collect(Collectors.toList());
-        }
-        return jpaRepository.search(normalizedKeyword, semesterId, classId, teacherProfileId, active, status, PageRequest.of(page - 1, size)).getContent().stream()
+        return jpaRepository.search(normalizedKeyword, startYear, endYear, active, PageRequest.of(page - 1, size)).getContent().stream()
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public long count(String keyword, Long semesterId, Long classId, Long teacherId, Boolean active, CohortLifecycleStatus status) {
+    public long count(String keyword, Integer startYear, Integer endYear, Boolean active) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
-        if (normalizedKeyword == null && semesterId == null && classId == null && teacherId == null && active == null && status == null) {
+        if (normalizedKeyword == null && startYear == null && endYear == null && active == null) {
             return jpaRepository.count();
         }
-        Long teacherProfileId = null;
-        if (teacherId != null) {
-            teacherProfileId = jpaTeacherRepository.findByUserId(teacherId).map(t -> t.getId()).orElse(null);
-            if (teacherProfileId == null) {
-                return 0;
-            }
-        }
-        return jpaRepository.count(normalizedKeyword, semesterId, classId, teacherProfileId, active, status);
+        return jpaRepository.count(normalizedKeyword, startYear, endYear, active);
     }
 }
-

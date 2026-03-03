@@ -152,7 +152,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { classService, type Class } from '@/api/services/class.service'
+import { subjectService, type Subject } from '@/api/services/subject.service'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -162,7 +162,7 @@ const authStore = useAuthStore()
 const uiStore = useUiStore()
 const isAdmin = computed(() => (authStore.currentUser?.role || '').split(',').includes('ADMIN'))
 
-const subjects = ref<Class[]>([])
+const subjects = ref<Subject[]>([])
 const loading = ref(false)
 const page = ref(1)
 const size = ref(10)
@@ -181,7 +181,7 @@ const deleteOpen = ref(false)
 const saving = ref(false)
 const deletingLoading = ref(false)
 const editingId = ref<number | null>(null)
-const deleting = ref<Class | null>(null)
+const deleting = ref<Subject | null>(null)
 const formRef = ref<any>(null)
 
 const form = ref({
@@ -211,7 +211,7 @@ const rules = {
 const fetchSubjects = async () => {
   loading.value = true
   try {
-    const res = await classService.getAll({
+    const res = await subjectService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
@@ -259,7 +259,7 @@ const openCreateDialog = () => {
   dialogOpen.value = true
 }
 
-const openEditDialog = (s: Class) => {
+const openEditDialog = (s: Subject) => {
   if (!isAdmin.value) return
   editingId.value = s.id
   form.value = {
@@ -291,10 +291,10 @@ const saveSubject = async () => {
       active: !!form.value.active
     }
     if (editingId.value) {
-      await classService.update(editingId.value, payload)
+      await subjectService.update(editingId.value, payload)
       uiStore.notify('Cập nhật môn học thành công', 'success')
     } else {
-      await classService.create(payload)
+      await subjectService.create(payload)
       uiStore.notify('Tạo môn học thành công', 'success')
     }
     dialogOpen.value = false
@@ -313,7 +313,7 @@ const saveSubject = async () => {
   }
 }
 
-const openDeleteDialog = (s: Class) => {
+const openDeleteDialog = (s: Subject) => {
   if (!isAdmin.value) return
   deleting.value = s
   deleteOpen.value = true
@@ -323,7 +323,7 @@ const confirmDelete = async () => {
   if (!deleting.value) return
   deletingLoading.value = true
   try {
-    await classService.delete(deleting.value.id)
+    await subjectService.delete(deleting.value.id)
     uiStore.notify('Xóa môn học thành công', 'success')
     deleteOpen.value = false
     fetchSubjects()

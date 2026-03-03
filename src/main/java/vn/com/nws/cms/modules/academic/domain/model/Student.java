@@ -16,7 +16,7 @@ public class Student extends AuditEntity {
     private User user;
     private String studentCode;
     private Department department;
-    private AdminClass adminClass;
+    private StudentClass studentClass;
     private String phone;
     private boolean active;
 }

@@ -25,10 +25,10 @@
         <tbody>
           <tr v-for="e in enrollments" :key="e.id">
             <td>{{ e.id }}</td>
-            <td>{{ e.cohort?.code || '-' }}</td>
-            <td>{{ e.cohort?.name || '-' }}</td>
-            <td>{{ e.cohort?.semester?.code || '-' }}</td>
-            <td>{{ formatTimeSlots(e.cohort?.timeSlots) }}</td>
+            <td>{{ e.section?.code || '-' }}</td>
+            <td>{{ e.section?.name || '-' }}</td>
+            <td>{{ e.section?.semester?.code || '-' }}</td>
+            <td>{{ formatTimeSlots(e.section?.timeSlots) }}</td>
             <td>
               <v-chip color="blue" variant="tonal" size="small">{{ e.status }}</v-chip>
             </td>
@@ -79,7 +79,7 @@ const isWindowOpen = (start?: string | null, end?: string | null) => {
 
 const canCancel = (e: Enrollment) => {
   if (e.status !== 'ENROLLED') return false
-  return isWindowOpen(e.cohort?.enrollmentStartDate, e.cohort?.enrollmentEndDate)
+  return isWindowOpen(e.section?.enrollmentStartDate, e.section?.enrollmentEndDate)
 }
 
 const formatTimeSlots = (slots?: Array<{ dayOfWeek: number; startTime: string; endTime: string }> | null) =>

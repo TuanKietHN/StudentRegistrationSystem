@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Enrollment extends AuditEntity {
     private Long id;
-    private Cohort cohort;
+    private Section section;
     private Student student;
     private EnrollmentStatus status;
     private Double grade;

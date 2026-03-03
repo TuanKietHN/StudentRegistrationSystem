@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
 
 @Entity
-@Table(name = "admin_classes")
+@Table(name = "student_classes")
 @Data
 @Builder
 @NoArgsConstructor
@@ -36,4 +36,3 @@ public class AdminClassEntity extends AuditEntity {
     @Column(nullable = false)
     private boolean active;
 }
-

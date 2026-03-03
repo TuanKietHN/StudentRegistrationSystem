@@ -23,7 +23,7 @@
     <v-list density="comfortable" nav>
       <v-list-subheader>Chức năng</v-list-subheader>
       <v-list-item title="Trang chủ" :to="{ name: 'StudentHome' }" prepend-icon="mdi-view-dashboard" />
-      <v-list-item title="Đăng ký lớp" :to="{ name: 'StudentCohortRegistration' }" prepend-icon="mdi-google-classroom" />
+      <v-list-item title="Đăng ký lớp" :to="{ name: 'StudentSectionRegistration' }" prepend-icon="mdi-google-classroom" />
       <v-list-item title="Lớp đã đăng ký" :to="{ name: 'StudentMyEnrollments' }" prepend-icon="mdi-clipboard-text" />
     </v-list>
   </v-navigation-drawer>

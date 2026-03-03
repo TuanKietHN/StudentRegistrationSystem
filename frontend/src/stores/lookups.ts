@@ -2,19 +2,19 @@ import { defineStore } from 'pinia'
 import { unwrapApiResponse, unwrapPageResponse } from '@/api/response'
 import { departmentService, type Department } from '@/api/services/department.service'
 import { semesterService, type Semester } from '@/api/services/semester.service'
-import { classService, type Class } from '@/api/services/class.service'
+import { subjectService, type Subject } from '@/api/services/subject.service'
 
 type Option = { title: string; value: number }
 
 interface LookupsState {
   semesterOptions: Option[]
-  classOptions: Option[]
+  subjectOptions: Option[]
   departmentOptions: Option[]
   activeSemesterId: number | null
   activeSemesterLabel: string
   loaded: {
     semesters: boolean
-    classes: boolean
+    subjects: boolean
     departments: boolean
     activeSemester: boolean
   }
@@ -23,13 +23,13 @@ interface LookupsState {
 export const useLookupsStore = defineStore('lookups', {
   state: (): LookupsState => ({
     semesterOptions: [],
-    classOptions: [],
+    subjectOptions: [],
     departmentOptions: [],
     activeSemesterId: null,
     activeSemesterLabel: '',
     loaded: {
       semesters: false,
-      classes: false,
+      subjects: false,
       departments: false,
       activeSemester: false
     }
@@ -46,15 +46,15 @@ export const useLookupsStore = defineStore('lookups', {
       this.loaded.semesters = true
     },
 
-    async loadClasses(force = false) {
-      if (this.loaded.classes && !force) return
-      const res = await classService.getAll({ page: 1, size: 500 })
-      const page = unwrapPageResponse<Class>(res)
-      this.classOptions = (page.data || []).map((s) => ({
+    async loadSubjects(force = false) {
+      if (this.loaded.subjects && !force) return
+      const res = await subjectService.getAll({ page: 1, size: 500 })
+      const page = unwrapPageResponse<Subject>(res)
+      this.subjectOptions = (page.data || []).map((s) => ({
         title: `${s.code} - ${s.name}`,
         value: s.id
       }))
-      this.loaded.classes = true
+      this.loaded.subjects = true
     },
 
     async loadDepartments(force = false) {
@@ -83,7 +83,7 @@ export const useLookupsStore = defineStore('lookups', {
     },
 
     async ensureAcademicLookups() {
-      await Promise.all([this.loadSemesters(), this.loadClasses(), this.loadActiveSemester()])
+      await Promise.all([this.loadSemesters(), this.loadSubjects(), this.loadActiveSemester()])
     }
   }
 })

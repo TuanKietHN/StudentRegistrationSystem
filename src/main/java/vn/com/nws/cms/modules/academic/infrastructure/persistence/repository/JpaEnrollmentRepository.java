@@ -10,16 +10,17 @@ import java.util.Optional;
 
 @Repository
 public interface JpaEnrollmentRepository extends JpaRepository<EnrollmentEntity, Long> {
-    boolean existsByCohortIdAndStudentId(Long cohortId, Long studentId);
+    boolean existsBySection_IdAndStudent_Id(Long sectionId, Long studentId);
 
     @Override
-    @EntityGraph(attributePaths = {"cohort", "cohort.semester", "cohort.clazz", "cohort.teacher", "cohort.teacher.user", "student", "student.user"})
+    @EntityGraph(attributePaths = {"section", "section.semester", "section.subject", "section.teacher", "section.teacher.user", "student", "student.user"})
     Optional<EnrollmentEntity> findById(Long id);
 
-    @EntityGraph(attributePaths = {"cohort", "cohort.semester", "cohort.clazz", "cohort.teacher", "cohort.teacher.user", "student", "student.user"})
-    List<EnrollmentEntity> findByCohortId(Long cohortId);
+    @EntityGraph(attributePaths = {"section", "section.semester", "section.subject", "section.teacher", "section.teacher.user", "student", "student.user"})
+    List<EnrollmentEntity> findBySection_Id(Long sectionId);
 
-    @EntityGraph(attributePaths = {"cohort", "cohort.semester", "cohort.clazz", "cohort.teacher", "cohort.teacher.user", "student", "student.user"})
+    @EntityGraph(attributePaths = {"section", "section.semester", "section.subject", "section.teacher", "section.teacher.user", "student", "student.user"})
     List<EnrollmentEntity> findByStudentId(Long studentId);
-    long countByCohortId(Long cohortId);
+
+    long countBySection_Id(Long sectionId);
 }

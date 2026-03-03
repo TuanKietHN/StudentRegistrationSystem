@@ -77,27 +77,27 @@ public class EnrollmentController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách học phần thành công", response));
     }
 
-    @GetMapping("/course/{courseId}")
+    @GetMapping("/sections/{sectionId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @Operation(summary = "Danh sách sinh viên trong lớp", description = "Lấy danh sách sinh viên đăng ký lớp học phần")
-    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getCourseEnrollments(Authentication authentication, @PathVariable Long courseId) {
+    public ResponseEntity<ApiResponse<List<EnrollmentResponse>>> getSectionEnrollments(Authentication authentication, @PathVariable Long sectionId) {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
-        List<EnrollmentResponse> response = enrollmentService.getCourseEnrollments(courseId, authentication.getName(), isAdmin, isTeacher);
+        List<EnrollmentResponse> response = enrollmentService.getSectionEnrollments(sectionId, authentication.getName(), isAdmin, isTeacher);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách sinh viên thành công", response));
     }
 
-    @PostMapping(value = "/course/{courseId}/grades/import", consumes = {"multipart/form-data"})
+    @PostMapping(value = "/sections/{sectionId}/grades/import", consumes = {"multipart/form-data"})
     @PreAuthorize("hasAnyRole('ADMIN', 'TEACHER')")
     @Operation(summary = "Import điểm từ Excel", description = "Import điểm (quá trình/thi) vào lớp học phần. Teacher chỉ được import 1 lần (điểm đã khóa sẽ bị bỏ qua).")
     public ResponseEntity<ApiResponse<GradesImportResultResponse>> importGrades(
             Authentication authentication,
-            @PathVariable Long courseId,
+            @PathVariable Long sectionId,
             @RequestPart("file") MultipartFile file
     ) {
         boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
-        GradesImportResultResponse response = enrollmentService.importCourseGrades(courseId, authentication.getName(), isAdmin, isTeacher, file);
+        GradesImportResultResponse response = enrollmentService.importSectionGrades(sectionId, authentication.getName(), isAdmin, isTeacher, file);
         return ResponseEntity.ok(ApiResponse.success("Import điểm thành công", response));
     }
 }

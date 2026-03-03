@@ -32,8 +32,8 @@ public class StudentEntity extends AuditEntity {
     private DepartmentEntity department;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_class_id")
-    private AdminClassEntity adminClass;
+    @JoinColumn(name = "student_class_id")
+    private StudentClassEntity studentClass;
 
     private String phone;
 

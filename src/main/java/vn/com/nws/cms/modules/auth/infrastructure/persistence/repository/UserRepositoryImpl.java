@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.domain.enums.RoleType;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
@@ -32,6 +33,7 @@ public class UserRepositoryImpl implements UserRepository {
     private final UserMapper userMapper;
 
     @Override
+    @Transactional
     public User save(User user) {
         UserEntity entity;
 
@@ -105,16 +107,19 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> findById(Long id) {
         return jpaUserRepository.findById(id).map(userMapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
         return jpaUserRepository.findByUsername(username).map(userMapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
         return jpaUserRepository.findByEmail(email).map(userMapper::toDomain);
     }

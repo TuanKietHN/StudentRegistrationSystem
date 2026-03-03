@@ -7,11 +7,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import vn.com.nws.cms.common.dto.ApiResponse;
 import vn.com.nws.cms.common.dto.PageResponse;
 import vn.com.nws.cms.modules.academic.api.dto.*;
 import vn.com.nws.cms.modules.academic.application.SectionService;
+import vn.com.nws.cms.modules.auth.domain.model.User;
+import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 
 import java.util.List;
 
@@ -22,6 +25,7 @@ import java.util.List;
 public class SectionController {
 
     private final SectionService sectionService;
+    private final UserRepository userRepository;
 
     @GetMapping
     @Operation(summary = "Danh sách lớp học phần", description = "Lấy danh sách lớp học phần có phân trang và lọc")
@@ -33,8 +37,22 @@ public class SectionController {
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication
     ) {
+        if (authentication != null && authentication.isAuthenticated()) {
+            boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
+            if (isTeacher && !isAdmin) {
+                User currentUser = userRepository.findByUsername(authentication.getName())
+                        .or(() -> userRepository.findByEmail(authentication.getName()))
+                        .orElse(null);
+                if (currentUser != null) {
+                    teacherId = currentUser.getId();
+                }
+            }
+        }
+
         SectionFilterRequest request = new SectionFilterRequest();
         request.setKeyword(keyword);
         request.setSemesterId(semesterId);
@@ -112,4 +130,3 @@ public class SectionController {
         return ResponseEntity.ok(ApiResponse.success("Cập nhật lịch học thành công", null));
     }
 }
-

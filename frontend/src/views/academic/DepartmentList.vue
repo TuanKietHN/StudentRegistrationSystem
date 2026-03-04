@@ -80,29 +80,35 @@
               <v-textarea v-model="form.description" label="Mô tả" rows="3" auto-grow />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field
-                  v-model.number="form.parentId"
-                  label="Parent ID (tuỳ chọn)"
-                  type="number"
-                  min="1"
+              <v-autocomplete
+                  v-model="form.parentId"
+                  :items="parentDepartmentOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Khoa cha (tuỳ chọn)"
+                  clearable
+                  no-data-text="Không có dữ liệu"
               />
             </v-col>
             <v-col cols="12" md="6">
-              <v-text-field
-                  v-model.number="form.headTeacherId"
-                  label="Head Teacher ID (tuỳ chọn)"
-                  type="number"
-                  min="1"
+              <v-autocomplete
+                  v-model="form.headTeacherId"
+                  :items="headTeacherOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="Trưởng khoa (tuỳ chọn)"
+                  clearable
+                  no-data-text="Không có dữ liệu"
               />
             </v-col>
             <v-col cols="12">
               <v-switch
-                v-model="form.active"
-                :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
-                inset
-                density="comfortable"
-                color="success"
-                hide-details
+                  v-model="form.active"
+                  :label="form.active ? 'Trạng thái: Hoạt động' : 'Trạng thái: Ngưng'"
+                  inset
+                  density="comfortable"
+                  color="success"
+                  hide-details
               />
             </v-col>
           </v-row>
@@ -129,6 +135,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { departmentService, type Department } from '@/api/services/department.service'
+import { teacherService, type Teacher } from '@/api/services/teacher.service'
+import { unwrapPageResponse } from '@/api/response'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -145,6 +153,13 @@ const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
 let searchTimeout: any = null
+
+type Option = { title: string; value: number }
+const allDepartmentOptions = ref<Option[]>([])
+const headTeacherOptions = ref<Option[]>([])
+const parentDepartmentOptions = computed(() =>
+    allDepartmentOptions.value.filter((o) => !editingId.value || o.value !== editingId.value)
+)
 
 const dialogOpen = ref(false)
 const deleteOpen = ref(false)
@@ -179,8 +194,34 @@ const fetchDepartments = async () => {
     const result = response.data.data
     departments.value = result.data
     totalPages.value = result.totalPages
+  } catch (err: any) {
+    departments.value = []
+    totalPages.value = 1
+    uiStore.notify(err?.response?.data?.message || 'Không lấy được danh sách khoa', 'error', 4000)
   } finally {
     loading.value = false
+  }
+}
+
+const fetchFormLookups = async () => {
+  try {
+    const [depRes, teaRes] = await Promise.all([
+      departmentService.getAll({ page: 1, size: 500 }),
+      teacherService.getAll({ page: 1, size: 500, active: true })
+    ])
+    const depPage = unwrapPageResponse<Department>(depRes as any)
+    allDepartmentOptions.value = (depPage.data || []).map((d) => ({
+      title: `${d.code} - ${d.name}`,
+      value: d.id
+    }))
+    const teaPage = unwrapPageResponse<Teacher>(teaRes as any)
+    headTeacherOptions.value = (teaPage.data || []).map((t) => ({
+      title: `${t.username}${t.email ? ` (${t.email})` : ''}`,
+      value: t.id
+    }))
+  } catch {
+    allDepartmentOptions.value = []
+    headTeacherOptions.value = []
   }
 }
 
@@ -293,7 +334,9 @@ const confirmDelete = async () => {
   }
 }
 
-onMounted(fetchDepartments)
+onMounted(async () => {
+  await Promise.all([fetchFormLookups(), fetchDepartments()])
+})
 </script>
 
 <style scoped>
@@ -359,3 +402,4 @@ onMounted(fetchDepartments)
   border-radius: 12px;
 }
 </style>
+

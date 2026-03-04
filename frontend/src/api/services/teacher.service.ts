@@ -5,6 +5,7 @@ export interface Teacher {
   userId: number;
   username: string;
   fullName?: string;
+  email?: string;
   employeeCode: string;
   departmentId?: number;
   departmentName?: string;

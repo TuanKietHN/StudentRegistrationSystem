@@ -13,17 +13,26 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="departmentId"
-            :items="departmentOptions"
-            item-title="title"
-            item-value="value"
-            label="Khoa"
-            clearable
-            @update:model-value="handleSearch"
+              v-model="departmentId"
+              :items="departmentOptions"
+              item-title="title"
+              item-value="value"
+              label="Khoa"
+              clearable
+              @update:model-value="handleSearch"
           />
         </v-col>
         <v-col cols="12" md="4">
-          <v-text-field v-model.number="intakeYear" type="number" label="Khóa (năm nhập học)" @update:model-value="handleSearch" />
+          <v-select
+              v-model="cohortId"
+              :items="cohortOptions"
+              item-title="title"
+              item-value="value"
+              label="Niên khóa"
+              clearable
+              no-data-text="Không có dữ liệu"
+              @update:model-value="handleSearch"
+          />
         </v-col>
       </v-row>
 
@@ -31,29 +40,33 @@
 
       <v-table>
         <thead>
-          <tr>
-            <th>Mã lớp</th>
-            <th>Tên lớp</th>
-            <th>Khoa</th>
-            <th>Khóa</th>
-            <th>Chương trình</th>
-            <th>Hành động</th>
-          </tr>
+        <tr>
+          <th>Mã lớp</th>
+          <th>Tên lớp</th>
+          <th>Khoa</th>
+          <th>Niên khóa</th>
+          <th>Khóa</th>
+          <th>Chương trình</th>
+          <th>Cố vấn</th>
+          <th>Hành động</th>
+        </tr>
         </thead>
         <tbody>
-          <tr v-for="c in adminClasses" :key="c.id">
-            <td>{{ c.code }}</td>
-            <td>{{ c.name }}</td>
-            <td>{{ c.departmentName || '-' }}</td>
-            <td>{{ c.intakeYear ?? '-' }}</td>
-            <td>{{ c.program || '-' }}</td>
-            <td>
-              <v-btn size="small" color="primary" variant="flat" @click="goStudents(c.id)">Danh sách sinh viên</v-btn>
-            </td>
-          </tr>
-          <tr v-if="adminClasses.length === 0">
-            <td colspan="6" class="text-center py-6">Không có dữ liệu</td>
-          </tr>
+        <tr v-for="c in adminClasses" :key="c.id">
+          <td>{{ c.code }}</td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.departmentName || '-' }}</td>
+          <td>{{ c.cohortName || '-' }}</td>
+          <td>{{ c.intakeYear ?? '-' }}</td>
+          <td>{{ c.program || '-' }}</td>
+          <td>{{ advisorTeacherLabel(c.advisorTeacherId) }}</td>
+          <td>
+            <v-btn size="small" color="primary" variant="flat" @click="goStudents(c.id)">Danh sách sinh viên</v-btn>
+          </td>
+        </tr>
+        <tr v-if="adminClasses.length === 0">
+          <td colspan="8" class="text-center py-6">Không có dữ liệu</td>
+        </tr>
         </tbody>
       </v-table>
 
@@ -70,39 +83,49 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { unwrapPageResponse } from '@/api/response'
-import { adminClassService, type AdminClass } from '@/api/services/adminClass.service'
+import { studentClassService, type StudentClass } from '@/api/services/studentClass.service'
 import { useLookupsStore } from '@/stores/lookups'
 import { useDebounceFn } from '@/composables/useDebounceFn'
+import { cohortService, type Cohort } from '@/api/services/cohort.service'
+import { teacherService, type Teacher } from '@/api/services/teacher.service'
+import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 const router = useRouter()
 const lookupsStore = useLookupsStore()
+const uiStore = useUiStore()
 
-const adminClasses = ref<AdminClass[]>([])
+const adminClasses = ref<StudentClass[]>([])
 const loading = ref(false)
 const page = ref(1)
 const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
 const departmentId = ref<number | null>(null)
-const intakeYear = ref<number | null>(null)
+const cohortId = ref<number | null>(null)
 
 const departmentOptions = computed(() => lookupsStore.departmentOptions)
+const cohortOptions = ref<{ title: string; value: number }[]>([])
+const teacherLabelById = ref(new Map<number, string>())
 
 const fetchAdminClasses = async () => {
   loading.value = true
   try {
-    const res = await adminClassService.getAll({
+    const res = await studentClassService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
       departmentId: departmentId.value || undefined,
-      intakeYear: intakeYear.value || undefined,
+      cohortId: cohortId.value || undefined,
       active: true
     })
-    const data = unwrapPageResponse<AdminClass>(res)
+    const data = unwrapPageResponse<StudentClass>(res)
     adminClasses.value = data.data || []
     totalPages.value = data.totalPages || 1
+  } catch (err: any) {
+    adminClasses.value = []
+    totalPages.value = 1
+    uiStore.notify(err?.response?.data?.message || 'Không lấy được danh sách lớp hành chính', 'error', 4000)
   } finally {
     loading.value = false
   }
@@ -129,9 +152,38 @@ const goStudents = (adminClassId: number) => {
   router.push({ name: 'TeacherAdminClassStudents', params: { adminClassId } })
 }
 
+const advisorTeacherLabel = (id?: number | null) => {
+  if (!id) return '-'
+  return teacherLabelById.value.get(id) || `#${id}`
+}
+
+const loadCohorts = async () => {
+  try {
+    const res = await cohortService.getAll({ page: 1, size: 500, active: true })
+    const page = unwrapPageResponse<Cohort>(res)
+    cohortOptions.value = (page.data || []).map((c) => ({
+      title: `${c.code} - ${c.name}`,
+      value: c.id
+    }))
+  } catch {
+    cohortOptions.value = []
+  }
+}
+
+const loadTeacherMap = async () => {
+  try {
+    const res = await teacherService.getAll({ page: 1, size: 500, active: true })
+    const page = unwrapPageResponse<Teacher>(res)
+    teacherLabelById.value = new Map((page.data || []).map((t) => [t.id, `${t.username}${t.email ? ` (${t.email})` : ''}`]))
+  } catch {
+    teacherLabelById.value = new Map()
+  }
+}
+
 onMounted(async () => {
-  await lookupsStore.loadDepartments()
+  try {
+    await Promise.all([lookupsStore.loadDepartments(), loadCohorts(), loadTeacherMap()])
+  } catch {}
   await reload()
 })
 </script>
-

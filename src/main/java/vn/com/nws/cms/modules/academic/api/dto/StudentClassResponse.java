@@ -16,10 +16,10 @@ public class StudentClassResponse {
     private Long cohortId;
     private String cohortCode;
     private String cohortName;
+    private Long advisorTeacherId;
     private Integer intakeYear;
     private String program;
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
-

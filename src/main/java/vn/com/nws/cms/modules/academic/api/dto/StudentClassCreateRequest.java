@@ -13,8 +13,8 @@ public class StudentClassCreateRequest {
 
     private Long departmentId;
     private Long cohortId;
+    private Long advisorTeacherId;
     private Integer intakeYear;
     private String program;
     private boolean active;
 }
-

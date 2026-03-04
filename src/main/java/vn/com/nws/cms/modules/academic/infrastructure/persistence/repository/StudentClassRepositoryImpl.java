@@ -6,10 +6,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.domain.model.StudentClass;
+import vn.com.nws.cms.modules.academic.domain.model.Teacher;
 import vn.com.nws.cms.modules.academic.domain.repository.StudentClassRepository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.CohortEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.DepartmentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentClassEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.TeacherEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.StudentClassMapper;
 
 import java.util.List;
@@ -23,6 +25,7 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     private final JpaStudentClassRepository jpaRepository;
     private final DepartmentJpaRepository departmentJpaRepository;
     private final JpaCohortRepository cohortJpaRepository;
+    private final JpaTeacherRepository teacherJpaRepository;
     private final StudentClassMapper mapper;
 
     @Override
@@ -60,17 +63,24 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
             entity.setCohort(null);
         }
 
-        return mapper.toDomain(jpaRepository.save(entity));
+        if (studentClass.getAdvisorTeacher() != null && studentClass.getAdvisorTeacher().getId() != null) {
+            TeacherEntity advisor = teacherJpaRepository.findById(studentClass.getAdvisorTeacher().getId()).orElse(null);
+            entity.setAdvisorTeacher(advisor);
+        } else {
+            entity.setAdvisorTeacher(null);
+        }
+
+        return mapToDomain(jpaRepository.save(entity));
     }
 
     @Override
     public Optional<StudentClass> findById(Long id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        return jpaRepository.findById(id).map(this::mapToDomain);
     }
 
     @Override
     public Optional<StudentClass> findByCode(String code) {
-        return jpaRepository.findByCode(code).map(mapper::toDomain);
+        return jpaRepository.findByCode(code).map(this::mapToDomain);
     }
 
     @Override
@@ -96,15 +106,22 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
 
         int start = (int) pageable.getOffset();
         if (start >= filtered.size()) {
-            return new PageImpl<StudentClassEntity>(List.of(), pageable, filtered.size()).map(mapper::toDomain);
+            return new PageImpl<>(List.<StudentClassEntity>of(), pageable, filtered.size()).map(this::mapToDomain);
         }
         int end = Math.min(start + pageable.getPageSize(), filtered.size());
-        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size()).map(mapper::toDomain);
+        return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size()).map(this::mapToDomain);
     }
 
     @Override
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }
-}
 
+    private StudentClass mapToDomain(StudentClassEntity entity) {
+        StudentClass domain = mapper.toDomain(entity);
+        if (entity.getAdvisorTeacher() != null) {
+            domain.setAdvisorTeacher(Teacher.builder().id(entity.getAdvisorTeacher().getId()).build());
+        }
+        return domain;
+    }
+}

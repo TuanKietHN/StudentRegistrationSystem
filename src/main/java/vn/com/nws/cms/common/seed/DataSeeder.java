@@ -285,34 +285,39 @@ public class DataSeeder implements CommandLineRunner {
         Department qtkd    = departmentByCode("QTKD");
         Department ketoan  = departmentByCode("KETOAN");
 
+        Teacher advisorCntt = teacherByEmail("phamthihoa@nws.com.vn");
+        Teacher advisorQtkd = teacherByEmail("doduchung@nws.com.vn");
+        Teacher advisorKetoan = teacherByEmail("vothilan@nws.com.vn");
+
         Cohort k22 = cohortByCode("COHORT_2022");
         Cohort k23 = cohortByCode("COHORT_2023");
         Cohort k24 = cohortByCode("COHORT_2024");
         Cohort k25 = cohortByCode("COHORT_2025");
 
         // CNTT
-        upsertStudentClass("CNTT-K22-01", "CNTT K22 - Lớp 01", cntt, k22, 2022, "Đại học chính quy");
-        upsertStudentClass("CNTT-K22-02", "CNTT K22 - Lớp 02", cntt, k22, 2022, "Đại học chính quy");
-        upsertStudentClass("CNTT-K23-01", "CNTT K23 - Lớp 01", cntt, k23, 2023, "Đại học chính quy");
-        upsertStudentClass("CNTT-K23-02", "CNTT K23 - Lớp 02", cntt, k23, 2023, "Đại học chính quy");
-        upsertStudentClass("CNTT-K24-01", "CNTT K24 - Lớp 01", cntt, k24, 2024, "Đại học chính quy");
-        upsertStudentClass("CNTT-K25-01", "CNTT K25 - Lớp 01", cntt, k25, 2025, "Đại học chính quy");
-        upsertStudentClass("CNTT-K25-02", "CNTT K25 - Lớp 02", cntt, k25, 2025, "Đại học chính quy");
+        upsertStudentClass("CNTT-K22-01", "CNTT K22 - Lớp 01", cntt, k22, advisorCntt, 2022, "Đại học chính quy");
+        upsertStudentClass("CNTT-K22-02", "CNTT K22 - Lớp 02", cntt, k22, advisorCntt, 2022, "Đại học chính quy");
+        upsertStudentClass("CNTT-K23-01", "CNTT K23 - Lớp 01", cntt, k23, advisorCntt, 2023, "Đại học chính quy");
+        upsertStudentClass("CNTT-K23-02", "CNTT K23 - Lớp 02", cntt, k23, advisorCntt, 2023, "Đại học chính quy");
+        upsertStudentClass("CNTT-K24-01", "CNTT K24 - Lớp 01", cntt, k24, advisorCntt, 2024, "Đại học chính quy");
+        upsertStudentClass("CNTT-K25-01", "CNTT K25 - Lớp 01", cntt, k25, advisorCntt, 2025, "Đại học chính quy");
+        upsertStudentClass("CNTT-K25-02", "CNTT K25 - Lớp 02", cntt, k25, advisorCntt, 2025, "Đại học chính quy");
 
         // QTKD
-        upsertStudentClass("QTKD-K24-01", "QTKD K24 - Lớp 01", qtkd, k24, 2024, "Đại học chính quy");
-        upsertStudentClass("QTKD-K25-01", "QTKD K25 - Lớp 01", qtkd, k25, 2025, "Đại học chính quy");
+        upsertStudentClass("QTKD-K24-01", "QTKD K24 - Lớp 01", qtkd, k24, advisorQtkd, 2024, "Đại học chính quy");
+        upsertStudentClass("QTKD-K25-01", "QTKD K25 - Lớp 01", qtkd, k25, advisorQtkd, 2025, "Đại học chính quy");
 
         // Kế toán
-        upsertStudentClass("KETOAN-K25-01", "Kế toán K25 - Lớp 01", ketoan, k25, 2025, "Đại học chính quy");
+        upsertStudentClass("KETOAN-K25-01", "Kế toán K25 - Lớp 01", ketoan, k25, advisorKetoan, 2025, "Đại học chính quy");
     }
 
     private void upsertStudentClass(String code, String name, Department department,
-                                    Cohort cohort, Integer intakeYear, String program) {
+                                    Cohort cohort, Teacher advisorTeacher, Integer intakeYear, String program) {
         studentClassRepository.findByCode(code).ifPresentOrElse(existing -> {
             existing.setName(name);
             existing.setDepartment(department);
             existing.setCohort(cohort);
+            existing.setAdvisorTeacher(advisorTeacher);
             existing.setIntakeYear(intakeYear);
             existing.setProgram(program);
             existing.setActive(true);
@@ -324,6 +329,7 @@ public class DataSeeder implements CommandLineRunner {
                     .name(name)
                     .department(department)
                     .cohort(cohort)
+                    .advisorTeacher(advisorTeacher)
                     .intakeYear(intakeYear)
                     .program(program)
                     .active(true)

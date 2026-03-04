@@ -8,8 +8,8 @@ public class StudentClassUpdateRequest {
     private String name;
     private Long departmentId;
     private Long cohortId;
+    private Long advisorTeacherId;
     private Integer intakeYear;
     private String program;
     private Boolean active;
 }
-

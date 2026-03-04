@@ -100,8 +100,8 @@ public class StudentRepositoryImpl implements StudentRepository {
     }
 
     @Override
-    public List<Student> findByAdminClassId(Long adminClassId) {
-        return jpaRepository.findByStudentClassId(adminClassId).stream().map(this::mapToDomain).toList();
+    public List<Student> findByStudentClassId(Long studentClassId) {
+        return jpaRepository.findByStudentClassId(studentClassId).stream().map(this::mapToDomain).toList();
     }
 
     @Override

@@ -7,10 +7,11 @@ import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.Student
 
 @Mapper(componentModel = "spring", uses = {DepartmentMapper.class, CohortMapper.class})
 public interface StudentClassMapper {
+    @Mapping(target = "advisorTeacher", ignore = true)
     StudentClass toDomain(StudentClassEntity entity);
 
     @Mapping(target = "department", ignore = true)
     @Mapping(target = "cohort", ignore = true)
+    @Mapping(target = "advisorTeacher", ignore = true)
     StudentClassEntity toEntity(StudentClass domain);
 }
-

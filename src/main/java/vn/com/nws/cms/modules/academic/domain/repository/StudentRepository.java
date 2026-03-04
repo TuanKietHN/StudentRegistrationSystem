@@ -16,6 +16,6 @@ public interface StudentRepository {
     boolean existsByStudentCodeAndIdNot(String studentCode, Long id);
 
     Page<Student> findAll(String keyword, Long departmentId, Boolean active, Pageable pageable);
-    List<Student> findByAdminClassId(Long adminClassId);
+    List<Student> findByStudentClassId(Long studentClassId);
     void deleteById(Long id);
 }

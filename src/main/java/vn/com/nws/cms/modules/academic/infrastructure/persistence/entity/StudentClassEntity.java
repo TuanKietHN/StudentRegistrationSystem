@@ -32,6 +32,10 @@ public class StudentClassEntity extends AuditEntity {
     @JoinColumn(name = "cohort_id")
     private CohortEntity cohort;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "advisor_teacher_id")
+    private TeacherEntity advisorTeacher;
+
     @Column(name = "intake_year")
     private Integer intakeYear;
 
@@ -40,4 +44,3 @@ public class StudentClassEntity extends AuditEntity {
     @Column(nullable = false)
     private boolean active;
 }
-

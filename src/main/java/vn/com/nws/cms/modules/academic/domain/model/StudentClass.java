@@ -16,8 +16,8 @@ public class StudentClass extends AuditEntity {
     private String name;
     private Department department;
     private Cohort cohort;
+    private Teacher advisorTeacher;
     private Integer intakeYear;
     private String program;
     private boolean active;
 }
-

@@ -1,4 +1,4 @@
-package vn.com.nws.cms.modules.academic.application;
+package vn.com.nws.cms.modules.academic.application.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +12,7 @@ import vn.com.nws.cms.modules.academic.api.dto.StudentClassFilterRequest;
 import vn.com.nws.cms.modules.academic.api.dto.StudentClassResponse;
 import vn.com.nws.cms.modules.academic.api.dto.StudentClassUpdateRequest;
 import vn.com.nws.cms.modules.academic.api.dto.StudentResponse;
+import vn.com.nws.cms.modules.academic.application.StudentClassService;
 import vn.com.nws.cms.modules.academic.domain.model.Cohort;
 import vn.com.nws.cms.modules.academic.domain.model.Department;
 import vn.com.nws.cms.modules.academic.domain.model.Student;

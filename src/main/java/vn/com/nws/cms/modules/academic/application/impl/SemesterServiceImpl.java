@@ -1,4 +1,4 @@
-package vn.com.nws.cms.modules.academic.application;
+package vn.com.nws.cms.modules.academic.application.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.dto.PageResponse;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.api.dto.*;
+import vn.com.nws.cms.modules.academic.application.SemesterService;
 import vn.com.nws.cms.modules.academic.domain.model.Semester;
 import vn.com.nws.cms.modules.academic.domain.repository.SemesterRepository;
 

@@ -96,6 +96,11 @@ cms-root/
         3.  Copy folder `dist` vào `src/main/resources/static`.
     *   Kết quả: 1 file JAR duy nhất chứa cả Backend và Frontend.
 
+### Seed dữ liệu dev
+*   `DataSeeder` chỉ được nạp khi chạy profile `dev` và `cms.seed.enabled=true` ([DataSeeder](file:///c:/Users/Admin/Downloads/Repo/cms/src/main/java/vn/com/nws/cms/common/seed/DataSeeder.java)).
+*   Trong repo hiện tại, `application-dev.properties` đặt `cms.seed.enabled=${CMS_SEED_ENABLED:true}` để mặc định bật seed ở dev và có thể tắt bằng env `CMS_SEED_ENABLED=false` (có thể khai báo trong `.env` do app đang `spring.config.import=optional:file:.env[.properties]`).
+*   Việc đổi `spring.jpa.hibernate.ddl-auto` (validate/update) chỉ ảnh hưởng đồng bộ schema, không quyết định việc seeder có chạy hay không.
+
 ## 4. Coding Conventions & Rules
 
 ### Null Safety

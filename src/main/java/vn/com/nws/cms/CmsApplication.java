@@ -20,6 +20,8 @@ public class CmsApplication {
     }
     @EventListener(ApplicationReadyEvent.class)
     public void checkProfile(ApplicationReadyEvent event) {
-        log.info(">>> Active profiles: {}", Arrays.toString(event.getApplicationContext().getEnvironment().getActiveProfiles()));
+        var env = event.getApplicationContext().getEnvironment();
+        log.info(">>> Active profiles: {}", Arrays.toString(env.getActiveProfiles()));
+        log.info(">>> cms.seed.enabled={}", env.getProperty("cms.seed.enabled"));
     }
 }

@@ -101,7 +101,7 @@ public class DataSeeder implements CommandLineRunner {
         upsertUser("le.minh.anh",       "admin@nws.com.vn",         "admin123",    Set.of(RoleType.ADMIN));
 
         // Giáo vụ (admin + teacher)
-        upsertUser("nguyen.quang.huy",   "giaovien@nws.com.vn",        "teacher123",  Set.of(RoleType.TEACHER));
+        upsertUser("nguyen.quang.huy",   "giaovu@nws.com.vn",        "teacher123",  Set.of(RoleType.TEACHER));
 
         // Giảng viên CNTT
         upsertUser("pham.thi.hoa",       "phamthihoa@nws.com.vn",    "Teacher@123",  Set.of(RoleType.TEACHER));

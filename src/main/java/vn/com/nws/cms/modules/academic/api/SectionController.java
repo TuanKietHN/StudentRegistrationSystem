@@ -28,6 +28,7 @@ public class SectionController {
     private final UserRepository userRepository;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('SECTION:READ')")
     @Operation(summary = "Danh sách lớp học phần", description = "Lấy danh sách lớp học phần có phân trang và lọc")
     public ResponseEntity<ApiResponse<PageResponse<SectionResponse>>> getSections(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -70,6 +71,7 @@ public class SectionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SECTION:READ')")
     @Operation(summary = "Chi tiết lớp học phần", description = "Lấy thông tin chi tiết lớp học phần")
     public ResponseEntity<ApiResponse<SectionResponse>> getSectionById(@PathVariable Long id) {
         SectionResponse response = sectionService.getSectionById(id);
@@ -77,7 +79,7 @@ public class SectionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SECTION:CREATE')")
     @Operation(summary = "Tạo lớp học phần", description = "Tạo lớp học phần (Admin)")
     public ResponseEntity<ApiResponse<SectionResponse>> createSection(@Valid @RequestBody SectionCreateRequest request) {
         SectionResponse response = sectionService.createSection(request);
@@ -85,7 +87,7 @@ public class SectionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SECTION:UPDATE')")
     @Operation(summary = "Cập nhật lớp học phần", description = "Cập nhật lớp học phần (Admin)")
     public ResponseEntity<ApiResponse<SectionResponse>> updateSection(@PathVariable Long id, @Valid @RequestBody SectionUpdateRequest request) {
         SectionResponse response = sectionService.updateSection(id, request);
@@ -93,7 +95,7 @@ public class SectionController {
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SECTION:UPDATE')")
     @Operation(summary = "Hủy lớp học phần", description = "Hủy lớp học phần (Admin)")
     public ResponseEntity<ApiResponse<SectionResponse>> cancelSection(@PathVariable Long id, @RequestBody(required = false) SectionCancelRequest request) {
         SectionResponse response = sectionService.cancelSection(id, request);
@@ -101,7 +103,7 @@ public class SectionController {
     }
 
     @PostMapping("/merge")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SECTION:UPDATE')")
     @Operation(summary = "Dồn lớp", description = "Dồn nhiều lớp học phần vào 1 lớp (Admin)")
     public ResponseEntity<ApiResponse<SectionResponse>> mergeSections(@Valid @RequestBody SectionMergeRequest request) {
         SectionResponse response = sectionService.mergeSections(request);
@@ -109,7 +111,7 @@ public class SectionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SECTION:DELETE')")
     @Operation(summary = "Xóa lớp học phần", description = "Xóa lớp học phần (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteSection(@PathVariable Long id) {
         sectionService.deleteSection(id);
@@ -117,13 +119,14 @@ public class SectionController {
     }
 
     @GetMapping("/{id}/time-slots")
+    @PreAuthorize("hasAuthority('SECTION:READ')")
     @Operation(summary = "Lịch học", description = "Lấy lịch học của lớp học phần")
     public ResponseEntity<ApiResponse<List<SectionTimeSlotResponse>>> getTimeSlots(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch học thành công", sectionService.getSectionTimeSlots(id)));
     }
 
     @PutMapping("/{id}/time-slots")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SECTION:UPDATE')")
     @Operation(summary = "Cập nhật lịch học", description = "Cập nhật lịch học của lớp học phần (Admin)")
     public ResponseEntity<ApiResponse<Void>> updateTimeSlots(@PathVariable Long id, @Valid @RequestBody List<SectionTimeSlotRequest> request) {
         sectionService.replaceSectionTimeSlots(id, request);

@@ -36,7 +36,7 @@ public class StudentClassController {
     private final StudentClassService studentClassService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:READ')")
     @Operation(summary = "Danh sách lớp hành chính", description = "Lấy danh sách lớp hành chính có phân trang và lọc")
     public ResponseEntity<ApiResponse<PageResponse<StudentClassResponse>>> getStudentClasses(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -58,7 +58,7 @@ public class StudentClassController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:READ')")
     @Operation(summary = "Chi tiết lớp hành chính", description = "Lấy thông tin chi tiết lớp hành chính")
     public ResponseEntity<ApiResponse<StudentClassResponse>> getStudentClassById(@PathVariable Long id) {
         StudentClassResponse response = studentClassService.getStudentClassById(id);
@@ -66,7 +66,7 @@ public class StudentClassController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:CREATE')")
     @Operation(summary = "Tạo lớp hành chính", description = "Tạo lớp hành chính (Admin)")
     public ResponseEntity<ApiResponse<StudentClassResponse>> createStudentClass(@Valid @RequestBody StudentClassCreateRequest request) {
         StudentClassResponse response = studentClassService.createStudentClass(request);
@@ -74,7 +74,7 @@ public class StudentClassController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:UPDATE')")
     @Operation(summary = "Cập nhật lớp hành chính", description = "Cập nhật lớp hành chính (Admin)")
     public ResponseEntity<ApiResponse<StudentClassResponse>> updateStudentClass(@PathVariable Long id, @Valid @RequestBody StudentClassUpdateRequest request) {
         StudentClassResponse response = studentClassService.updateStudentClass(id, request);
@@ -82,7 +82,7 @@ public class StudentClassController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:DELETE')")
     @Operation(summary = "Xóa lớp hành chính", description = "Xóa lớp hành chính (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteStudentClass(@PathVariable Long id) {
         studentClassService.deleteStudentClass(id);
@@ -90,10 +90,9 @@ public class StudentClassController {
     }
 
     @GetMapping("/{id}/students")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:READ')")
     @Operation(summary = "Danh sách sinh viên theo lớp hành chính", description = "Lấy danh sách sinh viên của lớp hành chính")
     public ResponseEntity<ApiResponse<List<StudentResponse>>> getStudentClassStudents(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách sinh viên thành công", studentClassService.getStudentClassStudents(id)));
     }
 }
-

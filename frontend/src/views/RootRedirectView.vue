@@ -5,30 +5,18 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const resolveTargetName = () => {
-  const token = localStorage.getItem('accessToken')
-  if (!token) return 'Login'
-
-  const activeRole = localStorage.getItem('activeRole')
-  if (activeRole === 'ADMIN') return 'AdminHome'
-  if (activeRole === 'TEACHER') return 'TeacherHome'
-  if (activeRole === 'STUDENT') return 'StudentHome'
-
-  const userRaw = localStorage.getItem('user')
-  const roleStr = userRaw ? (JSON.parse(userRaw)?.role as string) : ''
-  const roles = String(roleStr)
-    .split(',')
-    .map((r) => r.trim())
-    .filter(Boolean)
-    .map((r) => r.replace(/^ROLE_/, ''))
-
-  if (roles.includes('ADMIN')) return 'AdminHome'
-  if (roles.includes('STUDENT')) return 'StudentHome'
-  if (roles.includes('TEACHER')) return 'TeacherHome'
-  return 'Login'
+  if (!authStore.isLoggedIn) return 'Login'
+  if (authStore.activeRole) return authStore.defaultRouteNameForRole(authStore.activeRole)
+  if (authStore.roles.includes('ADMIN')) return 'AdminHome'
+  if (authStore.roles.includes('STUDENT')) return 'StudentHome'
+  if (authStore.roles.includes('TEACHER')) return 'TeacherHome'
+  return authStore.defaultRouteNameForRole(authStore.activeRole)
 }
 
 onMounted(() => {

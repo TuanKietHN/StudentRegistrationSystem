@@ -13,6 +13,16 @@ export function applyGuards(router: Router) {
       return { name: 'Login', query: { redirect: to.fullPath } }
     }
 
+    const requiredPermissions = to.meta.permissions
+    if (requiredPermissions?.length && !authStore.hasPermissions(requiredPermissions)) {
+      window.dispatchEvent(
+        new CustomEvent('api:notify', {
+          detail: { text: 'Không có quyền truy cập trang này', color: 'warning', timeout: 3000 }
+        })
+      )
+      return { name: authStore.defaultRouteNameForRole(authStore.activeRole) }
+    }
+
     const requiredRoles = to.meta.roles
     if (requiredRoles?.length && !authStore.hasAnyRole(requiredRoles)) {
       window.dispatchEvent(

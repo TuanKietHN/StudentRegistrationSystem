@@ -1,6 +1,12 @@
 package vn.com.nws.cms.modules.auth.infrastructure.persistence.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,12 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "permissions")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RoleEntity extends AuditEntity {
+public class PermissionEntity extends AuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,11 +31,15 @@ public class RoleEntity extends AuditEntity {
     @Column(unique = true, nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private String resource;
+
+    @Column(nullable = false)
+    private String action;
+
     private String description;
 
-    @OneToMany(mappedBy = "role")
-    private List<UserRoleEntity> userRoles = new ArrayList<>();
-
-    @OneToMany(mappedBy = "role")
+    @OneToMany(mappedBy = "permission")
     private List<RolePermissionEntity> rolePermissions = new ArrayList<>();
 }
+

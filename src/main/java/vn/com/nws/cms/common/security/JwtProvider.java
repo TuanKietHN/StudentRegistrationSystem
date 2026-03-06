@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -26,24 +25,20 @@ public class JwtProvider {
     private long jwtExpiration; // in milliseconds
 
     public String generateToken(Authentication authentication) {
-        UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
-        return generateToken(userPrincipal.getUsername(), userPrincipal);
+        String username = authentication.getName();
+        String scope = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(" "));
+        return generateToken(username, scope);
     }
     
     public String generateToken(String username) {
-        return generateToken(username, null);
+        return generateToken(username, "");
     }
     
-    private String generateToken(String username, UserDetails userDetails) {
+    private String generateToken(String username, String scope) {
         Instant now = Instant.now();
         Instant validity = now.plusMillis(jwtExpiration);
-
-        String scope = "";
-        if (userDetails != null) {
-            scope = userDetails.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .collect(Collectors.joining(" "));
-        }
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(username)

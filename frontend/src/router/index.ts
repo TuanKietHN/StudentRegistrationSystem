@@ -67,15 +67,15 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['ADMIN'], activeRoleRequired: 'ADMIN' },
       children: [
         { path: '', name: 'AdminHome', component: HomeView },
-        { path: 'departments', name: 'AdminDepartments', component: DepartmentList },
-        { path: 'teachers', name: 'AdminTeachers', component: TeacherList },
-        { path: 'semesters', name: 'AdminSemesters', component: SemesterList },
-        { path: 'subjects', name: 'AdminSubjects', component: SubjectList },
-        { path: 'sections', name: 'AdminSections', component: CourseList },
-        { path: 'sections/:sectionId/enrollments', name: 'AdminSectionEnrollments', component: AdminCourseEnrollmentsView },
-        { path: 'admin-classes', name: 'AdminAdminClasses', component: AdminAdminClassesView },
-        { path: 'admin-classes/:adminClassId/students', name: 'AdminAdminClassStudents', component: AdminAdminClassStudentsView },
-        { path: 'users', name: 'AdminUsers', component: UserList }
+        { path: 'departments', name: 'AdminDepartments', component: DepartmentList, meta: { permissions: ['DEPARTMENT:READ'] } },
+        { path: 'teachers', name: 'AdminTeachers', component: TeacherList, meta: { permissions: ['TEACHER:READ'] } },
+        { path: 'semesters', name: 'AdminSemesters', component: SemesterList, meta: { permissions: ['SEMESTER:READ'] } },
+        { path: 'subjects', name: 'AdminSubjects', component: SubjectList, meta: { permissions: ['SUBJECT:READ'] } },
+        { path: 'sections', name: 'AdminSections', component: CourseList, meta: { permissions: ['SECTION:READ', 'SEMESTER:READ', 'SUBJECT:READ', 'TEACHER:READ'] } },
+        { path: 'sections/:sectionId/enrollments', name: 'AdminSectionEnrollments', component: AdminCourseEnrollmentsView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ'] } },
+        { path: 'admin-classes', name: 'AdminAdminClasses', component: AdminAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'admin-classes/:adminClassId/students', name: 'AdminAdminClassStudents', component: AdminAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'users', name: 'AdminUsers', component: UserList, meta: { permissions: ['USER:READ'] } }
       ]
     },
     {
@@ -84,10 +84,10 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['TEACHER'], activeRoleRequired: 'TEACHER' },
       children: [
         { path: '', name: 'TeacherHome', component: TeacherHomeView },
-        { path: 'sections', name: 'TeacherSections', component: TeacherCoursesView },
-        { path: 'sections/:sectionId/enrollments', name: 'TeacherSectionEnrollments', component: TeacherCourseEnrollmentsView },
-        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView },
-        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView }
+        { path: 'sections', name: 'TeacherSections', component: TeacherCoursesView, meta: { permissions: ['SECTION:READ', 'SEMESTER:READ', 'SUBJECT:READ'] } },
+        { path: 'sections/:sectionId/enrollments', name: 'TeacherSectionEnrollments', component: TeacherCourseEnrollmentsView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ', 'ENROLLMENT:UPDATE'] } },
+        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } }
       ]
     },
     {
@@ -96,8 +96,8 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['STUDENT'], activeRoleRequired: 'STUDENT' },
       children: [
         { path: '', name: 'StudentHome', component: StudentHomeView },
-        { path: 'sections', name: 'StudentSectionRegistration', component: StudentCourseRegistrationView },
-        { path: 'enrollments', name: 'StudentMyEnrollments', component: StudentMyEnrollmentsView }
+        { path: 'sections', name: 'StudentSectionRegistration', component: StudentCourseRegistrationView, meta: { permissions: ['SEMESTER:READ', 'SUBJECT:READ', 'SECTION:READ', 'ENROLLMENT:READ', 'ENROLLMENT:CREATE'] } },
+        { path: 'enrollments', name: 'StudentMyEnrollments', component: StudentMyEnrollmentsView, meta: { permissions: ['ENROLLMENT:READ', 'ENROLLMENT:DELETE'] } }
       ]
     },
     { path: '/users', redirect: { name: 'AdminUsers' } },

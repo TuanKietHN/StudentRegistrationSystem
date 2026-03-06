@@ -22,6 +22,7 @@ public class SubjectController {
     private final SubjectService subjectService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('SUBJECT:READ')")
     @Operation(summary = "Danh sách môn học", description = "Lấy danh sách môn học có phân trang và tìm kiếm")
     public ResponseEntity<ApiResponse<PageResponse<SubjectResponse>>> getSubjects(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -40,6 +41,7 @@ public class SubjectController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SUBJECT:READ')")
     @Operation(summary = "Chi tiết môn học", description = "Lấy thông tin chi tiết của một môn học")
     public ResponseEntity<ApiResponse<SubjectResponse>> getSubjectById(@PathVariable Long id) {
         SubjectResponse response = subjectService.getSubjectById(id);
@@ -47,7 +49,7 @@ public class SubjectController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SUBJECT:CREATE')")
     @Operation(summary = "Tạo môn học mới", description = "Tạo mới một môn học (Admin)")
     public ResponseEntity<ApiResponse<SubjectResponse>> createSubject(@Valid @RequestBody SubjectCreateRequest request) {
         SubjectResponse response = subjectService.createSubject(request);
@@ -55,7 +57,7 @@ public class SubjectController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SUBJECT:UPDATE')")
     @Operation(summary = "Cập nhật môn học", description = "Cập nhật thông tin môn học (Admin)")
     public ResponseEntity<ApiResponse<SubjectResponse>> updateSubject(
             @PathVariable Long id,
@@ -66,11 +68,10 @@ public class SubjectController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SUBJECT:DELETE')")
     @Operation(summary = "Xóa môn học", description = "Xóa môn học (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteSubject(@PathVariable Long id) {
         subjectService.deleteSubject(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa môn học thành công", null));
     }
 }
-

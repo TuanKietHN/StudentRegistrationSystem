@@ -19,10 +19,19 @@ import vn.com.nws.cms.modules.academic.domain.repository.*;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.PermissionEntity;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.RoleEntity;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.RolePermissionEntity;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.RolePermissionId;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaPermissionRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaRolePermissionRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaRoleRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -48,6 +57,9 @@ public class DataSeeder implements CommandLineRunner {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final JpaRoleRepository jpaRoleRepository;
+    private final JpaPermissionRepository jpaPermissionRepository;
+    private final JpaRolePermissionRepository jpaRolePermissionRepository;
 
     private final DepartmentRepository departmentRepository;
     private final TeacherRepository teacherRepository;
@@ -74,6 +86,7 @@ public class DataSeeder implements CommandLineRunner {
         log.info("========== [DataSeeder] Bắt đầu khởi tạo dữ liệu mẫu ==========");
 
         TransactionTemplate tx = new TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(s -> seedRbac());
         tx.executeWithoutResult(s -> seedUsers());
         tx.executeWithoutResult(s -> seedDepartments());
         tx.executeWithoutResult(s -> seedTeacherProfiles());
@@ -91,6 +104,146 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     // =========================================================================
+    //  0. RBAC
+    // =========================================================================
+
+    private record PermissionSeed(String name, String resource, String action, String description) {
+    }
+
+    private void seedRbac() {
+        log.info("[Seeder] Khởi tạo RBAC (roles/permissions/role_permissions)...");
+
+        Map<String, RoleEntity> roles = new HashMap<>();
+        for (RoleType roleType : RoleType.values()) {
+            String roleName = roleType.authority();
+            RoleEntity role = jpaRoleRepository.findByName(roleName)
+                    .orElseGet(() -> jpaRoleRepository.save(RoleEntity.builder()
+                            .name(roleName)
+                            .description(roleName)
+                            .build()));
+            roles.put(roleName, role);
+        }
+
+        List<PermissionSeed> permissionSeeds = List.of(
+                new PermissionSeed("USER:CREATE", "USER", "CREATE", "Create user"),
+                new PermissionSeed("USER:READ", "USER", "READ", "Read user"),
+                new PermissionSeed("USER:UPDATE", "USER", "UPDATE", "Update user"),
+                new PermissionSeed("USER:DELETE", "USER", "DELETE", "Delete user"),
+
+                new PermissionSeed("DEPARTMENT:CREATE", "DEPARTMENT", "CREATE", "Create department"),
+                new PermissionSeed("DEPARTMENT:READ", "DEPARTMENT", "READ", "Read department"),
+                new PermissionSeed("DEPARTMENT:UPDATE", "DEPARTMENT", "UPDATE", "Update department"),
+                new PermissionSeed("DEPARTMENT:DELETE", "DEPARTMENT", "DELETE", "Delete department"),
+
+                new PermissionSeed("SUBJECT:CREATE", "SUBJECT", "CREATE", "Create subject"),
+                new PermissionSeed("SUBJECT:READ", "SUBJECT", "READ", "Read subject"),
+                new PermissionSeed("SUBJECT:UPDATE", "SUBJECT", "UPDATE", "Update subject"),
+                new PermissionSeed("SUBJECT:DELETE", "SUBJECT", "DELETE", "Delete subject"),
+
+                new PermissionSeed("SEMESTER:CREATE", "SEMESTER", "CREATE", "Create semester"),
+                new PermissionSeed("SEMESTER:READ", "SEMESTER", "READ", "Read semester"),
+                new PermissionSeed("SEMESTER:UPDATE", "SEMESTER", "UPDATE", "Update semester"),
+                new PermissionSeed("SEMESTER:DELETE", "SEMESTER", "DELETE", "Delete semester"),
+
+                new PermissionSeed("COHORT:CREATE", "COHORT", "CREATE", "Create cohort"),
+                new PermissionSeed("COHORT:READ", "COHORT", "READ", "Read cohort"),
+                new PermissionSeed("COHORT:UPDATE", "COHORT", "UPDATE", "Update cohort"),
+                new PermissionSeed("COHORT:DELETE", "COHORT", "DELETE", "Delete cohort"),
+
+                new PermissionSeed("SECTION:CREATE", "SECTION", "CREATE", "Create section"),
+                new PermissionSeed("SECTION:READ", "SECTION", "READ", "Read section"),
+                new PermissionSeed("SECTION:UPDATE", "SECTION", "UPDATE", "Update section"),
+                new PermissionSeed("SECTION:DELETE", "SECTION", "DELETE", "Delete section"),
+
+                new PermissionSeed("TEACHER:CREATE", "TEACHER", "CREATE", "Create teacher"),
+                new PermissionSeed("TEACHER:READ", "TEACHER", "READ", "Read teacher"),
+                new PermissionSeed("TEACHER:UPDATE", "TEACHER", "UPDATE", "Update teacher"),
+                new PermissionSeed("TEACHER:DELETE", "TEACHER", "DELETE", "Delete teacher"),
+
+                new PermissionSeed("STUDENT:CREATE", "STUDENT", "CREATE", "Create student"),
+                new PermissionSeed("STUDENT:READ", "STUDENT", "READ", "Read student"),
+                new PermissionSeed("STUDENT:UPDATE", "STUDENT", "UPDATE", "Update student"),
+                new PermissionSeed("STUDENT:DELETE", "STUDENT", "DELETE", "Delete student"),
+
+                new PermissionSeed("STUDENT_CLASS:CREATE", "STUDENT_CLASS", "CREATE", "Create student class"),
+                new PermissionSeed("STUDENT_CLASS:READ", "STUDENT_CLASS", "READ", "Read student class"),
+                new PermissionSeed("STUDENT_CLASS:UPDATE", "STUDENT_CLASS", "UPDATE", "Update student class"),
+                new PermissionSeed("STUDENT_CLASS:DELETE", "STUDENT_CLASS", "DELETE", "Delete student class"),
+
+                new PermissionSeed("ENROLLMENT:CREATE", "ENROLLMENT", "CREATE", "Create enrollment"),
+                new PermissionSeed("ENROLLMENT:READ", "ENROLLMENT", "READ", "Read enrollment"),
+                new PermissionSeed("ENROLLMENT:UPDATE", "ENROLLMENT", "UPDATE", "Update enrollment"),
+                new PermissionSeed("ENROLLMENT:DELETE", "ENROLLMENT", "DELETE", "Delete enrollment")
+        );
+
+        Map<String, PermissionEntity> permissionsByName = new HashMap<>();
+        for (PermissionSeed seed : permissionSeeds) {
+            PermissionEntity permission = jpaPermissionRepository.findByName(seed.name())
+                    .map(existing -> {
+                        existing.setResource(seed.resource());
+                        existing.setAction(seed.action());
+                        existing.setDescription(seed.description());
+                        return existing;
+                    })
+                    .orElseGet(() -> PermissionEntity.builder()
+                            .name(seed.name())
+                            .resource(seed.resource())
+                            .action(seed.action())
+                            .description(seed.description())
+                            .build());
+            permission = jpaPermissionRepository.save(permission);
+            permissionsByName.put(permission.getName(), permission);
+        }
+
+        List<String> allPermissionNames = permissionSeeds.stream().map(PermissionSeed::name).toList();
+
+        Map<String, List<String>> roleToPermissions = Map.of(
+                RoleType.ADMIN.authority(), allPermissionNames,
+                RoleType.TEACHER.authority(), List.of(
+                        "DEPARTMENT:READ",
+                        "SUBJECT:READ",
+                        "SEMESTER:READ",
+                        "COHORT:READ",
+                        "SECTION:READ",
+                        "STUDENT_CLASS:READ",
+                        "TEACHER:READ",
+                        "ENROLLMENT:READ",
+                        "ENROLLMENT:UPDATE"
+                ),
+                RoleType.STUDENT.authority(), List.of(
+                        "SUBJECT:READ",
+                        "SEMESTER:READ",
+                        "SECTION:READ",
+                        "ENROLLMENT:READ",
+                        "ENROLLMENT:CREATE",
+                        "ENROLLMENT:DELETE"
+                )
+        );
+
+        for (Map.Entry<String, List<String>> entry : roleToPermissions.entrySet()) {
+            RoleEntity role = roles.get(entry.getKey());
+            if (role == null) {
+                continue;
+            }
+            for (String permissionName : entry.getValue()) {
+                PermissionEntity permission = permissionsByName.get(permissionName);
+                if (permission == null) {
+                    continue;
+                }
+                RolePermissionId id = new RolePermissionId(role.getId(), permission.getId());
+                if (jpaRolePermissionRepository.existsById(id)) {
+                    continue;
+                }
+                jpaRolePermissionRepository.save(RolePermissionEntity.builder()
+                        .id(id)
+                        .role(role)
+                        .permission(permission)
+                        .build());
+            }
+        }
+    }
+
+    // =========================================================================
     //  1. USERS
     // =========================================================================
 
@@ -98,10 +251,10 @@ public class DataSeeder implements CommandLineRunner {
         log.info("[Seeder] Tạo tài khoản người dùng...");
 
         // Quản trị viên
-        upsertUser("le.minh.anh",       "admin@nws.com.vn",         "admin123",    Set.of(RoleType.ADMIN));
+        upsertUser("le.minh.anh",       "admin@nws.com.vn",         "Admin@123",    Set.of(RoleType.ADMIN));
 
         // Giáo vụ (admin + teacher)
-        upsertUser("nguyen.quang.huy",   "giaovu@nws.com.vn",        "teacher123",  Set.of(RoleType.TEACHER));
+        upsertUser("nguyen.quang.huy",   "giaovu@nws.com.vn",        "Teacher@123",  Set.of(RoleType.ADMIN, RoleType.TEACHER));
 
         // Giảng viên CNTT
         upsertUser("pham.thi.hoa",       "phamthihoa@nws.com.vn",    "Teacher@123",  Set.of(RoleType.TEACHER));

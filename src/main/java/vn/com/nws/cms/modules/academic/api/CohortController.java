@@ -24,6 +24,7 @@ public class CohortController {
     private final CohortService cohortService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('COHORT:READ')")
     @Operation(summary = "Danh sách niên khóa", description = "Lấy danh sách niên khóa có phân trang và lọc")
     public ResponseEntity<ApiResponse<PageResponse<CohortResponse>>> getCohorts(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -46,6 +47,7 @@ public class CohortController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('COHORT:READ')")
     @Operation(summary = "Chi tiết niên khóa", description = "Lấy thông tin chi tiết niên khóa")
     public ResponseEntity<ApiResponse<CohortResponse>> getCohortById(@PathVariable Long id) {
         CohortResponse response = cohortService.getCohortById(id);
@@ -53,7 +55,7 @@ public class CohortController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('COHORT:CREATE')")
     @Operation(summary = "Tạo niên khóa", description = "Tạo niên khóa (Admin)")
     public ResponseEntity<ApiResponse<CohortResponse>> createCohort(@Valid @RequestBody CohortCreateRequest request) {
         CohortResponse response = cohortService.createCohort(request);
@@ -61,7 +63,7 @@ public class CohortController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('COHORT:UPDATE')")
     @Operation(summary = "Cập nhật niên khóa", description = "Cập nhật niên khóa (Admin)")
     public ResponseEntity<ApiResponse<CohortResponse>> updateCohort(@PathVariable Long id, @Valid @RequestBody CohortUpdateRequest request) {
         CohortResponse response = cohortService.updateCohort(id, request);
@@ -69,7 +71,7 @@ public class CohortController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('COHORT:DELETE')")
     @Operation(summary = "Xóa niên khóa", description = "Xóa niên khóa (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteCohort(@PathVariable Long id) {
         cohortService.deleteCohort(id);

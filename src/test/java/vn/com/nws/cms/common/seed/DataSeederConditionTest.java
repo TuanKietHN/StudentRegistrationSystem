@@ -10,6 +10,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
 import vn.com.nws.cms.modules.academic.domain.repository.*;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaPermissionRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaRolePermissionRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaRoleRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -61,6 +64,21 @@ class DataSeederConditionTest {
         @Bean
         UserRepository userRepository() {
             return mock(UserRepository.class);
+        }
+
+        @Bean
+        JpaRoleRepository jpaRoleRepository() {
+            return mock(JpaRoleRepository.class);
+        }
+
+        @Bean
+        JpaPermissionRepository jpaPermissionRepository() {
+            return mock(JpaPermissionRepository.class);
+        }
+
+        @Bean
+        JpaRolePermissionRepository jpaRolePermissionRepository() {
+            return mock(JpaRolePermissionRepository.class);
         }
 
         @Bean

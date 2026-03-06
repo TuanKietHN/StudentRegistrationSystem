@@ -138,3 +138,9 @@ cms-root/
 
 ### Giai đoạn 4: E-learning Features
 N/A (ngoài phạm vi dự án hiện tại).
+
+## 6. RBAC (Phân quyền) — Hiện trạng & kế hoạch chuyển đổi
+
+- Hiện trạng phân quyền đang dựa nhiều vào `@PreAuthorize(hasRole...)` (hardcode policy trong code) trong khi database đã có đầy đủ bảng RBAC (`roles`, `permissions`, `role_permissions`, `user_roles`) nhưng chưa được tận dụng để enforce theo permission.
+- Đã triển khai bước đầu: đưa permission (từ DB) vào JWT `scope` khi login/refresh để sẵn sàng chuyển dần sang `hasAuthority('X:Y')`.
+- Tài liệu tổng hợp chức năng theo role + lộ trình chuyển sang phân quyền động theo permission: [RBAC_CURRENT_FEATURES_AND_PLAN.md](file:///c:/Users/Admin/Downloads/Repo/cms/docs/RBAC_CURRENT_FEATURES_AND_PLAN.md).

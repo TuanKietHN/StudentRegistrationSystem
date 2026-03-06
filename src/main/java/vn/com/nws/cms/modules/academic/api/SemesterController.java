@@ -22,6 +22,7 @@ public class SemesterController {
     private final SemesterService semesterService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('SEMESTER:READ')")
     @Operation(summary = "Danh sách học kỳ", description = "Lấy danh sách học kỳ có phân trang và tìm kiếm")
     public ResponseEntity<ApiResponse<PageResponse<SemesterResponse>>> getSemesters(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -40,6 +41,7 @@ public class SemesterController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SEMESTER:READ')")
     @Operation(summary = "Chi tiết học kỳ", description = "Lấy thông tin chi tiết của một học kỳ")
     public ResponseEntity<ApiResponse<SemesterResponse>> getSemesterById(@PathVariable Long id) {
         SemesterResponse response = semesterService.getSemesterById(id);
@@ -47,6 +49,7 @@ public class SemesterController {
     }
 
     @GetMapping("/active")
+    @PreAuthorize("hasAuthority('SEMESTER:READ')")
     @Operation(summary = "Học kỳ hiện tại", description = "Lấy thông tin học kỳ đang hoạt động")
     public ResponseEntity<ApiResponse<SemesterResponse>> getActiveSemester() {
         SemesterResponse response = semesterService.getActiveSemester();
@@ -54,6 +57,7 @@ public class SemesterController {
     }
 
     @GetMapping("/active-secondary")
+    @PreAuthorize("hasAuthority('SEMESTER:READ')")
     @Operation(summary = "Học kỳ phụ hiện tại", description = "Lấy thông tin học kỳ phụ/song song đang hoạt động")
     public ResponseEntity<ApiResponse<SemesterResponse>> getSecondaryActiveSemester() {
         SemesterResponse response = semesterService.getSecondaryActiveSemester();
@@ -61,7 +65,7 @@ public class SemesterController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SEMESTER:CREATE')")
     @Operation(summary = "Tạo học kỳ mới", description = "Tạo mới một học kỳ (Admin)")
     public ResponseEntity<ApiResponse<SemesterResponse>> createSemester(@Valid @RequestBody SemesterCreateRequest request) {
         SemesterResponse response = semesterService.createSemester(request);
@@ -69,7 +73,7 @@ public class SemesterController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SEMESTER:UPDATE')")
     @Operation(summary = "Cập nhật học kỳ", description = "Cập nhật thông tin học kỳ (Admin)")
     public ResponseEntity<ApiResponse<SemesterResponse>> updateSemester(
             @PathVariable Long id,
@@ -79,7 +83,7 @@ public class SemesterController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SEMESTER:DELETE')")
     @Operation(summary = "Xóa học kỳ", description = "Xóa học kỳ (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteSemester(@PathVariable Long id) {
         semesterService.deleteSemester(id);

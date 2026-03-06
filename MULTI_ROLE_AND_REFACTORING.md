@@ -36,7 +36,7 @@ Class `AuthService` cũ đã được tách thành 3 service nhỏ hơn để tu
 
 ### 2.3. Cập Nhật Domain & Entity
 - **User (Domain)**: Chuyển field `role` (String) thành `roles` (`Set<RoleType>`).
-- **UserEntity (Infrastructure)**: Sử dụng `@ElementCollection` để map `Set<RoleType>` xuống DB.
+- **Persistence (Infrastructure)**: Map role qua bảng `roles` + bảng nối `user_roles` (entity `RoleEntity`, `UserRoleEntity`) thay vì lưu trực tiếp trong cột của `users`.
 
 ## 3. Hướng Dẫn Naming Convention (User vs IAM)
 

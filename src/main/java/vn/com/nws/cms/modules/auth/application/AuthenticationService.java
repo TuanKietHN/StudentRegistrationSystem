@@ -16,9 +16,13 @@ import vn.com.nws.cms.common.security.JwtProvider;
 import vn.com.nws.cms.modules.auth.api.dto.LoginRequest;
 import vn.com.nws.cms.modules.auth.api.dto.TokenResponse;
 import vn.com.nws.cms.modules.auth.domain.model.User;
+import vn.com.nws.cms.modules.auth.domain.repository.PermissionRepository;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +32,7 @@ public class AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final PermissionRepository permissionRepository;
     private final JwtProvider jwtProvider;
     private final AuthSessionService authSessionService;
     private final AuthRateLimitService authRateLimitService;
@@ -65,12 +70,13 @@ public class AuthenticationService {
             throw new BusinessException("Sai thông tin đăng nhập");
         }
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtProvider.generateToken(authentication);
-
         String principalUsername = authentication.getName();
         User user = userRepository.findByUsername(principalUsername)
                 .orElseThrow(() -> new BusinessException("User not found"));
+
+        Authentication authWithAuthorities = buildAuthentication(user);
+        SecurityContextHolder.getContext().setAuthentication(authWithAuthorities);
+        String jwt = jwtProvider.generateToken(authWithAuthorities);
 
         clearLoginFailure(user, ip, userAgent);
         authRateLimitService.clearLoginCounters(ip, principalUsername);
@@ -108,9 +114,7 @@ public class AuthenticationService {
         Authentication auth = new UsernamePasswordAuthenticationToken(
                 user.getUsername(),
                 null,
-                user.getRoles().stream()
-                        .map(role -> new SimpleGrantedAuthority(role.authority()))
-                        .collect(Collectors.toList())
+                buildAuthorities(user)
         );
         String newAccessToken = jwtProvider.generateToken(auth);
         TokenResponse tokenResponse = buildTokenResponse(newAccessToken, null, user);
@@ -172,6 +176,19 @@ public class AuthenticationService {
 
     private boolean isLocked(User user) {
         return user.getLockUntil() != null && user.getLockUntil().isAfter(LocalDateTime.now());
+    }
+
+    private Authentication buildAuthentication(User user) {
+        return new UsernamePasswordAuthenticationToken(user.getUsername(), null, buildAuthorities(user));
+    }
+
+    private List<SimpleGrantedAuthority> buildAuthorities(User user) {
+        Set<String> roleNames = user.getRoles().stream().map(r -> r.authority()).collect(Collectors.toSet());
+        List<String> permissionNames = permissionRepository.findPermissionNamesByRoleNames(roleNames);
+        Set<String> all = new LinkedHashSet<>();
+        all.addAll(roleNames);
+        all.addAll(permissionNames);
+        return all.stream().map(SimpleGrantedAuthority::new).toList();
     }
 
     public record LoginResult(TokenResponse tokenResponse, String sessionId, String refreshToken) {}

@@ -94,8 +94,17 @@ public class TeacherRepositoryImpl implements TeacherRepository {
     @Transactional(readOnly = true)
     public Page<Teacher> findAll(String keyword, Long departmentId, Boolean active, Pageable pageable) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
-        if (normalizedKeyword == null && departmentId == null && active == null) {
-            return teacherJpaRepository.findAll(pageable).map(this::mapToDomain);
+        if (normalizedKeyword == null) {
+            if (departmentId == null && active == null) {
+                return teacherJpaRepository.findAll(pageable).map(this::mapToDomain);
+            }
+            if (departmentId != null && active != null) {
+                return teacherJpaRepository.findByDepartment_IdAndActive(departmentId, active, pageable).map(this::mapToDomain);
+            }
+            if (departmentId != null) {
+                return teacherJpaRepository.findByDepartment_Id(departmentId, pageable).map(this::mapToDomain);
+            }
+            return teacherJpaRepository.findByActive(active, pageable).map(this::mapToDomain);
         }
         return teacherJpaRepository.findAll(normalizedKeyword, departmentId, active, pageable).map(this::mapToDomain);
     }

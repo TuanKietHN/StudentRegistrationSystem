@@ -21,10 +21,22 @@ public interface JpaCohortRepository extends JpaRepository<CohortEntity, Long> {
            "(:active IS NULL OR c.active = :active)")
     Page<CohortEntity> search(String keyword, Integer startYear, Integer endYear, Boolean active, Pageable pageable);
 
+    @Query("SELECT c FROM CohortEntity c WHERE " +
+           "(:startYear IS NULL OR c.startYear = :startYear) AND " +
+           "(:endYear IS NULL OR c.endYear = :endYear) AND " +
+           "(:active IS NULL OR c.active = :active)")
+    Page<CohortEntity> searchWithoutKeyword(Integer startYear, Integer endYear, Boolean active, Pageable pageable);
+
     @Query("SELECT COUNT(c) FROM CohortEntity c WHERE " +
            "(:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
            "(:startYear IS NULL OR c.startYear = :startYear) AND " +
            "(:endYear IS NULL OR c.endYear = :endYear) AND " +
            "(:active IS NULL OR c.active = :active)")
     long count(String keyword, Integer startYear, Integer endYear, Boolean active);
+
+    @Query("SELECT COUNT(c) FROM CohortEntity c WHERE " +
+           "(:startYear IS NULL OR c.startYear = :startYear) AND " +
+           "(:endYear IS NULL OR c.endYear = :endYear) AND " +
+           "(:active IS NULL OR c.active = :active)")
+    long countWithoutKeyword(Integer startYear, Integer endYear, Boolean active);
 }

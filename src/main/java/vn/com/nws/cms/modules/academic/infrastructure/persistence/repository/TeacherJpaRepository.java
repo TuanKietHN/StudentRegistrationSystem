@@ -22,6 +22,12 @@ public interface TeacherJpaRepository extends JpaRepository<TeacherEntity, Long>
                                 @Param("active") Boolean active, 
                                 Pageable pageable);
 
+    Page<TeacherEntity> findByActive(Boolean active, Pageable pageable);
+
+    Page<TeacherEntity> findByDepartment_Id(Long departmentId, Pageable pageable);
+
+    Page<TeacherEntity> findByDepartment_IdAndActive(Long departmentId, Boolean active, Pageable pageable);
+
     Optional<TeacherEntity> findByUserId(Long userId);
     
     Optional<TeacherEntity> findByEmployeeCode(String employeeCode);

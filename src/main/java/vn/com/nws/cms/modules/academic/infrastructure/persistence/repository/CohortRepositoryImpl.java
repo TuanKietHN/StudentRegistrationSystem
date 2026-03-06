@@ -56,6 +56,11 @@ public class CohortRepositoryImpl implements CohortRepository {
                     .map(mapper::toDomain)
                     .collect(Collectors.toList());
         }
+        if (normalizedKeyword == null) {
+            return jpaRepository.searchWithoutKeyword(startYear, endYear, active, PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(mapper::toDomain)
+                    .collect(Collectors.toList());
+        }
         return jpaRepository.search(normalizedKeyword, startYear, endYear, active, PageRequest.of(page - 1, size)).getContent().stream()
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
@@ -66,6 +71,9 @@ public class CohortRepositoryImpl implements CohortRepository {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
         if (normalizedKeyword == null && startYear == null && endYear == null && active == null) {
             return jpaRepository.count();
+        }
+        if (normalizedKeyword == null) {
+            return jpaRepository.countWithoutKeyword(startYear, endYear, active);
         }
         return jpaRepository.count(normalizedKeyword, startYear, endYear, active);
     }

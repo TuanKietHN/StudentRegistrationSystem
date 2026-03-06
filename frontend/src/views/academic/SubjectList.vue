@@ -1,76 +1,117 @@
 <template>
-  <v-card>
-    <v-card-text>
-      <PageHeader title="Danh sách Môn học">
-        <template #actions>
-          <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
-        </template>
-      </PageHeader>
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-text-field
+  <div>
+    <PageHeader
+      title="Quản lý Môn học"
+      subtitle="Danh sách tất cả các môn học trong chương trình đào tạo."
+    >
+      <template #actions>
+        <v-btn
+          v-if="isAdmin"
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-plus"
+          @click="openCreateDialog"
+        >
+          Thêm môn học
+        </v-btn>
+      </template>
+    </PageHeader>
+
+    <v-card class="admin-panel mb-6" variant="flat">
+      <v-card-text class="pa-4">
+        <v-row>
+          <v-col cols="12" md="7">
+            <v-text-field
               v-model="keyword"
-              label="Tìm kiếm theo mã, tên..."
+              class="admin-input"
+              placeholder="Tìm kiếm mã môn, tên môn học..."
+              prepend-inner-icon="mdi-magnify"
+              variant="solo-filled"
+              bg-color="#F7F6F8"
+              hide-details
               @update:model-value="handleSearch"
-          />
-        </v-col>
-        <v-col cols="12" md="6">
-          <v-select
+            />
+          </v-col>
+          <v-col cols="12" md="5">
+            <v-select
               v-model="activeFilter"
+              class="admin-input"
               :items="activeOptions"
               item-title="title"
               item-value="value"
-              label="Lọc trạng thái"
+              placeholder="Tất cả trạng thái"
+              prepend-inner-icon="mdi-filter-variant"
+              variant="solo-filled"
+              bg-color="#F7F6F8"
+              hide-details
               clearable
               @update:model-value="handleSearch"
+            />
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
+    <v-card class="admin-panel" variant="flat">
+      <v-progress-linear v-if="loading" indeterminate />
+      <v-card-text class="pa-0">
+        <v-table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Mã</th>
+              <th>Tên</th>
+              <th>Số tín chỉ</th>
+              <th>Tỷ lệ điểm</th>
+              <th>Trạng thái</th>
+              <th class="text-right">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in subjects" :key="s.id">
+              <td>{{ s.id }}</td>
+              <td>{{ s.code }}</td>
+              <td>{{ s.name }}</td>
+              <td>{{ s.credit }}</td>
+              <td>{{ (s.processWeight ?? 40) }}-{{ (s.examWeight ?? 60) }}</td>
+              <td>
+                <v-chip :color="s.active ? 'green' : 'red'" variant="tonal" size="small">
+                  {{ s.active ? 'Hoạt động' : 'Ngưng' }}
+                </v-chip>
+              </td>
+              <td class="text-right">
+                <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(s)">Sửa</v-btn>
+                <v-btn
+                  size="small"
+                  color="error"
+                  variant="text"
+                  :disabled="!isAdmin"
+                  @click="openDeleteDialog(s)"
+                >
+                  Xóa
+                </v-btn>
+              </td>
+            </tr>
+            <tr v-if="subjects.length === 0">
+              <td colspan="7" class="text-center py-6">Không có dữ liệu</td>
+            </tr>
+          </tbody>
+        </v-table>
+
+        <v-divider />
+        <div class="d-flex align-center justify-space-between pa-4">
+          <div class="text-caption" style="color: #64748b">Trang {{ page }} / {{ totalPages }}</div>
+          <v-pagination
+            :model-value="page"
+            :length="totalPages"
+            density="comfortable"
+            rounded="lg"
+            @update:model-value="changePage"
           />
-        </v-col>
-      </v-row>
-
-      <v-progress-linear v-if="loading" indeterminate class="mb-4" />
-
-      <v-table>
-        <thead>
-        <tr>
-          <th>ID</th>
-          <th>Mã</th>
-          <th>Tên</th>
-          <th>Số tín chỉ</th>
-          <th>Tỷ lệ điểm</th>
-          <th>Trạng thái</th>
-          <th>Hành động</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="s in subjects" :key="s.id">
-          <td>{{ s.id }}</td>
-          <td>{{ s.code }}</td>
-          <td>{{ s.name }}</td>
-          <td>{{ s.credit }}</td>
-          <td>{{ (s.processWeight ?? 40) }}-{{ (s.examWeight ?? 60) }}</td>
-          <td>
-            <v-chip :color="s.active ? 'green' : 'red'" variant="tonal" size="small">
-              {{ s.active ? 'Hoạt động' : 'Ngưng' }}
-            </v-chip>
-          </td>
-          <td>
-            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(s)">Sửa</v-btn>
-            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(s)">Xóa</v-btn>
-          </td>
-        </tr>
-        <tr v-if="subjects.length === 0">
-          <td colspan="7" class="text-center py-6">Không có dữ liệu</td>
-        </tr>
-        </tbody>
-      </v-table>
-
-      <div class="d-flex align-center justify-center mt-4">
-        <v-btn :disabled="page === 1" variant="text" @click="changePage(page - 1)">Trước</v-btn>
-        <div class="mx-4">Trang {{ page }} / {{ totalPages }}</div>
-        <v-btn :disabled="page === totalPages" variant="text" @click="changePage(page + 1)">Sau</v-btn>
-      </div>
-    </v-card-text>
-  </v-card>
+        </div>
+      </v-card-text>
+    </v-card>
+  </div>
 
   <v-dialog v-model="dialogOpen" max-width="760">
     <v-card>

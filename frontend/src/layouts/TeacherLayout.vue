@@ -1,7 +1,15 @@
 <template>
-  <v-app-bar color="primary" density="comfortable">
-    <v-app-bar-title>CMS Academic (Giảng viên)</v-app-bar-title>
+  <v-app-bar class="admin-app-bar" color="surface" density="comfortable" elevation="0" height="64">
+    <v-btn icon="mdi-menu" variant="text" class="d-md-none" @click="drawerOpen = !drawerOpen" />
+
+    <div class="d-flex align-center ga-2">
+      <v-icon icon="mdi-home-outline" size="18" color="secondary" />
+      <div class="text-body-2 text-secondary">/</div>
+      <div class="text-body-2 font-weight-semibold text-secondary">{{ currentSectionTitle }}</div>
+    </div>
+
     <v-spacer />
+
     <v-select
       v-if="isDualRole"
       :model-value="activeRole"
@@ -10,41 +18,99 @@
       item-value="value"
       hide-details
       density="compact"
-      variant="solo"
-      class="mr-3"
+      variant="solo-filled"
+      bg-color="#F7F6F8"
+      class="admin-input mr-2"
       style="max-width: 160px"
       @update:model-value="onSwitchRole"
     />
-    <div class="text-body-2 mr-3">Xin chào, {{ currentUser?.username }}</div>
-    <v-btn color="secondary" variant="flat" @click="handleLogout">Đăng xuất</v-btn>
+
+    <v-btn icon="mdi-bell-outline" variant="text" />
+    <v-btn icon="mdi-logout" variant="text" @click="handleLogout" />
   </v-app-bar>
 
-  <v-navigation-drawer :model-value="drawer" width="280">
-    <v-list density="comfortable" nav>
-      <v-list-subheader>Chức năng</v-list-subheader>
-      <v-list-item title="Trang chủ" :to="{ name: 'TeacherHome' }" prepend-icon="mdi-view-dashboard" />
-      <v-list-item title="Lớp tôi dạy" :to="{ name: 'TeacherSections' }" prepend-icon="mdi-google-classroom" />
-      <v-list-item title="Lớp hành chính" :to="{ name: 'TeacherAdminClasses' }" prepend-icon="mdi-account-multiple" />
+  <v-navigation-drawer
+    v-model="drawerOpen"
+    class="admin-drawer"
+    color="surface"
+    width="280"
+    :temporary="isMobile"
+  >
+    <div class="pa-6 d-flex align-center ga-3">
+      <div class="admin-brand-icon d-flex align-center justify-center">
+        <v-icon icon="mdi-school-outline" color="primary" size="20" />
+      </div>
+      <div>
+        <div class="text-body-2 font-weight-bold text-secondary">LMS</div>
+        <div class="text-caption" style="color: #64748b">Giảng viên</div>
+      </div>
+    </div>
+
+    <v-list nav density="comfortable" class="px-4">
+      <v-list-item
+        v-for="item in navItems"
+        :key="item.name"
+        :to="{ name: item.name }"
+        :title="item.title"
+        :prepend-icon="item.icon"
+        rounded="lg"
+        class="admin-nav-item"
+        active-class="admin-nav-item--active"
+      />
     </v-list>
+
+    <div class="mt-auto">
+      <v-divider class="mx-4 my-4" />
+      <div class="px-4 pb-4">
+        <div class="d-flex align-center ga-3 pa-2">
+          <v-avatar size="32" color="#E2E8F0">
+            <v-icon icon="mdi-account" color="secondary" size="18" />
+          </v-avatar>
+          <div class="flex-1">
+            <div class="text-body-2 font-weight-semibold text-secondary">
+              {{ currentUser?.username || 'Tài khoản' }}
+            </div>
+            <div class="text-caption" style="color: #64748b">{{ activeRoleLabel }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </v-navigation-drawer>
 
-  <v-main>
-    <v-container class="py-6" fluid>
+  <v-main class="admin-layout">
+    <v-container class="py-6 px-6" fluid>
       <RouterView />
     </v-container>
   </v-main>
 </template>
 
 <script setup lang="ts">
-import { RouterView, useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useDisplay } from 'vuetify'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const currentUser = computed(() => authStore.currentUser)
 const activeRole = computed(() => authStore.activeRole)
 const isDualRole = computed(() => authStore.isDualRole)
+
+const drawerOpen = ref(true)
+const { mdAndDown } = useDisplay()
+const isMobile = computed(() => mdAndDown.value)
+
+const navItems = [
+  { name: 'TeacherHome', title: 'Bảng điều khiển', icon: 'mdi-view-dashboard-outline' },
+  { name: 'TeacherSections', title: 'Lớp tôi dạy', icon: 'mdi-google-classroom' },
+  { name: 'TeacherAdminClasses', title: 'Lớp hành chính', icon: 'mdi-account-multiple-outline' }
+]
+
+const route = useRoute()
+const currentSectionTitle = computed(() => {
+  const found = navItems.find((i) => i.name === route.name)
+  return found?.title || 'Giảng viên'
+})
 
 const roleOptions = computed(() => {
   const roles = authStore.roles
@@ -54,9 +120,10 @@ const roleOptions = computed(() => {
   ].filter(Boolean) as Array<{ title: string; value: 'STUDENT' | 'TEACHER' }>
 })
 
-const drawer = computed({
-  get: () => authStore.isLoggedIn,
-  set: () => {}
+const activeRoleLabel = computed(() => {
+  if (activeRole.value === 'TEACHER') return 'Giảng viên'
+  if (activeRole.value === 'STUDENT') return 'Sinh viên'
+  return ''
 })
 
 const handleLogout = () => {

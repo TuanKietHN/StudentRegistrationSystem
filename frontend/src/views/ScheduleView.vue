@@ -2,7 +2,7 @@
   <v-container>
     <v-row>
       <v-col cols="12">
-        <h1 class="text-h4 mb-4">Lịch học của tôi</h1>
+        <h1 class="text-h4 mb-4">{{ pageTitle }}</h1>
       </v-col>
     </v-row>
     <v-row v-if="loading">
@@ -56,11 +56,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { scheduleService, type ScheduleEvent } from '@/api/services/schedule.service'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const loading = ref(false)
 const events = ref<ScheduleEvent[]>([])
+
+const pageTitle = computed(() => {
+  return authStore.activeRole === 'TEACHER' ? 'Lịch giảng dạy của tôi' : 'Lịch học của tôi'
+})
 
 // Mapping based on Java DayOfWeek (ISO-8601): 1=Monday, 7=Sunday
 const days = [

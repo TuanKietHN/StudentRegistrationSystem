@@ -102,6 +102,7 @@ const isMobile = computed(() => mdAndDown.value)
 
 const navItems = [
   { name: 'StudentHome', title: 'Bảng điều khiển', icon: 'mdi-view-dashboard-outline' },
+  { name: 'StudentSchedule', title: 'Lịch học', icon: 'mdi-calendar-clock' },
   { name: 'StudentSectionRegistration', title: 'Đăng ký lớp', icon: 'mdi-google-classroom' },
   { name: 'StudentMyEnrollments', title: 'Lớp đã đăng ký', icon: 'mdi-clipboard-text-outline' }
 ]

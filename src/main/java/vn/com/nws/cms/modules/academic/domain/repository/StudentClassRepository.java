@@ -12,7 +12,7 @@ public interface StudentClassRepository {
     Optional<StudentClass> findByCode(String code);
     boolean existsByCode(String code);
     boolean existsByCodeAndIdNot(String code, Long id);
-    Page<StudentClass> search(String keyword, Long departmentId, Long cohortId, Boolean active, Pageable pageable);
+    Page<StudentClass> search(String keyword, Long departmentId, Long cohortId, Long advisorTeacherId, Boolean active, Pageable pageable);
     void deleteById(Long id);
 }
 

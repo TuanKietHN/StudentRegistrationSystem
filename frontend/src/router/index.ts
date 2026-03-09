@@ -27,6 +27,7 @@ const TeacherCoursesView = () => import('../views/teacher/TeacherCoursesView.vue
 const TeacherCourseEnrollmentsView = () => import('../views/teacher/TeacherCourseEnrollmentsView.vue')
 const TeacherAdminClassesView = () => import('../views/teacher/TeacherAdminClassesView.vue')
 const TeacherAdminClassStudentsView = () => import('../views/teacher/TeacherAdminClassStudentsView.vue')
+const TeacherAdminClassGradesView = () => import('../views/teacher/TeacherAdminClassGradesView.vue')
 const ScheduleView = () => import('../views/ScheduleView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
 
@@ -86,9 +87,10 @@ const router = createRouter({
       children: [
         { path: '', name: 'TeacherHome', component: TeacherHomeView },
         { path: 'sections', name: 'TeacherSections', component: TeacherCoursesView, meta: { permissions: ['SECTION:READ', 'SEMESTER:READ', 'SUBJECT:READ'] } },
-        { path: 'sections/:sectionId/enrollments', name: 'TeacherSectionEnrollments', component: TeacherCourseEnrollmentsView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ', 'ENROLLMENT:UPDATE'] } },
-        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
-        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'sections/:sectionId/enrollments', name: 'TeacherSectionEnrollments', component: TeacherCourseEnrollmentsView, meta: { permissions: ['ENROLLMENT:READ'] } },
+        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
+        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
+        { path: 'admin-classes/:adminClassId/grades', name: 'TeacherAdminClassGrades', component: TeacherAdminClassGradesView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
         { path: 'schedule', name: 'TeacherSchedule', component: ScheduleView, meta: { permissions: ['SECTION:READ'] } }
       ]
     },

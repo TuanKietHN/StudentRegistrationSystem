@@ -16,14 +16,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import vn.com.nws.cms.common.dto.ApiResponse;
 import vn.com.nws.cms.common.dto.PageResponse;
-import vn.com.nws.cms.modules.academic.api.dto.StudentClassCreateRequest;
-import vn.com.nws.cms.modules.academic.api.dto.StudentClassFilterRequest;
-import vn.com.nws.cms.modules.academic.api.dto.StudentClassResponse;
-import vn.com.nws.cms.modules.academic.api.dto.StudentClassUpdateRequest;
-import vn.com.nws.cms.modules.academic.api.dto.StudentResponse;
+import vn.com.nws.cms.common.exception.BusinessException;
+import vn.com.nws.cms.common.exception.ResourceNotFoundException;
+import vn.com.nws.cms.modules.academic.api.dto.*;
 import vn.com.nws.cms.modules.academic.application.StudentClassService;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.TeacherEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.TeacherJpaRepository;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.UserEntity;
+import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaUserRepository;
 
 import java.util.List;
 
@@ -34,6 +38,8 @@ import java.util.List;
 public class StudentClassController {
 
     private final StudentClassService studentClassService;
+    private final TeacherJpaRepository teacherJpaRepository;
+    private final JpaUserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasAuthority('STUDENT_CLASS:READ')")
@@ -42,19 +48,63 @@ public class StudentClassController {
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long cohortId,
+            @RequestParam(required = false) Long advisorTeacherId,
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isTeacher = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER"));
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        Long finalAdvisorId = advisorTeacherId;
+        if (isTeacher && !isAdmin) {
+            String username = auth.getName();
+            UserEntity user = userRepository.findByUsername(username)
+                    .or(() -> userRepository.findByEmail(username))
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            
+            TeacherEntity teacher = teacherJpaRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new BusinessException("Teacher profile not found"));
+            finalAdvisorId = teacher.getId();
+        }
+
         StudentClassFilterRequest request = new StudentClassFilterRequest();
         request.setKeyword(keyword);
         request.setDepartmentId(departmentId);
         request.setCohortId(cohortId);
+        request.setAdvisorTeacherId(finalAdvisorId);
         request.setActive(active);
         request.setPage(page);
         request.setSize(size);
         PageResponse<StudentClassResponse> response = studentClassService.getStudentClasses(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách lớp hành chính thành công", response));
+    }
+
+    @GetMapping("/{id}/grades")
+    @PreAuthorize("hasAuthority('STUDENT_CLASS:READ')")
+    @Operation(summary = "Bảng điểm sinh viên theo lớp hành chính", description = "Lấy danh sách điểm các môn của sinh viên trong lớp")
+    public ResponseEntity<ApiResponse<List<StudentGradeSummaryResponse>>> getStudentClassGrades(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isTeacher = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER"));
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isTeacher && !isAdmin) {
+            String username = auth.getName();
+            UserEntity user = userRepository.findByUsername(username)
+                    .or(() -> userRepository.findByEmail(username))
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            
+            TeacherEntity teacher = teacherJpaRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new BusinessException("Teacher profile not found"));
+            
+            StudentClassResponse sc = studentClassService.getStudentClassById(id);
+            if (sc.getAdvisorTeacherId() == null || !sc.getAdvisorTeacherId().equals(teacher.getId())) {
+                throw new BusinessException("Bạn không có quyền xem bảng điểm lớp này");
+            }
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("Lấy bảng điểm thành công", studentClassService.getStudentClassGrades(id)));
     }
 
     @GetMapping("/{id}")

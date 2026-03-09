@@ -61,7 +61,8 @@
           <td>{{ c.program || '-' }}</td>
           <td>{{ advisorTeacherLabel(c.advisorTeacherId) }}</td>
           <td>
-            <v-btn size="small" color="primary" variant="flat" @click="goStudents(c.id)">Danh sách sinh viên</v-btn>
+            <v-btn size="small" color="primary" variant="flat" class="mr-2" @click="goStudents(c.id)">Sinh viên</v-btn>
+            <v-btn size="small" color="secondary" variant="flat" @click="goGrades(c.id)">Bảng điểm</v-btn>
           </td>
         </tr>
         <tr v-if="adminClasses.length === 0">
@@ -150,6 +151,10 @@ const handleSearch = () => debouncedSearch()
 
 const goStudents = (adminClassId: number) => {
   router.push({ name: 'TeacherAdminClassStudents', params: { adminClassId } })
+}
+
+const goGrades = (adminClassId: number) => {
+  router.push({ name: 'TeacherAdminClassGrades', params: { adminClassId } })
 }
 
 const advisorTeacherLabel = (id?: number | null) => {

@@ -94,8 +94,8 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     }
 
     @Override
-    public Page<StudentClass> search(String keyword, Long departmentId, Long cohortId, Boolean active, Pageable pageable) {
-        List<StudentClassEntity> base = jpaRepository.searchNoKeywordList(departmentId, cohortId, active);
+    public Page<StudentClass> search(String keyword, Long departmentId, Long cohortId, Long advisorTeacherId, Boolean active, Pageable pageable) {
+        List<StudentClassEntity> base = jpaRepository.searchNoKeywordList(departmentId, cohortId, advisorTeacherId, active);
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase(Locale.ROOT);
         List<StudentClassEntity> filtered = normalizedKeyword == null
                 ? base

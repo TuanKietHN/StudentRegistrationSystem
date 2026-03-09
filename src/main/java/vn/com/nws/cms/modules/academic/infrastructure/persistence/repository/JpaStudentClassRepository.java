@@ -20,34 +20,38 @@ public interface JpaStudentClassRepository extends JpaRepository<StudentClassEnt
 
     boolean existsByCodeAndIdNot(String code, Long id);
 
-    @EntityGraph(attributePaths = {"department", "cohort"})
+    @EntityGraph(attributePaths = {"department", "cohort", "advisorTeacher", "advisorTeacher.user"})
     @Query("""
             SELECT c
             FROM StudentClassEntity c
             LEFT JOIN c.department d
             LEFT JOIN c.cohort co
+            LEFT JOIN c.advisorTeacher t
             WHERE (:active IS NULL OR c.active = :active)
               AND (:departmentId IS NULL OR d.id = :departmentId)
               AND (:cohortId IS NULL OR co.id = :cohortId)
+              AND (:advisorTeacherId IS NULL OR t.id = :advisorTeacherId)
               AND (
                 :keyword IS NULL
                 OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
             """)
-    Page<StudentClassEntity> search(String keyword, Long departmentId, Long cohortId, Boolean active, Pageable pageable);
+    Page<StudentClassEntity> search(String keyword, Long departmentId, Long cohortId, Long advisorTeacherId, Boolean active, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"department", "cohort"})
+    @EntityGraph(attributePaths = {"department", "cohort", "advisorTeacher", "advisorTeacher.user"})
     @Query("""
             SELECT c
             FROM StudentClassEntity c
             LEFT JOIN c.department d
             LEFT JOIN c.cohort co
+            LEFT JOIN c.advisorTeacher t
             WHERE (:active IS NULL OR c.active = :active)
               AND (:departmentId IS NULL OR d.id = :departmentId)
               AND (:cohortId IS NULL OR co.id = :cohortId)
+              AND (:advisorTeacherId IS NULL OR t.id = :advisorTeacherId)
             ORDER BY c.code ASC
             """)
-    List<StudentClassEntity> searchNoKeywordList(Long departmentId, Long cohortId, Boolean active);
+    List<StudentClassEntity> searchNoKeywordList(Long departmentId, Long cohortId, Long advisorTeacherId, Boolean active);
 }
 

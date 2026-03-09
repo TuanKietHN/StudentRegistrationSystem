@@ -12,19 +12,18 @@ import vn.com.nws.cms.modules.academic.api.dto.StudentClassFilterRequest;
 import vn.com.nws.cms.modules.academic.api.dto.StudentClassResponse;
 import vn.com.nws.cms.modules.academic.api.dto.StudentClassUpdateRequest;
 import vn.com.nws.cms.modules.academic.api.dto.StudentResponse;
+import vn.com.nws.cms.modules.academic.api.dto.StudentGradeSummaryResponse;
+import vn.com.nws.cms.modules.academic.api.dto.SubjectGradeResponse;
 import vn.com.nws.cms.modules.academic.application.StudentClassService;
-import vn.com.nws.cms.modules.academic.domain.model.Cohort;
-import vn.com.nws.cms.modules.academic.domain.model.Department;
-import vn.com.nws.cms.modules.academic.domain.model.Student;
-import vn.com.nws.cms.modules.academic.domain.model.StudentClass;
-import vn.com.nws.cms.modules.academic.domain.model.Teacher;
-import vn.com.nws.cms.modules.academic.domain.repository.CohortRepository;
-import vn.com.nws.cms.modules.academic.domain.repository.DepartmentRepository;
-import vn.com.nws.cms.modules.academic.domain.repository.StudentClassRepository;
-import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
-import vn.com.nws.cms.modules.academic.domain.repository.TeacherRepository;
+import vn.com.nws.cms.modules.academic.domain.model.*;
+import vn.com.nws.cms.modules.academic.domain.repository.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +34,7 @@ public class StudentClassServiceImpl implements StudentClassService {
     private final CohortRepository cohortRepository;
     private final TeacherRepository teacherRepository;
     private final StudentRepository studentRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Override
     public PageResponse<StudentClassResponse> getStudentClasses(StudentClassFilterRequest request) {
@@ -42,6 +42,7 @@ public class StudentClassServiceImpl implements StudentClassService {
                 request.getKeyword(),
                 request.getDepartmentId(),
                 request.getCohortId(),
+                request.getAdvisorTeacherId(),
                 request.getActive(),
                 PageRequest.of(request.getPage() - 1, request.getSize())
         );
@@ -54,6 +55,48 @@ public class StudentClassServiceImpl implements StudentClassService {
                 .totalPages(page.getTotalPages())
                 .data(data)
                 .build();
+    }
+
+    @Override
+    public List<StudentGradeSummaryResponse> getStudentClassGrades(Long id) {
+        if (studentClassRepository.findById(id).isEmpty()) {
+            throw new BusinessException("Student class not found");
+        }
+        List<Student> students = studentRepository.findByStudentClassId(id);
+        List<StudentGradeSummaryResponse> summary = new ArrayList<>();
+
+        for (Student student : students) {
+            List<Enrollment> enrollments = enrollmentRepository.findByStudentId(student.getId());
+            List<SubjectGradeResponse> grades = enrollments.stream()
+                    .map(e -> SubjectGradeResponse.builder()
+                            .subjectCode(e.getSection().getSubject().getCode())
+                            .subjectName(e.getSection().getSubject().getName())
+                            .processScore(e.getProcessScore())
+                            .examScore(e.getExamScore())
+                            .finalScore(e.getFinalScore())
+                            .semesterCode(e.getSection().getSemester().getCode())
+                            .build())
+                    .toList();
+
+            BigDecimal totalScore = BigDecimal.ZERO;
+            int count = 0;
+            for (Enrollment e : enrollments) {
+                if (e.getFinalScore() != null) {
+                    totalScore = totalScore.add(e.getFinalScore());
+                    count++;
+                }
+            }
+            BigDecimal gpa = count > 0 ? totalScore.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+
+            summary.add(StudentGradeSummaryResponse.builder()
+                    .studentId(student.getId())
+                    .studentCode(student.getStudentCode())
+                    .studentName(student.getUser() != null ? student.getUser().getFullName() : "N/A")
+                    .grades(grades)
+                    .gpa(gpa)
+                    .build());
+        }
+        return summary;
     }
 
     @Override

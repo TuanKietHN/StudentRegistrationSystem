@@ -102,6 +102,7 @@ const isMobile = computed(() => mdAndDown.value)
 
 const navItems = [
   { name: 'TeacherHome', title: 'Bảng điều khiển', icon: 'mdi-view-dashboard-outline' },
+  { name: 'TeacherSchedule', title: 'Lịch học', icon: 'mdi-calendar-clock' },
   { name: 'TeacherSections', title: 'Lớp tôi dạy', icon: 'mdi-google-classroom' },
   { name: 'TeacherAdminClasses', title: 'Lớp hành chính', icon: 'mdi-account-multiple-outline' }
 ]

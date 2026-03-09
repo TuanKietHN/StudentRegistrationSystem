@@ -7,6 +7,7 @@ public class StudentClassFilterRequest {
     private String keyword;
     private Long departmentId;
     private Long cohortId;
+    private Long advisorTeacherId;
     private Boolean active;
     private int page = 1;
     private int size = 10;

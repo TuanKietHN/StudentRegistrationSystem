@@ -47,5 +47,8 @@ export const studentClassService = {
     },
     delete(id: number) {
         return api.delete(`/v1/student-classes/${id}`)
+    },
+    getGrades(studentClassId: number) {
+        return api.get(`/v1/student-classes/${studentClassId}/grades`)
     }
 }

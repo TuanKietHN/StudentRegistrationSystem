@@ -27,4 +27,8 @@ public class User extends AuditEntity {
     private LocalDateTime lastLoginAt;
     private String lastLoginIp;
     private String lastLoginUserAgent;
+
+    public String getFullName() {
+        return username;
+    }
 }

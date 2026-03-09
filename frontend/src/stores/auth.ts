@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import router from '@/router'
 import { authService, type LoginPayload, type TokenResponse } from '@/api/services/auth.service'
 import { unwrapApiResponse } from '@/api/response'
+import { useLookupsStore } from './lookups'
 
 function base64UrlDecode(input: string): string {
   const padded = input.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(input.length / 4) * 4, '=')
@@ -98,6 +99,10 @@ export const useAuthStore = defineStore('auth', {
         await authService.logout()
       } catch {
       }
+      
+      const lookupsStore = useLookupsStore()
+      lookupsStore.reset()
+
       this.token = null
       this.user = null
       this.isAuthenticated = false

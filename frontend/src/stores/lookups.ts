@@ -84,6 +84,20 @@ export const useLookupsStore = defineStore('lookups', {
 
     async ensureAcademicLookups() {
       await Promise.all([this.loadSemesters(), this.loadSubjects(), this.loadActiveSemester()])
+    },
+
+    reset() {
+      this.semesterOptions = []
+      this.subjectOptions = []
+      this.departmentOptions = []
+      this.activeSemesterId = null
+      this.activeSemesterLabel = ''
+      this.loaded = {
+        semesters: false,
+        subjects: false,
+        departments: false,
+        activeSemester: false
+      }
     }
   }
 })

@@ -22,9 +22,9 @@
               {{ error }}
             </v-alert>
 
-            <v-form class="mt-6" @submit.prevent="handleRegister">
+            <v-form class="mt-6" @submit.prevent="handleRegister" ref="form">
               <v-text-field
-                v-model="username"
+                v-model.trim="username"
                 class="admin-input"
                 label="Username"
                 placeholder="Nhập tên đăng nhập"
@@ -35,11 +35,11 @@
                 density="comfortable"
                 required
                 hide-details="auto"
-                :rules="[(v) => !!v || 'Trường này không được để trống']"
+                :rules="usernameRules"
               />
 
               <v-text-field
-                v-model="email"
+                v-model.trim="email"
                 class="admin-input mt-4"
                 label="Email"
                 placeholder="Nhập email của bạn"
@@ -51,11 +51,11 @@
                 density="comfortable"
                 required
                 hide-details="auto"
-                :rules="[(v) => !!v || 'Trường này không được để trống']"
+                :rules="emailRules"
               />
 
               <v-text-field
-                v-model="password"
+                v-model.trim="password"
                 class="admin-input mt-4"
                 label="Mật khẩu"
                 placeholder="Nhập mật khẩu mạnh"
@@ -68,12 +68,12 @@
                 density="comfortable"
                 required
                 hide-details="auto"
-                :rules="[(v) => !!v || 'Trường này không được để trống']"
+                :rules="passwordRules"
                 @click:append-inner="showPassword = !showPassword"
               />
 
               <v-text-field
-                v-model="confirmPassword"
+                v-model.trim="confirmPassword"
                 class="admin-input mt-4"
                 label="Xác nhận mật khẩu"
                 placeholder="Nhập lại mật khẩu"
@@ -86,7 +86,7 @@
                 density="comfortable"
                 required
                 hide-details="auto"
-                :rules="[(v) => !!v || 'Trường này không được để trống']"
+                :rules="confirmPasswordRules"
                 @click:append-inner="showConfirmPassword = !showConfirmPassword"
               />
 
@@ -116,13 +116,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authService } from '@/api/services/auth.service'
 import { useUiStore } from '@/stores/ui'
 
 const router = useRouter()
 const uiStore = useUiStore()
+const form = ref<any>(null)
 
 const username = ref('')
 const email = ref('')
@@ -135,15 +136,35 @@ const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
+// Validation Rules
+const usernameRules = [
+  (v: string) => !!v || 'Tên đăng nhập không được để trống',
+  (v: string) => (v && v.length >= 3) || 'Tên đăng nhập phải có ít nhất 3 ký tự',
+  (v: string) => (v && v.length <= 20) || 'Tên đăng nhập không được quá 20 ký tự',
+  (v: string) => /^[a-zA-Z0-9_]+$/.test(v) || 'Tên đăng nhập chỉ chứa chữ cái, số và dấu gạch dưới'
+]
+
+const emailRules = [
+  (v: string) => !!v || 'Email không được để trống',
+  (v: string) => /.+@.+\..+/.test(v) || 'Email không đúng định dạng'
+]
+
+const passwordRules = [
+  (v: string) => !!v || 'Mật khẩu không được để trống',
+  (v: string) => (v && v.length >= 6) || 'Mật khẩu phải có ít nhất 6 ký tự'
+]
+
+const confirmPasswordRules = [
+  (v: string) => !!v || 'Vui lòng xác nhận mật khẩu',
+  (v: string) => v === password.value || 'Mật khẩu nhập lại không khớp'
+]
+
 const handleRegister = async () => {
   error.value = ''
   success.value = ''
 
-  if (password.value !== confirmPassword.value) {
-    error.value = 'Mật khẩu nhập lại không khớp'
-    uiStore.notify(error.value, 'error', 4000)
-    return
-  }
+  const { valid } = await form.value.validate()
+  if (!valid) return
 
   loading.value = true
   try {
@@ -154,7 +175,7 @@ const handleRegister = async () => {
     })
     success.value = 'Đăng ký thành công. Vui lòng đăng nhập.'
     uiStore.notify(success.value, 'success')
-    setTimeout(() => router.push({ name: 'Login' }), 600)
+    setTimeout(() => router.push({ name: 'Login' }), 1500)
   } catch (err: any) {
     const msg = err?.response?.data?.message
     const details = err?.response?.data?.data

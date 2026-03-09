@@ -19,9 +19,9 @@
               {{ error }}
             </v-alert>
 
-            <v-form class="mt-6" @submit.prevent="handleLogin">
+            <v-form class="mt-6" @submit.prevent="handleLogin" ref="form">
               <v-text-field
-                v-model="username"
+                v-model.trim="username"
                 class="admin-input"
                 label="Username hoặc Email"
                 placeholder="Nhập tài khoản của bạn"
@@ -32,11 +32,11 @@
                 density="comfortable"
                 required
                 hide-details="auto"
-                :rules="[(v) => !!v || 'Trường này không được để trống']"
+                :rules="[(v) => !!v || 'Tên đăng nhập không được để trống']"
               />
 
               <v-text-field
-                v-model="password"
+                v-model.trim="password"
                 class="admin-input mt-4"
                 label="Mật khẩu"
                 placeholder="Nhập mật khẩu của bạn"
@@ -49,7 +49,7 @@
                 density="comfortable"
                 required
                 hide-details="auto"
-                :rules="[(v) => !!v || 'Trường này không được để trống']"
+                :rules="[(v) => !!v || 'Mật khẩu không được để trống']"
                 @click:append-inner="showPassword = !showPassword"
               />
 
@@ -92,6 +92,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const uiStore = useUiStore()
 
+const form = ref<any>(null)
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -99,6 +100,9 @@ const error = ref('')
 const loading = ref(false)
 
 const handleLogin = async () => {
+  const { valid } = await form.value.validate()
+  if (!valid) return
+
   loading.value = true
   error.value = ''
 

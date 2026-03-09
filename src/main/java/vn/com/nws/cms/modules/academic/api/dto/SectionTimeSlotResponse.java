@@ -13,6 +13,7 @@ public class SectionTimeSlotResponse {
     private short dayOfWeek;
     private LocalTime startTime;
     private LocalTime endTime;
+    private String room;
 
     public static SectionTimeSlotResponse fromDomain(SectionTimeSlot slot) {
         return SectionTimeSlotResponse.builder()
@@ -20,6 +21,7 @@ public class SectionTimeSlotResponse {
                 .dayOfWeek(slot.getDayOfWeek())
                 .startTime(slot.getStartTime())
                 .endTime(slot.getEndTime())
+                .room(slot.getRoom())
                 .build();
     }
 }

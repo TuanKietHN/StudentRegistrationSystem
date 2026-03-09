@@ -33,5 +33,8 @@ public class SectionTimeSlotEntity extends AuditEntity {
 
     @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
+
+    @Column(name = "room")
+    private String room;
 }
 

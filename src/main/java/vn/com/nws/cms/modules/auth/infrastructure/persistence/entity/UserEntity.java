@@ -52,4 +52,8 @@ public class UserEntity extends AuditEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<UserRoleEntity> userRoles = new ArrayList<>();
+
+    public String getFullName() {
+        return username; // Currently we don't have separate first/last name fields
+    }
 }

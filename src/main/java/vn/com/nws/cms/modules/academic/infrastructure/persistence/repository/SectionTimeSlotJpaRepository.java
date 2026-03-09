@@ -46,5 +46,35 @@ public interface SectionTimeSlotJpaRepository extends JpaRepository<SectionTimeS
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime
     );
+
+    @Query("""
+            SELECT ts
+            FROM SectionTimeSlotEntity ts
+            JOIN FETCH ts.section s
+            JOIN FETCH s.subject
+            JOIN FETCH s.teacher t
+            LEFT JOIN FETCH t.user
+            WHERE t.id = :teacherId
+              AND s.semester.id = :semesterId
+              AND s.active = true
+            ORDER BY ts.dayOfWeek, ts.startTime
+            """)
+    List<SectionTimeSlotEntity> findByTeacherIdAndSemesterId(@Param("teacherId") Long teacherId, @Param("semesterId") Long semesterId);
+
+    @Query("""
+            SELECT ts
+            FROM SectionTimeSlotEntity ts
+            JOIN FETCH ts.section s
+            JOIN FETCH s.subject
+            LEFT JOIN FETCH s.teacher t
+            LEFT JOIN FETCH t.user
+            JOIN EnrollmentEntity e ON e.section.id = s.id
+            WHERE e.student.id = :studentId
+              AND s.semester.id = :semesterId
+              AND e.status = vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus.ENROLLED
+              AND s.active = true
+            ORDER BY ts.dayOfWeek, ts.startTime
+            """)
+    List<SectionTimeSlotEntity> findByStudentIdAndSemesterId(@Param("studentId") Long studentId, @Param("semesterId") Long semesterId);
 }
 

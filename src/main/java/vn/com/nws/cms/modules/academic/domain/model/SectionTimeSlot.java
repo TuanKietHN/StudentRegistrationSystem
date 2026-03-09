@@ -18,5 +18,6 @@ public class SectionTimeSlot extends AuditEntity {
     private short dayOfWeek;
     private LocalTime startTime;
     private LocalTime endTime;
+    private String room;
 }
 

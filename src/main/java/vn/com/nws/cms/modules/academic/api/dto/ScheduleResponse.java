@@ -1,19 +1,19 @@
 package vn.com.nws.cms.modules.academic.api.dto;
 
-import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
-
 import java.time.LocalTime;
 
 @Data
-public class SectionTimeSlotRequest {
-    @NotNull
+@Builder
+public class ScheduleResponse {
+    private Long sectionId;
+    private String sectionName;
+    private String subjectName;
+    private String subjectCode;
+    private String teacherName;
     private Short dayOfWeek;
-    @NotNull
     private LocalTime startTime;
-    @NotNull
     private LocalTime endTime;
-
     private String room;
 }
-

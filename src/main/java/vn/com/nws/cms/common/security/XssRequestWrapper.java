@@ -22,8 +22,9 @@ public class XssRequestWrapper extends HttpServletRequestWrapper {
         String contentType = request.getContentType();
         if (contentType != null && contentType.contains("application/json")) {
             String originalBody = StreamUtils.copyToString(request.getInputStream(), StandardCharsets.UTF_8);
-            String sanitizedBody = sanitize(originalBody);
-            this.body = sanitizedBody.getBytes(StandardCharsets.UTF_8);
+            // DO NOT sanitize JSON body here as it breaks JSON structure (e.g. quotes become &quot;)
+            // JSON fields should be validated via @Valid or sanitized at field level if needed
+            this.body = originalBody.getBytes(StandardCharsets.UTF_8);
         }
     }
 
@@ -83,6 +84,8 @@ public class XssRequestWrapper extends HttpServletRequestWrapper {
             return null;
         }
         // Basic XSS prevention by escaping HTML characters
+        // Note: For JSON bodies, we should use a library like Jackson with XSS protection
+        // or validate input fields specifically. Global escaping breaks JSON structure.
         return HtmlUtils.htmlEscape(value);
     }
 }

@@ -27,6 +27,7 @@ const TeacherCoursesView = () => import('../views/teacher/TeacherCoursesView.vue
 const TeacherCourseEnrollmentsView = () => import('../views/teacher/TeacherCourseEnrollmentsView.vue')
 const TeacherAdminClassesView = () => import('../views/teacher/TeacherAdminClassesView.vue')
 const TeacherAdminClassStudentsView = () => import('../views/teacher/TeacherAdminClassStudentsView.vue')
+const ScheduleView = () => import('../views/ScheduleView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
 
 const router = createRouter({
@@ -87,7 +88,8 @@ const router = createRouter({
         { path: 'sections', name: 'TeacherSections', component: TeacherCoursesView, meta: { permissions: ['SECTION:READ', 'SEMESTER:READ', 'SUBJECT:READ'] } },
         { path: 'sections/:sectionId/enrollments', name: 'TeacherSectionEnrollments', component: TeacherCourseEnrollmentsView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ', 'ENROLLMENT:UPDATE'] } },
         { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
-        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } }
+        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'schedule', name: 'TeacherSchedule', component: ScheduleView, meta: { permissions: ['SECTION:READ'] } }
       ]
     },
     {
@@ -97,7 +99,8 @@ const router = createRouter({
       children: [
         { path: '', name: 'StudentHome', component: StudentHomeView },
         { path: 'sections', name: 'StudentSectionRegistration', component: StudentCourseRegistrationView, meta: { permissions: ['SEMESTER:READ', 'SUBJECT:READ', 'SECTION:READ', 'ENROLLMENT:READ', 'ENROLLMENT:CREATE'] } },
-        { path: 'enrollments', name: 'StudentMyEnrollments', component: StudentMyEnrollmentsView, meta: { permissions: ['ENROLLMENT:READ', 'ENROLLMENT:DELETE'] } }
+        { path: 'enrollments', name: 'StudentMyEnrollments', component: StudentMyEnrollmentsView, meta: { permissions: ['ENROLLMENT:READ', 'ENROLLMENT:DELETE'] } },
+        { path: 'schedule', name: 'StudentSchedule', component: ScheduleView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ'] } }
       ]
     },
     { path: '/users', redirect: { name: 'AdminUsers' } },

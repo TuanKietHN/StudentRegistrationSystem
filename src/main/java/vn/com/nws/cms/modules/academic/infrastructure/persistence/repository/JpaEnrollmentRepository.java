@@ -22,5 +22,8 @@ public interface JpaEnrollmentRepository extends JpaRepository<EnrollmentEntity,
     @EntityGraph(attributePaths = {"section", "section.semester", "section.subject", "section.teacher", "section.teacher.user", "student", "student.user"})
     List<EnrollmentEntity> findByStudentId(Long studentId);
 
+    @EntityGraph(attributePaths = {"section", "section.semester", "section.subject", "section.teacher", "section.teacher.user"})
+    List<EnrollmentEntity> findByStudentIdAndSection_Semester_Id(Long studentId, Long semesterId);
+
     long countBySection_Id(Long sectionId);
 }

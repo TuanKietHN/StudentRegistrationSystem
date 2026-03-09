@@ -89,8 +89,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Đăng xuất", description = "Vô hiệu hóa Refresh Token hiện tại")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest httpRequest, @RequestBody(required = false) RefreshTokenRequest request) {
+    @Operation(summary = "Đăng xuất", description = "Vô hiệu hóa Refresh Token hiện tại và đưa Access Token vào blacklist")
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest httpRequest, Authentication authentication, @RequestBody(required = false) RefreshTokenRequest request) {
         String refreshToken = request != null ? request.getRefreshToken() : null;
         if (refreshToken == null || refreshToken.isBlank()) {
             refreshToken = getCookieValue(httpRequest, authCookieService.refreshCookieName());
@@ -98,7 +98,7 @@ public class AuthController {
         String ip = resolveIp(httpRequest);
         String userAgent = resolveUserAgent(httpRequest);
 
-        authenticationService.logout(refreshToken, ip, userAgent);
+        authenticationService.logout(refreshToken, authentication, ip, userAgent);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, authCookieService.clearRefreshTokenCookie().toString())

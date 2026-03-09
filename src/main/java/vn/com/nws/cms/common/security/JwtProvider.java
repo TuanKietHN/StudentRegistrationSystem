@@ -44,6 +44,7 @@ public class JwtProvider {
                 .subject(username)
                 .issuedAt(now)
                 .expiresAt(validity)
+                .id(UUID.randomUUID().toString())
                 .claim("scope", scope)
                 .build();
 

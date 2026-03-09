@@ -16,18 +16,25 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import vn.com.nws.cms.common.security.JwtBlacklistValidator;
+
 @Configuration
 public class JwtConfig {
 
     private final String jwtSecret;
     private final String jwtSecretB64;
+    private final JwtBlacklistValidator jwtBlacklistValidator;
 
     public JwtConfig(
             @Value("${jwt.secret:}") String jwtSecret,
-            @Value("${jwt.secret-b64:}") String jwtSecretB64
+            @Value("${jwt.secret-b64:}") String jwtSecretB64,
+            JwtBlacklistValidator jwtBlacklistValidator
     ) {
         this.jwtSecret = jwtSecret;
         this.jwtSecretB64 = jwtSecretB64;
+        this.jwtBlacklistValidator = jwtBlacklistValidator;
     }
 
     @Bean
@@ -43,9 +50,16 @@ public class JwtConfig {
         byte[] secret = resolveSecretBytes();
         SecretKeySpec secretKey = new SecretKeySpec(secret, "HmacSHA256");
 
-        return NimbusJwtDecoder.withSecretKey(secretKey)
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+        
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefault(),
+                jwtBlacklistValidator
+        ));
+        
+        return decoder;
     }
 
     private byte[] resolveSecretBytes() {

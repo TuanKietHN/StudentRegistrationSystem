@@ -25,6 +25,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import java.time.Instant;
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -123,11 +128,23 @@ public class AuthenticationService {
         return new RefreshResult(tokenResponse, rotated.sessionId(), rotated.refreshToken());
     }
 
-    public void logout(String refreshToken, String ip, String userAgent) {
-        if (refreshToken == null || refreshToken.isBlank()) {
-            return;
+    public void logout(String refreshToken, Authentication authentication, String ip, String userAgent) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authSessionService.revokeByRefreshToken(refreshToken);
         }
-        authSessionService.revokeByRefreshToken(refreshToken);
+
+        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
+            Jwt jwt = jwtAuth.getToken();
+            String jti = jwt.getId();
+            Instant expiresAt = jwt.getExpiresAt();
+            if (jti != null && expiresAt != null) {
+                long ttlMs = Duration.between(Instant.now(), expiresAt).toMillis();
+                if (ttlMs > 0) {
+                    authSessionService.blacklist(jti, ttlMs);
+                }
+            }
+        }
+
         authAuditService.record(null, "LOGOUT", true, ip, userAgent, null, null);
     }
 

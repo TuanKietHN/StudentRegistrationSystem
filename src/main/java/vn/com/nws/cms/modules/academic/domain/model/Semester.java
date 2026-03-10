@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.common.domain.model.Audit;
 
 import java.time.LocalDate;
 
@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Semester extends AuditEntity {
+public class Semester extends Audit {
     private Long id;
     private String name;
     private String code;

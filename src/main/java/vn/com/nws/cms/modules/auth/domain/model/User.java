@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.common.domain.model.Audit;
 import vn.com.nws.cms.domain.enums.RoleType;
 
 import java.time.LocalDateTime;
@@ -14,7 +14,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User extends AuditEntity {
+public class User extends Audit {
 
     private Long id;
     private String username;

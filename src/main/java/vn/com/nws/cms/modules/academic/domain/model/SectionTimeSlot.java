@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.common.domain.model.Audit;
 
 import java.time.LocalTime;
 
@@ -12,7 +12,7 @@ import java.time.LocalTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SectionTimeSlot extends AuditEntity {
+public class SectionTimeSlot extends Audit {
     private Long id;
     private Long sectionId;
     private short dayOfWeek;

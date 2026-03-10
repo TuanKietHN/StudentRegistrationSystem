@@ -16,6 +16,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const activeRole = localStorage.getItem('activeRole');
+    if (activeRole) {
+      config.headers['X-Active-Role'] = activeRole;
+    }
     return config;
   },
   (error) => Promise.reject(error)

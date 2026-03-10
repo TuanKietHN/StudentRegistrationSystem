@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.common.domain.model.Audit;
 import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
 
 import java.math.BigDecimal;
@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Enrollment extends AuditEntity {
+public class Enrollment extends Audit {
     private Long id;
     private Section section;
     private Student student;

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.modules.academic.domain.model.StudentClass;
 import vn.com.nws.cms.modules.academic.domain.model.Teacher;
 import vn.com.nws.cms.modules.academic.domain.repository.StudentClassRepository;
@@ -29,6 +30,7 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     private final StudentClassMapper mapper;
 
     @Override
+    @Transactional
     public StudentClass save(StudentClass studentClass) {
         StudentClassEntity entity;
         if (studentClass.getId() != null) {
@@ -74,11 +76,13 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<StudentClass> findById(Long id) {
         return jpaRepository.findById(id).map(this::mapToDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<StudentClass> findByCode(String code) {
         return jpaRepository.findByCode(code).map(this::mapToDomain);
     }
@@ -94,6 +98,7 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<StudentClass> search(String keyword, Long departmentId, Long cohortId, Long advisorTeacherId, Boolean active, Pageable pageable) {
         List<StudentClassEntity> base = jpaRepository.searchNoKeywordList(departmentId, cohortId, advisorTeacherId, active);
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim().toLowerCase(Locale.ROOT);
@@ -113,6 +118,7 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }

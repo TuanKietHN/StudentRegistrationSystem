@@ -103,6 +103,7 @@ const navItems = [
   { name: 'AdminDepartments', title: 'Quản lý khoa', icon: 'mdi-domain' },
   { name: 'AdminTeachers', title: 'Quản lý giảng viên', icon: 'mdi-account-tie-outline' },
   { name: 'AdminAdminClasses', title: 'Quản lý lớp hành chính', icon: 'mdi-account-multiple-outline' },
+  { name: 'AdminPrograms', title: 'Chương trình đào tạo', icon: 'mdi-school-outline' },
   { name: 'AdminSemesters', title: 'Quản lý học kỳ', icon: 'mdi-calendar-range-outline' },
   { name: 'AdminSubjects', title: 'Quản lý môn học', icon: 'mdi-book-open-page-variant-outline' },
   { name: 'AdminSections', title: 'Quản lý lớp học phần', icon: 'mdi-google-classroom' }

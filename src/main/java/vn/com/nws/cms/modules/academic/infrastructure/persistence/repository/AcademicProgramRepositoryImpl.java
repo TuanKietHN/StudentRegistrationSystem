@@ -2,6 +2,7 @@ package vn.com.nws.cms.modules.academic.infrastructure.persistence.repository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.modules.academic.domain.model.AcademicProgram;
 import vn.com.nws.cms.modules.academic.domain.repository.AcademicProgramRepository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.AcademicProgramEntity;
@@ -18,22 +19,26 @@ public class AcademicProgramRepositoryImpl implements AcademicProgramRepository 
     private final AcademicProgramMapper mapper;
 
     @Override
+    @Transactional
     public AcademicProgram save(AcademicProgram program) {
         AcademicProgramEntity entity = mapper.toEntity(program);
         return mapper.toDomain(jpaRepository.save(entity));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<AcademicProgram> findById(Long id) {
         return jpaRepository.findById(id).map(mapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<AcademicProgram> findByCode(String code) {
         return jpaRepository.findByCode(code).map(mapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AcademicProgram> findAll() {
         return jpaRepository.findAll().stream()
                 .map(mapper::toDomain)
@@ -41,6 +46,7 @@ public class AcademicProgramRepositoryImpl implements AcademicProgramRepository 
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }

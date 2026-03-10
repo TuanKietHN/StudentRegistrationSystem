@@ -7,13 +7,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
 
+import java.util.List;
+
 @Entity
-@Table(name = "student_classes")
+@Table(name = "academic_programs")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class StudentClassEntity extends AuditEntity {
+public class AcademicProgramEntity extends AuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,24 +30,15 @@ public class StudentClassEntity extends AuditEntity {
     @JoinColumn(name = "department_id")
     private DepartmentEntity department;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cohort_id")
-    private CohortEntity cohort;
+    @Column(name = "total_credits", nullable = false)
+    private Integer totalCredits;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "advisor_teacher_id")
-    private TeacherEntity advisorTeacher;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-    @Column(name = "intake_year")
-    private Integer intakeYear;
-
-    @Deprecated
-    private String program;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "program_id")
-    private AcademicProgramEntity academicProgram;
-
-    @Column(nullable = false)
+    @Column(name = "is_active")
     private boolean active;
+
+    @OneToMany(mappedBy = "academicProgram", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProgramSubjectEntity> subjects;
 }

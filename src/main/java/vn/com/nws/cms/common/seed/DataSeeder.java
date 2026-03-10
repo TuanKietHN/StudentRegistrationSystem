@@ -75,6 +75,8 @@ public class DataSeeder implements CommandLineRunner {
 
     private final EnrollmentService enrollmentService;
     private final EnrollmentRepository enrollmentRepository;
+    private final AcademicProgramRepository academicProgramRepository;
+    private final ProgramSubjectRepository programSubjectRepository;
     private final PlatformTransactionManager transactionManager;
 
     // =========================================================================
@@ -89,12 +91,14 @@ public class DataSeeder implements CommandLineRunner {
         tx.executeWithoutResult(s -> seedRbac());
         tx.executeWithoutResult(s -> seedUsers());
         tx.executeWithoutResult(s -> seedDepartments());
+        tx.executeWithoutResult(s -> seedSubjects()); // Moved up for AcademicProgram dependency
         tx.executeWithoutResult(s -> seedTeacherProfiles());
         tx.executeWithoutResult(s -> seedCohorts());
+        tx.executeWithoutResult(s -> seedAcademicPrograms()); // Phase 1: Academic Programs
         tx.executeWithoutResult(s -> seedStudentClasses());
         tx.executeWithoutResult(s -> seedStudentProfiles());
         tx.executeWithoutResult(s -> seedSemesters());
-        tx.executeWithoutResult(s -> seedSubjects());
+        // tx.executeWithoutResult(s -> seedSubjects()); // Moved up
         tx.executeWithoutResult(s -> seedSections());
         tx.executeWithoutResult(s -> seedSectionTimeSlots());
         tx.executeWithoutResult(s -> seedEnrollments());
@@ -428,6 +432,82 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     // =========================================================================
+    //  4.5. ACADEMIC PROGRAMS (Phase 1)
+    // =========================================================================
+
+    private void seedAcademicPrograms() {
+        log.info("[Seeder] Tạo chương trình đào tạo...");
+        Department cntt = departmentByCode("CNTT");
+        Department qtkd = departmentByCode("QTKD");
+        Department ketoan = departmentByCode("KETOAN");
+
+        AcademicProgram cnttProg = upsertAcademicProgram("CNTT_K25", "Kỹ thuật phần mềm K25", cntt, 130, "Chương trình chuẩn Kỹ thuật phần mềm K25");
+        AcademicProgram qtkdProg = upsertAcademicProgram("QTKD_K25", "Quản trị kinh doanh K25", qtkd, 120, "Chương trình chuẩn QTKD K25");
+        AcademicProgram ketoanProg = upsertAcademicProgram("KETOAN_K25", "Kế toán K25", ketoan, 125, "Chương trình chuẩn Kế toán K25");
+
+        // Gán môn học vào chương trình
+        upsertProgramSubject(cnttProg, "JAVA001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(cnttProg, "JAVA002", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(cnttProg, "WEB001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(cnttProg, "DB001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(cnttProg, "DB002", 2, ProgramSubject.TYPE_ELECTIVE, 4.0);
+        upsertProgramSubject(cnttProg, "AI001", 4, ProgramSubject.TYPE_ELECTIVE, 4.0);
+
+        upsertProgramSubject(qtkdProg, "MKT001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(qtkdProg, "MGMT001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(qtkdProg, "FIN001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+
+        upsertProgramSubject(ketoanProg, "ACC001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(ketoanProg, "ACC002", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+    }
+
+    private AcademicProgram upsertAcademicProgram(String code, String name, Department dept, int credits, String description) {
+        return academicProgramRepository.findByCode(code)
+                .map(existing -> {
+                    existing.setName(name);
+                    existing.setDepartment(dept);
+                    existing.setTotalCredits(credits);
+                    existing.setDescription(description);
+                    existing.setActive(true);
+                    return academicProgramRepository.save(existing);
+                })
+                .orElseGet(() -> {
+                    AcademicProgram p = AcademicProgram.builder()
+                            .code(code)
+                            .name(name)
+                            .department(dept)
+                            .totalCredits(credits)
+                            .description(description)
+                            .active(true)
+                            .build();
+                    log.debug("  [Program] Tạo mới: {}", code);
+                    return academicProgramRepository.save(p);
+                });
+    }
+
+    private void upsertProgramSubject(AcademicProgram prog, String subjectCode, int semester, String type, double passScore) {
+        try {
+            Subject subject = subjectByCode(subjectCode);
+            boolean exists = programSubjectRepository.findByProgramId(prog.getId()).stream()
+                    .anyMatch(ps -> ps.getSubject().getId().equals(subject.getId()));
+
+            if (!exists) {
+                ProgramSubject ps = ProgramSubject.builder()
+                        .programId(prog.getId())
+                        .subject(subject)
+                        .semester(semester)
+                        .subjectType(type)
+                        .passScore(passScore)
+                        .build();
+                programSubjectRepository.save(ps);
+                log.debug("  [ProgramSubject] Thêm {} vào {}", subjectCode, prog.getCode());
+            }
+        } catch (Exception e) {
+            log.warn("  [ProgramSubject] Lỗi thêm môn {}: {}", subjectCode, e.getMessage());
+        }
+    }
+
+    // =========================================================================
     //  5. STUDENT CLASSES (lớp hành chính)
     // =========================================================================
 
@@ -466,6 +546,15 @@ public class DataSeeder implements CommandLineRunner {
 
     private void upsertStudentClass(String code, String name, Department department,
                                     Cohort cohort, Teacher advisorTeacher, Integer intakeYear, String program) {
+        
+        // Try to find AcademicProgram (Phase 1)
+        AcademicProgram academicProgram = null;
+        if (department != null && intakeYear != null) {
+             String progCode = department.getCode() + "_K" + (intakeYear % 100);
+             academicProgram = academicProgramRepository.findByCode(progCode).orElse(null);
+        }
+        final AcademicProgram finalAcademicProgram = academicProgram;
+
         studentClassRepository.findByCode(code).ifPresentOrElse(existing -> {
             existing.setName(name);
             existing.setDepartment(department);
@@ -473,6 +562,7 @@ public class DataSeeder implements CommandLineRunner {
             existing.setAdvisorTeacher(advisorTeacher);
             existing.setIntakeYear(intakeYear);
             existing.setProgram(program);
+            existing.setAcademicProgram(finalAcademicProgram);
             existing.setActive(true);
             studentClassRepository.save(existing);
             log.debug("  [StudentClass] Cập nhật: {}", code);
@@ -485,6 +575,7 @@ public class DataSeeder implements CommandLineRunner {
                     .advisorTeacher(advisorTeacher)
                     .intakeYear(intakeYear)
                     .program(program)
+                    .academicProgram(finalAcademicProgram)
                     .active(true)
                     .build());
             log.debug("  [StudentClass] Tạo mới: {}", code);

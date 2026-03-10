@@ -1,3 +1,0 @@
-ALTER TABLE semesters
-    ADD COLUMN IF NOT EXISTS secondary_active BOOLEAN NOT NULL DEFAULT FALSE;
-

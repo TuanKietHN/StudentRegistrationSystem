@@ -12,6 +12,8 @@ export interface TokenResponse {
   expiresIn: number
   username: string
   role: string
+  studentId?: number
+  teacherId?: number
 }
 
 export interface RegisterPayload {

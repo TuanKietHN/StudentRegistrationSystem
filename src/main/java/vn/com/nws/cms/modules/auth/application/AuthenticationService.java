@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.common.security.JwtProvider;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.TeacherEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.StudentJpaRepository;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.TeacherJpaRepository;
 import vn.com.nws.cms.modules.auth.api.dto.LoginRequest;
 import vn.com.nws.cms.modules.auth.api.dto.TokenResponse;
 import vn.com.nws.cms.modules.auth.domain.model.User;
@@ -42,6 +46,8 @@ public class AuthenticationService {
     private final AuthSessionService authSessionService;
     private final AuthRateLimitService authRateLimitService;
     private final AuthAuditService authAuditService;
+    private final StudentJpaRepository studentJpaRepository;
+    private final TeacherJpaRepository teacherJpaRepository;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -153,6 +159,13 @@ public class AuthenticationService {
     }
 
     private TokenResponse buildTokenResponse(String accessToken, String refreshToken, User user) {
+        Long studentId = studentJpaRepository.findByUserId(user.getId())
+                .map(StudentEntity::getId)
+                .orElse(null);
+        Long teacherId = teacherJpaRepository.findByUserId(user.getId())
+                .map(TeacherEntity::getId)
+                .orElse(null);
+
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -160,6 +173,8 @@ public class AuthenticationService {
                 .expiresIn(jwtExpiration / 1000)
                 .username(user.getUsername())
                 .role(user.getRoles().stream().map(Enum::name).collect(Collectors.joining(",")))
+                .studentId(studentId)
+                .teacherId(teacherId)
                 .build();
     }
 

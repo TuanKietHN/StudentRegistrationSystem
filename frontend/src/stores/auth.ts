@@ -29,6 +29,8 @@ function authoritiesFromToken(token: string | null): string[] {
 interface User {
   username: string
   role: string
+  studentId?: number
+  teacherId?: number
 }
 
 interface AuthState {
@@ -70,11 +72,11 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setSession(payload: Pick<TokenResponse, 'accessToken' | 'username' | 'role'>) {
-      const { accessToken, username, role } = payload
+    setSession(payload: TokenResponse) {
+      const { accessToken, username, role, studentId, teacherId } = payload
 
       this.token = accessToken
-      this.user = { username, role }
+      this.user = { username, role, studentId, teacherId }
       this.isAuthenticated = true
 
       localStorage.setItem('accessToken', accessToken)

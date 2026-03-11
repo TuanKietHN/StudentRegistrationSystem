@@ -1,95 +1,117 @@
-# 01. Database review (migrations ↔ entity/domain)
+# 01. Database Review — Schema, Migrations & Entity/Domain Mapping
 
-## 1) Thiết lập hiện tại
+> Cập nhật: 2026-03-11 — phản ánh trạng thái hiện tại của codebase.
 
-### Backend đang chạy theo hướng nào?
-- Flyway là nguồn schema duy nhất (enabled + baseline-on-migrate)
-- `spring.jpa.hibernate.ddl-auto=validate` để JPA chỉ validate schema
+## 1) Chiến lược quản lý schema
 
-Mục tiêu là tránh drift schema: schema chỉ được thay đổi qua migrations, ứng dụng chỉ validate.
+| Tiêu chí              | Trạng thái          |
+|------------------------|---------------------|
+| Flyway                 | ✅ Enabled (auto-config) |
+| `ddl-auto`             | ✅ `validate`       |
+| Migration files        | 3 files (V1 consolidated, V2, V3) |
+| Nguồn schema duy nhất  | ✅ Flyway           |
 
-Nguồn:
-- `application.properties`
-- Migrations: `src/main/resources/db/migration/V1..V11`
+- **V1__init_schema.sql** (consolidated V1–V25): Schema toàn bộ hệ thống, 495 dòng, tạo mới tất cả bảng + seed RBAC + view `v_sections_with_teacher`.
+- **V2__add_academic_permissions.sql**: Bổ sung permissions cho Academic Program và Student Progress.
+- **V3__fix_permission_casing_and_add_sections.sql**: Sửa lỗi case hoa thường permissions + bổ sung section permissions.
+
+Kết luận: Schema đã được hợp nhất (consolidated) rất clean, tránh được vấn đề drift từ nhiều migration nhỏ.
 
 ## 2) Nhóm bảng theo bounded context
 
-### 2.1. Auth / IAM
+### 2.1. Auth / IAM (9 bảng)
 
-Schema theo migrations:
-- `users` (V1, V7 drop `role`, V8 add `avatar`)
-- `roles`, `permissions`, `role_permissions`, `user_roles` (V2)
-- `refresh_tokens`, `password_reset_tokens` (V2)
-
-Entity hiện có:
-- `UserEntity` → `users`
-- `RoleEntity`, `UserRoleEntity` → `roles`, `user_roles`
-
-Nhận xét:
-- Dữ liệu “permission” đã có trong DB (migrations) nhưng hiện chưa thấy entity/service/controller nào dùng `permissions`, `role_permissions` để authorize theo permission. Code hiện thiên về `@PreAuthorize(hasRole(...))`.
-
-### 2.2. Academic (quản lý học vụ cơ bản)
-
-Schema theo migrations (đang được API sử dụng):
-- `semesters` (V1)
-- `subjects` (V1, V3 mở rộng)
-- `courses` (V1, V3 mở rộng)
-- `enrollments` (V1)
+| Bảng                 | Vai trò |
+|----------------------|---------|
+| `users`              | Tài khoản đăng nhập (username, email, password) |
+| `roles`              | ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT |
+| `user_roles`         | M-N: user ↔ role |
+| `permissions`        | RESOURCE:ACTION (48+ permissions) |
+| `role_permissions`   | M-N: role ↔ permission |
+| `auth_audit_events`  | Ghi lại login/logout/failed attempts (từ code, chưa thấy trong V1 migration — **cần kiểm tra**) |
 
 Entity hiện có:
-- `SemesterEntity` → `semesters`
-- `SubjectEntity` → `subjects`
-- `CourseEntity` → `courses`
-- `EnrollmentEntity` → `enrollments`
-- `DepartmentEntity` → `departments` (V3)
-- `TeacherEntity` → `teachers` (V3)
+- `UserEntity`, `RoleEntity`, `UserRoleEntity`, `UserRoleId` — map đầy đủ
+- `PermissionEntity`, `RolePermissionEntity`, `RolePermissionId` — map đầy đủ
+- `AuthAuditEventEntity` — ✅ entity có nhưng **migration chưa rõ** (có thể tạo qua `ddl-auto` hoặc migration riêng)
 
-Nhận xét nổi bật:
-- API/Service hiện gọi `Course` là “lớp học phần”, tức một course gắn với `semester_id` và `subject_id` (mô hình V1).
-- Phần schema LMS (V4–V6) đã bị loại khỏi scope và bị drop bằng V9.
+> [!WARNING]
+> `AuthAuditEventEntity` không thấy trong V1__init_schema.sql. Cần xác minh bảng `auth_audit_events` được tạo từ đâu (migration missing? hay JPA auto?). Đây là rủi ro nếu `ddl-auto=validate` thì sẽ fail khi bảng chưa tồn tại.
 
-## 3) Các điểm lệch schema ↔ entity/domain cần chú ý
+### 2.2. Academic (12 bảng)
 
-### 3.1. `courses.teacher_id`: Users hay Teachers?
+| Bảng                 | Vai trò |
+|----------------------|---------|
+| `departments`        | Khoa/bộ môn (hỗ trợ parent-child) |
+| `teachers`           | Hồ sơ giảng viên, FK → users (1:1) |
+| `subjects`           | Môn học (code, credits, process_weight, exam_weight) |
+| `semesters`          | Học kỳ (active/secondary_active) |
+| `cohorts`            | Niên khóa (start_year – end_year) |
+| `academic_programs`  | Chương trình đào tạo (FK → departments) |
+| `program_subjects`   | M-N: chương trình ↔ môn học (semester, type, pass_score) |
+| `student_classes`    | Lớp hành chính (FK → department, cohort, teacher, program) |
+| `students`           | Hồ sơ sinh viên, FK → users (1:1) + student_class |
+| `sections`           | Lớp học phần (FK → semester, subject, user/teacher) |
+| `section_time_slots` | Lịch học (day_of_week, start/end time, room) |
+| `enrollments`        | Đăng ký học phần + điểm (process/exam/final score, score locking, override) |
 
-V1:
-- `courses.teacher_id` FK → `users(id)`
+Entity → bảng: tất cả 12 entity đã **map đầy đủ** với bảng tương ứng.
 
-V3:
-- Tạo bảng `teachers(user_id, ...)`
-- View `v_courses_with_teacher` JOIN `courses.teacher_id = teachers.id` (ngụ ý `teacher_id` là teachers.id)
-- Nhưng migration không ALTER FK của `courses.teacher_id`, nên về mặt schema gốc vẫn theo V1
+## 3) Các điểm cần chú ý
 
-Trong code:
-- `CourseEntity.teacher` đang map sang `UserEntity` (users)
+### 3.1. `sections.teacher_id` → `users(id)` (KHÔNG phải `teachers(id)`)
 
-Hệ quả:
-- View `v_courses_with_teacher` có nguy cơ sai (JOIN nhầm cột) nếu `teacher_id` thực tế là user_id.
-
-Khuyến nghị chuẩn hoá (chọn 1 trong 2 hướng):
-1. Chuẩn hoá `courses.teacher_id` → `teachers(id)` để enforce ở DB (V12), và join sang users qua `teachers.user_id`.
-
-### 3.2. `subjects.credit` vs `subjects.credits`
-
-V1 tạo cột `credit`.
-V3 thêm cột `credits` (mặc định 3).
+Schema hiện tại: `sections.teacher_id` FK → `users(id)`.
 
 Trong code:
-- `SubjectEntity`/domain sử dụng `credits`.
+- `Section.teacher` (domain model) có kiểu `User`, không phải `Teacher`
+- `SectionEntity.teacher` map tới `UserEntity`
+- View `v_sections_with_teacher` JOIN đúng: `sections.teacher_id = users.id`, rồi JOIN `teachers.user_id = users.id`
 
-Hệ quả:
-- Schema có khả năng tồn tại đồng thời 2 cột cùng ý nghĩa; dữ liệu seed ở V1 đi vào `credit` sẽ không tự “điền” sang `credits` nếu không có migration chuyển đổi.
+**Thiết kế này hợp lệ** nhưng có nhược điểm:
+- Không enforce ràng buộc "chỉ user có teacher profile mới được gán dạy" ở tầng DB
+- Muốn enforce cần ALTER FK thành `sections.teacher_id → teachers(id)` (hoặc validation ở tầng service)
 
-Khuyến nghị:
-- Đã hợp nhất bằng V11 (copy dữ liệu và drop `credit`).
+→ **Service tầng hiện tại đã validate**: DataSeeder chỉ gán user có ROLE_TEACHER.
 
-## 4) Kết luận nhanh về DB readiness cho “quản lý khóa học nội bộ”
+### 3.2. `auth_audit_events` — thiếu migration
 
-Phần đã “đủ dùng” (có API + entity + domain):
-- Auth cơ bản + JWT
-- Quản lý người dùng (admin) + avatar (MinIO)
-- Môn học (Subject), Học kỳ (Semester), Lớp học phần (Course), Đăng ký (Enrollment)
+`AuthAuditEventEntity` có trong code nhưng bảng không nằm trong V1. Cần tạo migration mới hoặc xác nhận bảng đã tạo bằng cách khác (ví dụ: `ddl-auto=update` trước đó rồi giữ lại).
 
-Điểm cần xử lý trước khi mở rộng (theo hướng nội bộ):
-- Bổ sung module teachers/departments ở layer API/service nếu cần quản trị hồ sơ giảng viên/khoa
-- Mở rộng lớp học phần với lịch học/phòng học/điểm danh theo buổi (nếu nghiệp vụ yêu cầu)
+### 3.3. V2/V3 Migrations dùng cột `module` không tồn tại trong V1
+
+V1 schema tạo bảng `permissions` với các cột: `name`, `resource`, `action`, `description`.
+
+V2 (`INSERT INTO permissions (name, description, module)`) và V3 tương tự — dùng cột `module` mà V1 **không tạo**.
+
+> [!CAUTION]
+> Nếu chạy fresh install với V1 rồi V2/V3, sẽ **fail** vì cột `module` không tồn tại. Cần sửa V2/V3 để dùng `resource` thay `module`, hoặc bổ sung `ALTER TABLE permissions ADD COLUMN module VARCHAR(100)` vào V1.
+
+### 3.4. RefreshToken / PasswordResetToken — quản lý bằng Redis
+
+Không thấy bảng `refresh_tokens` hay `password_reset_tokens` trong V1 consolidated. Từ code:
+- Refresh token được quản lý qua `RedisSessionRepository` (Redis-backed sessions)
+- Password reset token qua `PasswordService` (cần xác nhận xem lưu ở Redis hay DB)
+
+→ Hướng tiếp cận Redis-backed session là đúng cho production, nhưng cần document rõ dependency vào Redis.
+
+## 4) Kết luận
+
+### ✅ Đã tốt
+
+- Schema consolidated V1 rất sạch, đầy đủ indexes, triggers, constraints
+- Grade weights có CHECK constraint (`process_weight + exam_weight = 100`)
+- Enrollment có UNIQUE constraint (`section_id, student_id`), tránh đăng ký trùng
+- Section lifecycle (OPEN/CLOSED/CANCELED/MERGED) có CHECK constraint
+- View `v_sections_with_teacher` phục vụ query join phức tạp
+- Schema hỗ trợ score locking + score override (audit trail cho điểm)
+
+### ⚠️ Cần xử lý
+
+| # | Vấn đề | Mức độ |
+|---|--------|--------|
+| 1 | `auth_audit_events` thiếu migration | 🔴 Cao |
+| 2 | V2/V3 dùng cột `module` không tồn tại trong V1 | 🔴 Cao (fresh install sẽ fail) |
+| 3 | Xác nhận Redis dependency cho session/token | 🟡 Trung bình |
+| 4 | `sections.teacher_id` FK tới `users` thay vì `teachers` | 🟢 Chấp nhận được |
+| 5 | `subjects` không có bảng prerequisite riêng (nếu cần prerequisites) | 🟡 Trung bình |

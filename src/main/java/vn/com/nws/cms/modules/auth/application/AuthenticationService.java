@@ -13,10 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.common.security.JwtProvider;
-import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
-import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.TeacherEntity;
-import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.StudentJpaRepository;
-import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.TeacherJpaRepository;
+import vn.com.nws.cms.modules.academic.domain.model.Student;
+import vn.com.nws.cms.modules.academic.domain.model.Teacher;
+import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.TeacherRepository;
 import vn.com.nws.cms.modules.auth.api.dto.LoginRequest;
 import vn.com.nws.cms.modules.auth.api.dto.TokenResponse;
 import vn.com.nws.cms.modules.auth.domain.model.User;
@@ -46,8 +46,8 @@ public class AuthenticationService {
     private final AuthSessionService authSessionService;
     private final AuthRateLimitService authRateLimitService;
     private final AuthAuditService authAuditService;
-    private final StudentJpaRepository studentJpaRepository;
-    private final TeacherJpaRepository teacherJpaRepository;
+    private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
@@ -159,11 +159,11 @@ public class AuthenticationService {
     }
 
     private TokenResponse buildTokenResponse(String accessToken, String refreshToken, User user) {
-        Long studentId = studentJpaRepository.findByUserId(user.getId())
-                .map(StudentEntity::getId)
+        Long studentId = studentRepository.findByUserId(user.getId())
+                .map(Student::getId)
                 .orElse(null);
-        Long teacherId = teacherJpaRepository.findByUserId(user.getId())
-                .map(TeacherEntity::getId)
+        Long teacherId = teacherRepository.findByUserId(user.getId())
+                .map(Teacher::getId)
                 .orElse(null);
 
         return TokenResponse.builder()

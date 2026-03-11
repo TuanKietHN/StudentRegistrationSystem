@@ -2,6 +2,9 @@ package vn.com.nws.cms.modules.academic.application.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.ResourceNotFoundException;
@@ -12,6 +15,9 @@ import vn.com.nws.cms.modules.academic.domain.model.*;
 import vn.com.nws.cms.modules.academic.domain.repository.EnrollmentRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.ProgramSubjectRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.TeacherRepository;
+import vn.com.nws.cms.modules.auth.domain.model.User;
+import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,10 +32,15 @@ public class StudentProgressServiceImpl implements StudentProgressService {
     private final StudentRepository studentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ProgramSubjectRepository programSubjectRepository;
+    private final TeacherRepository teacherRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
     public StudentProgressResponse getStudentProgress(Long studentId) {
+        // Security Check
+        checkPermission(studentId);
+
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found with id: " + studentId));
 
@@ -188,5 +199,48 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         BigDecimal bd = BigDecimal.valueOf(value);
         bd = bd.setScale(places, RoundingMode.HALF_UP);
         return bd.doubleValue();
+    }
+
+    private void checkPermission(Long targetStudentId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("User is not authenticated");
+        }
+
+        boolean canReadAll = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("STUDENT_PROGRESS:READ_ALL"));
+        if (canReadAll) {
+            return;
+        }
+
+        String username = auth.getName();
+        User currentUser = userRepository.findByUsername(username)
+                .or(() -> userRepository.findByEmail(username))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        boolean canReadClass = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("STUDENT_PROGRESS:READ_CLASS"));
+        boolean canReadSelf = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("STUDENT_PROGRESS:READ_SELF"));
+
+        if (canReadSelf) {
+            Student currentStudentProfile = studentRepository.findByUserId(currentUser.getId()).orElse(null);
+            if (currentStudentProfile != null && currentStudentProfile.getId().equals(targetStudentId)) {
+                return;
+            }
+        }
+
+        if (canReadClass) {
+            Teacher currentTeacherProfile = teacherRepository.findByUserId(currentUser.getId())
+                    .orElseThrow(() -> new AccessDeniedException("Teacher profile not found for current user"));
+
+            Student targetStudent = studentRepository.findById(targetStudentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+            
+            StudentClass studentClass = targetStudent.getStudentClass();
+            if (studentClass != null && studentClass.getAdvisorTeacher() != null &&
+                    studentClass.getAdvisorTeacher().getId().equals(currentTeacherProfile.getId())) {
+                return;
+            }
+        }
+
+        throw new AccessDeniedException("Access denied: You do not have permission to view this student's progress");
     }
 }

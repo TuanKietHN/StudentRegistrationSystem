@@ -1,6 +1,6 @@
 # 03. Chức năng hiện có, đánh giá chất lượng & khoảng trống
 
-> Cập nhật: 2026-03-11
+> Cập nhật: 2026-03-11 — phản ánh trạng thái sau khi refactor layer leak và GlobalExceptionHandler.
 
 ## 1) Chức năng hiện có — Backend API
 
@@ -138,16 +138,16 @@ Role ← M:N → Permission (RESOURCE:ACTION)
 
 ### 4.2. Điểm cần cải thiện
 
-| # | Vấn đề | Mức độ | Gợi ý |
-|---|--------|--------|-------|
-| 1 | Layer leak (Controller → JPA entity) | 🟡 Trung bình | Refactor `StudentProgressController`, `AuthenticationService` |
-| 2 | `auth_audit_events` thiếu migration | 🔴 Cao | Tạo migration V4 |
-| 3 | Test coverage chưa rõ | 🟡 Trung bình | Chưa thấy unit test/integration test cho services |
-| 4 | isAdmin/isTeacher check duplicate | 🟡 Trung bình | Extract thành utility hoặc custom annotation |
-| 5 | `GlobalExceptionHandler` catch `RuntimeException` quá rộng | 🟡 Trung bình | Có thể nuốt unexpected errors; nên log stack trace |
-| 6 | `CourseClass.java` legacy file | 🟢 Thấp | Xác nhận và xóa nếu không dùng |
-| 7 | `Course*` DTOs (legacy) | 🟢 Thấp | CourseCreateRequest, CourseFilterRequest... có thể legacy từ trước Section refactor |
-| 8 | `PasswordEncoder` bean trong `SecurityConfig` | 🟢 Thấp | Có thể tách thành `@Bean` riêng để tránh circular dependency |
+| # | Vấn đề | Mức độ | Trạng thái |
+|---|--------|--------|------------|
+| 1 | Layer leak (Controller → JPA entity) | 🟡 Trung bình | ✅ Đã sửa — `StudentProgressController` chỉ còn inject `StudentProgressService`; `AuthenticationService` dùng domain repository thay JPA entity. |
+| 2 | `auth_audit_events` thiếu migration | 🔴 Cao | ⏳ Chưa sửa — cần tạo migration V4. |
+| 3 | Test coverage chưa rõ | 🟡 Trung bình | ⏳ Chưa có unit/integration test cho services. |
+| 4 | isAdmin/isTeacher check duplicate | 🟡 Trung bình | ⏳ Chưa sửa. |
+| 5 | `GlobalExceptionHandler` catch `RuntimeException` quá rộng | 🟡 Trung bình | ✅ Đã sửa — tất cả handler đều log stack trace đầy đủ (`log.error("...", e)`). |
+| 6 | `CourseClass.java` legacy file | 🟢 Thấp | ⏳ Cần xác nhận và xóa nếu không dùng. |
+| 7 | `Course*` DTOs (legacy) | 🟢 Thấp | ⏳ Chưa dọn dẹp. |
+| 8 | `PasswordEncoder` bean trong `SecurityConfig` | 🟢 Thấp | ⏳ Chưa sửa. |
 
 ## 5) Khoảng trống — VS "quản lý khóa học nội bộ" hoàn chỉnh
 

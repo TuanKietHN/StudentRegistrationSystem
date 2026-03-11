@@ -1,6 +1,6 @@
 # 02. Domain/Entity Review — Kiến trúc tầng domain & entity
 
-> Cập nhật: 2026-03-11
+> Cập nhật: 2026-03-11 — phản ánh trạng thái sau khi refactor layer leak.
 
 ## 1) Kiến trúc phân tầng (Clean Architecture)
 
@@ -28,14 +28,13 @@ infrastructure/persistence (Entity + JPA Repository + Mapper)
 | Service interface + Impl | ✅ 12 service trong academic + 2 trong iam + 7 trong auth |
 | DTO request/response riêng biệt | ✅ Mỗi entity có Create/Update/Response/Filter DTOs |
 
-### 1.2. Điểm cần cải thiện
+### 1.2. Điểm đã cải thiện (Đã sửa)
 
-| # | Vấn đề | Chi tiết |
-|---|--------|----------|
-| 1 | **Layer leak**: `StudentProgressController` truy cập trực tiếp JPA entity/repository | Import `StudentEntity`, `TeacherEntity`, `StudentJpaRepository`, `TeacherJpaRepository` — vi phạm Clean Architecture. Nên dùng domain repository hoặc service. |
-| 2 | **Layer leak**: `AuthenticationService` import JPA entity | Import `StudentEntity`, `TeacherEntity`, `StudentJpaRepository`, `TeacherJpaRepository` để lấy studentId/teacherId cho TokenResponse. Nên abstract qua domain repository. |
-| 3 | **DataSeeder** import JPA entity | `JpaPermissionRepository`, `JpaRolePermissionRepository` — chấp nhận được cho seed data, nhưng lý tưởng nên qua domain layer. |
-| 4 | `CourseClass.java` trong domain/model | File có vẻ legacy (còn sót), cần xác nhận có đang dùng không. |
+| # | Vấn đề | Trạng thái |
+|---|--------|------------|
+| 1 | **Layer leak trong `StudentProgressController`** (trực tiếp inject `StudentJpaRepository`, `TeacherJpaRepository`, `UserEntity`) | ✅ Đã sửa — chỉ còn inject `StudentProgressService`. Logic phân quyền chi tiết đã được chuyển vào service layer. |
+| 2 | **Layer leak trong `AuthenticationService`** (import `StudentEntity`, `TeacherEntity`, `StudentJpaRepository`, `TeacherJpaRepository`) | ✅ Đã sửa — giờ dùng domain repositories `StudentRepository`/`TeacherRepository` và domain models `Student`/`Teacher`. |
+| 3 | `CourseClass.java` trong domain/model | ❓ Cần xác nhận còn dùng không. |
 
 ## 2) Domain Models — Tổng quan
 

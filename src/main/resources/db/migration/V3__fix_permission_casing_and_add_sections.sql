@@ -3,54 +3,54 @@ UPDATE permissions SET name = UPPER(name) WHERE name LIKE 'academic_program:%';
 UPDATE permissions SET name = UPPER(name) WHERE name LIKE 'student_progress:%';
 
 -- 2. Add SECTION permissions if not exist
-INSERT INTO permissions (name, description, module)
-SELECT 'SECTION:READ', 'Xem lớp học phần', 'SECTION'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'SECTION:READ', 'Xem lớp học phần', 'SECTION', 'READ'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'SECTION:READ');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'SECTION:CREATE', 'Tạo lớp học phần', 'SECTION'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'SECTION:CREATE', 'Tạo lớp học phần', 'SECTION', 'CREATE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'SECTION:CREATE');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'SECTION:UPDATE', 'Cập nhật lớp học phần', 'SECTION'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'SECTION:UPDATE', 'Cập nhật lớp học phần', 'SECTION', 'UPDATE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'SECTION:UPDATE');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'SECTION:DELETE', 'Xóa lớp học phần', 'SECTION'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'SECTION:DELETE', 'Xóa lớp học phần', 'SECTION', 'DELETE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'SECTION:DELETE');
 
 -- 3. Add ENROLLMENT permissions if not exist
-INSERT INTO permissions (name, description, module)
-SELECT 'ENROLLMENT:READ', 'Xem đăng ký học phần', 'ENROLLMENT'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'ENROLLMENT:READ', 'Xem đăng ký học phần', 'ENROLLMENT', 'READ'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'ENROLLMENT:READ');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'ENROLLMENT:CREATE', 'Tạo đăng ký học phần', 'ENROLLMENT'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'ENROLLMENT:CREATE', 'Tạo đăng ký học phần', 'ENROLLMENT', 'CREATE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'ENROLLMENT:CREATE');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'ENROLLMENT:UPDATE', 'Cập nhật đăng ký học phần', 'ENROLLMENT'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'ENROLLMENT:UPDATE', 'Cập nhật đăng ký học phần', 'ENROLLMENT', 'UPDATE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'ENROLLMENT:UPDATE');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'ENROLLMENT:DELETE', 'Xóa đăng ký học phần', 'ENROLLMENT'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'ENROLLMENT:DELETE', 'Xóa đăng ký học phần', 'ENROLLMENT', 'DELETE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'ENROLLMENT:DELETE');
 
 -- 4. Add STUDENT_CLASS permissions if not exist
-INSERT INTO permissions (name, description, module)
-SELECT 'STUDENT_CLASS:READ', 'Xem lớp hành chính', 'STUDENT_CLASS'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'STUDENT_CLASS:READ', 'Xem lớp hành chính', 'STUDENT_CLASS', 'READ'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'STUDENT_CLASS:READ');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'STUDENT_CLASS:CREATE', 'Tạo lớp hành chính', 'STUDENT_CLASS'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'STUDENT_CLASS:CREATE', 'Tạo lớp hành chính', 'STUDENT_CLASS', 'CREATE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'STUDENT_CLASS:CREATE');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'STUDENT_CLASS:UPDATE', 'Cập nhật lớp hành chính', 'STUDENT_CLASS'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'STUDENT_CLASS:UPDATE', 'Cập nhật lớp hành chính', 'STUDENT_CLASS', 'UPDATE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'STUDENT_CLASS:UPDATE');
 
-INSERT INTO permissions (name, description, module)
-SELECT 'STUDENT_CLASS:DELETE', 'Xóa lớp hành chính', 'STUDENT_CLASS'
+INSERT INTO permissions (name, description, resource, action)
+SELECT 'STUDENT_CLASS:DELETE', 'Xóa lớp hành chính', 'STUDENT_CLASS', 'DELETE'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE name = 'STUDENT_CLASS:DELETE');
 
 

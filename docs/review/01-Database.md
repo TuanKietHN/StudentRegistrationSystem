@@ -1,6 +1,6 @@
 # 01. Database Review — Schema, Migrations & Entity/Domain Mapping
 
-> Cập nhật: 2026-03-11 — phản ánh trạng thái hiện tại của codebase.
+> Cập nhật: 2026-03-11 — phản ánh trạng thái hiện tại sau khi fix migration.
 
 ## 1) Chiến lược quản lý schema
 
@@ -78,14 +78,9 @@ Trong code:
 
 `AuthAuditEventEntity` có trong code nhưng bảng không nằm trong V1. Cần tạo migration mới hoặc xác nhận bảng đã tạo bằng cách khác (ví dụ: `ddl-auto=update` trước đó rồi giữ lại).
 
-### 3.3. V2/V3 Migrations dùng cột `module` không tồn tại trong V1
+### 3.3. V2/V3 Migrations (Đã sửa)
 
-V1 schema tạo bảng `permissions` với các cột: `name`, `resource`, `action`, `description`.
-
-V2 (`INSERT INTO permissions (name, description, module)`) và V3 tương tự — dùng cột `module` mà V1 **không tạo**.
-
-> [!CAUTION]
-> Nếu chạy fresh install với V1 rồi V2/V3, sẽ **fail** vì cột `module` không tồn tại. Cần sửa V2/V3 để dùng `resource` thay `module`, hoặc bổ sung `ALTER TABLE permissions ADD COLUMN module VARCHAR(100)` vào V1.
+Trước đó V2/V3 dùng cột `module` không tồn tại trong V1. Hiện tại đã được sửa thành `resource` và `action` để đồng bộ hoàn toàn với schema của V1.
 
 ### 3.4. RefreshToken / PasswordResetToken — quản lý bằng Redis
 
@@ -111,7 +106,6 @@ Không thấy bảng `refresh_tokens` hay `password_reset_tokens` trong V1 conso
 | # | Vấn đề | Mức độ |
 |---|--------|--------|
 | 1 | `auth_audit_events` thiếu migration | 🔴 Cao |
-| 2 | V2/V3 dùng cột `module` không tồn tại trong V1 | 🔴 Cao (fresh install sẽ fail) |
-| 3 | Xác nhận Redis dependency cho session/token | 🟡 Trung bình |
-| 4 | `sections.teacher_id` FK tới `users` thay vì `teachers` | 🟢 Chấp nhận được |
-| 5 | `subjects` không có bảng prerequisite riêng (nếu cần prerequisites) | 🟡 Trung bình |
+| 2 | Xác nhận Redis dependency cho session/token | 🟡 Trung bình |
+| 3 | `sections.teacher_id` FK tới `users` thay vì `teachers` | 🟢 Chấp nhận được |
+| 4 | `subjects` không có bảng prerequisite riêng (nếu cần prerequisites) | 🟡 Trung bình |

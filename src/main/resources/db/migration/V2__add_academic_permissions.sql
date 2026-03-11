@@ -1,11 +1,11 @@
-INSERT INTO permissions (name, description, module) VALUES 
-('ACADEMIC_PROGRAM:READ', 'Xem chương trình đào tạo', 'ACADEMIC_PROGRAM'),
-('ACADEMIC_PROGRAM:CREATE', 'Tạo chương trình đào tạo', 'ACADEMIC_PROGRAM'),
-('ACADEMIC_PROGRAM:UPDATE', 'Cập nhật chương trình đào tạo', 'ACADEMIC_PROGRAM'),
-('ACADEMIC_PROGRAM:DELETE', 'Xóa chương trình đào tạo', 'ACADEMIC_PROGRAM'),
-('STUDENT_PROGRESS:READ_ALL', 'Xem tiến độ học tập (Tất cả)', 'STUDENT_PROGRESS'),
-('STUDENT_PROGRESS:READ_CLASS', 'Xem tiến độ học tập (Lớp chủ nhiệm)', 'STUDENT_PROGRESS'),
-('STUDENT_PROGRESS:READ_SELF', 'Xem tiến độ học tập (Cá nhân)', 'STUDENT_PROGRESS');
+INSERT INTO permissions (name, description, resource, action) VALUES 
+('ACADEMIC_PROGRAM:READ', 'Xem chương trình đào tạo', 'ACADEMIC_PROGRAM', 'READ'),
+('ACADEMIC_PROGRAM:CREATE', 'Tạo chương trình đào tạo', 'ACADEMIC_PROGRAM', 'CREATE'),
+('ACADEMIC_PROGRAM:UPDATE', 'Cập nhật chương trình đào tạo', 'ACADEMIC_PROGRAM', 'UPDATE'),
+('ACADEMIC_PROGRAM:DELETE', 'Xóa chương trình đào tạo', 'ACADEMIC_PROGRAM', 'DELETE'),
+('STUDENT_PROGRESS:READ_ALL', 'Xem tiến độ học tập (Tất cả)', 'STUDENT_PROGRESS', 'READ_ALL'),
+('STUDENT_PROGRESS:READ_CLASS', 'Xem tiến độ học tập (Lớp chủ nhiệm)', 'STUDENT_PROGRESS', 'READ_CLASS'),
+('STUDENT_PROGRESS:READ_SELF', 'Xem tiến độ học tập (Cá nhân)', 'STUDENT_PROGRESS', 'READ_SELF');
 
 -- Assign permissions to roles
 -- ADMIN: Full access to academic programs and student progress

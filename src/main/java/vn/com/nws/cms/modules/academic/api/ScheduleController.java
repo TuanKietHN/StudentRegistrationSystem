@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,10 +32,11 @@ public class ScheduleController {
     private final UserRepository userRepository;
 
     @GetMapping("/mine")
-    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER')")
+    @PreAuthorize("hasAnyRole('STUDENT', 'TEACHER', 'ADMIN')")
     @Operation(summary = "Get my schedule")
     public ResponseEntity<List<ScheduleResponse>> getMySchedule(
-            @RequestParam(required = false) Long semesterId
+            @RequestParam(required = false) Long semesterId,
+            @RequestHeader(value = "X-Active-Role", required = false) String activeRole
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username;
@@ -50,13 +52,22 @@ public class ScheduleController {
                 .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Determine role based on authorities or user roles
-        // Assuming user has only one primary role relevant for schedule (STUDENT or TEACHER)
-        // If user has both, we might need a way to switch context or return merged schedule?
-        // For now, prioritize TEACHER then STUDENT
+        // Determine role based on X-Active-Role header first, then fallback to user roles
         String role = "STUDENT";
-        if (user.getRoles().stream().anyMatch(r -> r.name().equals("TEACHER"))) {
-            role = "TEACHER";
+        if (activeRole != null && !activeRole.isEmpty()) {
+             // Validate if user actually has this role
+             boolean hasRole = user.getRoles().stream()
+                     .anyMatch(r -> r.name().equals(activeRole));
+             if (hasRole) {
+                 role = activeRole;
+             }
+        } else {
+            // Fallback logic if no header provided
+            if (user.getRoles().stream().anyMatch(r -> r.name().equals("TEACHER"))) {
+                role = "TEACHER";
+            } else if (user.getRoles().stream().anyMatch(r -> r.name().equals("ADMIN"))) {
+                 return ResponseEntity.ok(List.of());
+            }
         }
         
         return ResponseEntity.ok(scheduleService.getMySchedule(user.getId(), role, semesterId));

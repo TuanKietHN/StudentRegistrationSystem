@@ -57,16 +57,26 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     private ScheduleResponse toScheduleResponse(SectionTimeSlotEntity entity) {
         String teacherName = "N/A";
-        if (entity.getSection().getTeacher() != null && entity.getSection().getTeacher().getUser() != null) {
+        if (entity.getSection() != null && entity.getSection().getTeacher() != null && entity.getSection().getTeacher().getUser() != null) {
             teacherName = entity.getSection().getTeacher().getUser().getUsername();
         }
+        
+        String subjectName = "N/A";
+        String subjectCode = "N/A";
+        if (entity.getSection() != null && entity.getSection().getSubject() != null) {
+            subjectName = entity.getSection().getSubject().getName();
+            subjectCode = entity.getSection().getSubject().getCode();
+        }
+        
+        Long sectionId = entity.getSection() != null ? entity.getSection().getId() : null;
+        String sectionName = entity.getSection() != null ? entity.getSection().getName() : "N/A";
 
         return ScheduleResponse.builder()
                 .id(entity.getId())
-                .sectionId(entity.getSection().getId())
-                .sectionName(entity.getSection().getName())
-                .subjectName(entity.getSection().getSubject() != null ? entity.getSection().getSubject().getName() : "N/A")
-                .subjectCode(entity.getSection().getSubject() != null ? entity.getSection().getSubject().getCode() : "N/A")
+                .sectionId(sectionId)
+                .sectionName(sectionName)
+                .subjectName(subjectName)
+                .subjectCode(subjectCode)
                 .teacherName(teacherName)
                 .dayOfWeek(entity.getDayOfWeek())
                 .startTime(entity.getStartTime())

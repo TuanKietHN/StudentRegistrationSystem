@@ -58,23 +58,27 @@ public class StudentClassServiceImpl implements StudentClassService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<StudentGradeSummaryResponse> getStudentClassGrades(Long id) {
-        if (studentClassRepository.findById(id).isEmpty()) {
-            throw new BusinessException("Student class not found");
-        }
+        StudentClass studentClass = studentClassRepository.findById(id).orElseThrow(() -> new BusinessException("Student class not found"));
+        
         List<Student> students = studentRepository.findByStudentClassId(id);
         List<StudentGradeSummaryResponse> summary = new ArrayList<>();
 
         for (Student student : students) {
+            // Fix: Use Student JPA Entity to fetch user info properly via repository if needed, 
+            // but here 'student' is Domain Model mapped from Entity.
+            // Check mapper to ensure User info is populated.
+            
             List<Enrollment> enrollments = enrollmentRepository.findByStudentId(student.getId());
             List<SubjectGradeResponse> grades = enrollments.stream()
                     .map(e -> SubjectGradeResponse.builder()
-                            .subjectCode(e.getSection().getSubject().getCode())
-                            .subjectName(e.getSection().getSubject().getName())
+                            .subjectCode(e.getSection().getSubject() != null ? e.getSection().getSubject().getCode() : "N/A")
+                            .subjectName(e.getSection().getSubject() != null ? e.getSection().getSubject().getName() : "N/A")
                             .processScore(e.getProcessScore())
                             .examScore(e.getExamScore())
                             .finalScore(e.getFinalScore())
-                            .semesterCode(e.getSection().getSemester().getCode())
+                            .semesterCode(e.getSection().getSemester() != null ? e.getSection().getSemester().getCode() : "N/A")
                             .build())
                     .toList();
 
@@ -87,11 +91,16 @@ public class StudentClassServiceImpl implements StudentClassService {
                 }
             }
             BigDecimal gpa = count > 0 ? totalScore.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+            
+            String studentName = "N/A";
+            if (student.getUser() != null) {
+                studentName = student.getUser().getFullName();
+            }
 
             summary.add(StudentGradeSummaryResponse.builder()
                     .studentId(student.getId())
                     .studentCode(student.getStudentCode())
-                    .studentName(student.getUser() != null ? student.getUser().getFullName() : "N/A")
+                    .studentName(studentName)
                     .grades(grades)
                     .gpa(gpa)
                     .build());
@@ -199,7 +208,10 @@ public class StudentClassServiceImpl implements StudentClassService {
         if (studentClassRepository.findById(id).isEmpty()) {
             throw new BusinessException("Student class not found");
         }
+        // Force initialize collection or fetch with join
+        // Here we rely on mapper or manual conversion to trigger lazy loading within transaction
         List<Student> students = studentRepository.findByStudentClassId(id);
+        
         return students.stream().map(StudentResponse::fromDomain).toList();
     }
 

@@ -44,7 +44,7 @@ public interface StudentJpaRepository extends JpaRepository<StudentEntity, Long>
     @Query("""
             SELECT s
             FROM StudentEntity s
-            LEFT JOIN s.user u
+            JOIN FETCH s.user u
             WHERE s.studentClass.id = :studentClassId
             ORDER BY s.studentCode ASC, u.username ASC
             """)

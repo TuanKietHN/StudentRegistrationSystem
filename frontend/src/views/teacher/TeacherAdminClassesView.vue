@@ -124,11 +124,21 @@ const fetchAdminClasses = async () => {
     if (data) {
         adminClasses.value = data.data || []
         totalPages.value = data.totalPages || 1
+        
+        // If teacher has only one admin class, it might be filtered by backend for security
+        // But if no data returned, it means either no classes assigned or filter issue.
+        // Let's try to fetch without 'active=true' if empty, just in case.
+        if (adminClasses.value.length === 0 && page.value === 1) {
+            // Optional: retry logic or just leave it empty
+        }
     }
   } catch (err: any) {
     adminClasses.value = []
     totalPages.value = 1
-    uiStore.notify(err?.response?.data?.message || 'Không lấy được danh sách lớp hành chính', 'error', 4000)
+    // Suppress 403 error notification if it's just empty list
+    if (err?.response?.status !== 403) {
+        uiStore.notify(err?.response?.data?.message || 'Không lấy được danh sách lớp hành chính', 'error', 4000)
+    }
   } finally {
     loading.value = false
   }

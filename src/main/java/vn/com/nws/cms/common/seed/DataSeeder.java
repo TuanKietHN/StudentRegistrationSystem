@@ -628,6 +628,7 @@ public class DataSeeder implements CommandLineRunner {
         // Thêm tài khoản mẫu cũ (để test login)
         upsertStudent("student@nws.com.vn", "SV2500001", cntt, cnttK25_01, "0901111111");
         upsertStudent("tranthihinh@nws.com.vn", "SV2500002", cntt, cnttK25_01, "0901111112");
+        upsertStudent("lequoccuong@nws.com.vn", "SV2500003", cntt, cnttK25_01, "0901111113");
     }
 
     private void seedStudentsForClass(StudentClass studentClass, Department dept, String prefix, int count) {
@@ -955,9 +956,9 @@ public class DataSeeder implements CommandLineRunner {
         replaceSectionSlots("DB002_HK2_2526_01", List.of(
                 slot(5, "07:30", "12:00")
         ));
-        // AI001: T5 sáng và T7
+        // AI001: T6 sáng và T7 sáng (đổi để tránh trùng WEB001 T4)
         replaceSectionSlots("AI001_HK2_2526_01", List.of(
-                slot(4, "07:30", "10:45"),
+                slot(5, "07:30", "10:45"),
                 slot(6, "07:30", "10:45")
         ));
         // MKT001: T2 chiều và T4 chiều

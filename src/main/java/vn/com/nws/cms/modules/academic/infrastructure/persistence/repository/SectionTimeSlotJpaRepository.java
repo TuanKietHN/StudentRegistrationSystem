@@ -51,8 +51,8 @@ public interface SectionTimeSlotJpaRepository extends JpaRepository<SectionTimeS
             SELECT ts
             FROM SectionTimeSlotEntity ts
             JOIN FETCH ts.section s
-            JOIN FETCH s.subject
-            JOIN FETCH s.teacher t
+            LEFT JOIN FETCH s.subject
+            LEFT JOIN FETCH s.teacher t
             LEFT JOIN FETCH t.user
             WHERE t.id = :teacherId
               AND s.semester.id = :semesterId
@@ -65,7 +65,7 @@ public interface SectionTimeSlotJpaRepository extends JpaRepository<SectionTimeS
             SELECT ts
             FROM SectionTimeSlotEntity ts
             JOIN FETCH ts.section s
-            JOIN FETCH s.subject
+            LEFT JOIN FETCH s.subject
             LEFT JOIN FETCH s.teacher t
             LEFT JOIN FETCH t.user
             JOIN EnrollmentEntity e ON e.section.id = s.id

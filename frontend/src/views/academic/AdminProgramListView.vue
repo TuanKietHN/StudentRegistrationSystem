@@ -337,10 +337,15 @@ const closeDialog = () => {
 
 const saveProgram = async () => {
   try {
+    if (!editedItem.departmentId) {
+        uiStore.notify('Vui lòng chọn Khoa', 'error')
+        return
+    }
+    
     if (editedIndex.value > -1) {
       await academicProgramService.update(editedItem.id, {
         name: editedItem.name,
-        departmentId: editedItem.departmentId!,
+        departmentId: editedItem.departmentId,
         totalCredits: Number(editedItem.totalCredits),
         description: editedItem.description,
         active: editedItem.active
@@ -350,7 +355,7 @@ const saveProgram = async () => {
       await academicProgramService.create({
         code: editedItem.code,
         name: editedItem.name,
-        departmentId: editedItem.departmentId!,
+        departmentId: editedItem.departmentId,
         totalCredits: Number(editedItem.totalCredits),
         description: editedItem.description
       })

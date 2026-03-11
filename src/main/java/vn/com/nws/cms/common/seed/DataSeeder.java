@@ -129,6 +129,15 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         List<PermissionSeed> permissionSeeds = List.of(
+                new PermissionSeed("ACADEMIC_PROGRAM:READ", "ACADEMIC_PROGRAM", "READ", "Read academic program"),
+                new PermissionSeed("ACADEMIC_PROGRAM:CREATE", "ACADEMIC_PROGRAM", "CREATE", "Create academic program"),
+                new PermissionSeed("ACADEMIC_PROGRAM:UPDATE", "ACADEMIC_PROGRAM", "UPDATE", "Update academic program"),
+                new PermissionSeed("ACADEMIC_PROGRAM:DELETE", "ACADEMIC_PROGRAM", "DELETE", "Delete academic program"),
+
+                new PermissionSeed("STUDENT_PROGRESS:READ_ALL", "STUDENT_PROGRESS", "READ_ALL", "Read all student progress"),
+                new PermissionSeed("STUDENT_PROGRESS:READ_CLASS", "STUDENT_PROGRESS", "READ_CLASS", "Read class student progress"),
+                new PermissionSeed("STUDENT_PROGRESS:READ_SELF", "STUDENT_PROGRESS", "READ_SELF", "Read self progress"),
+
                 new PermissionSeed("USER:CREATE", "USER", "CREATE", "Create user"),
                 new PermissionSeed("USER:READ", "USER", "READ", "Read user"),
                 new PermissionSeed("USER:UPDATE", "USER", "UPDATE", "Update user"),
@@ -212,7 +221,9 @@ public class DataSeeder implements CommandLineRunner {
                         "STUDENT_CLASS:READ",
                         "TEACHER:READ",
                         "ENROLLMENT:READ",
-                        "ENROLLMENT:UPDATE"
+                        "ENROLLMENT:UPDATE",
+                        "ACADEMIC_PROGRAM:READ",
+                        "STUDENT_PROGRESS:READ_CLASS"
                 ),
                 RoleType.STUDENT.authority(), List.of(
                         "SUBJECT:READ",
@@ -220,7 +231,9 @@ public class DataSeeder implements CommandLineRunner {
                         "SECTION:READ",
                         "ENROLLMENT:READ",
                         "ENROLLMENT:CREATE",
-                        "ENROLLMENT:DELETE"
+                        "ENROLLMENT:DELETE",
+                        "ACADEMIC_PROGRAM:READ",
+                        "STUDENT_PROGRESS:READ_SELF"
                 )
         );
 
@@ -605,20 +618,37 @@ public class DataSeeder implements CommandLineRunner {
         StudentClass cnttK24_01 = studentClassByCode("CNTT-K24-01");
 
         // Gán sinh viên vào lớp hành chính
-        upsertStudent("student@nws.com.vn",          "SV2500001", cntt,   cnttK25_01, "0901111111");
-        upsertStudent("tranthihinh@nws.com.vn",      "SV2500002", cntt,   cnttK25_01, "0901111112");
-        upsertStudent("lequoccuong@nws.com.vn",       "SV2500003", cntt,   cnttK25_01, "0901111113");
-        upsertStudent("phamngocidiem@nws.com.vn",     "SV2500004", cntt,   cnttK25_02, "0901111114");
-        upsertStudent("hoangvanem@nws.com.vn",        "SV2500005", cntt,   cnttK25_02, "0901111115");
-        upsertStudent("nguyenthiphuong@nws.com.vn",   "SV2500006", qtkd,   qtkdK25_01, "0901111116");
-        upsertStudent("buiducgiang@nws.com.vn",       "SV2500007", qtkd,   qtkdK25_01, "0901111117");
-        upsertStudent("dothihuyen@nws.com.vn",        "SV2500008", ketoan, ketoanK25,  "0901111118");
-        upsertStudent("caovanien@nws.com.vn",         "SV2400001", cntt,   cnttK24_01, "0901111119");
-        upsertStudent("maithikhanh@nws.com.vn",       "SV2400002", cntt,   cnttK24_01, "0901111120");
+        // Tạo 80 sinh viên cho mỗi lớp
+        seedStudentsForClass(cnttK25_01, cntt, "CNTT25", 80);
+        seedStudentsForClass(cnttK25_02, cntt, "CNTT25_2", 80);
+        seedStudentsForClass(qtkdK25_01, qtkd, "QTKD25", 80);
+        seedStudentsForClass(ketoanK25, ketoan, "KETOAN25", 80);
+        seedStudentsForClass(cnttK24_01, cntt, "CNTT24", 80);
+        
+        // Thêm tài khoản mẫu cũ (để test login)
+        upsertStudent("student@nws.com.vn", "SV2500001", cntt, cnttK25_01, "0901111111");
+        upsertStudent("tranthihinh@nws.com.vn", "SV2500002", cntt, cnttK25_01, "0901111112");
+    }
+
+    private void seedStudentsForClass(StudentClass studentClass, Department dept, String prefix, int count) {
+        log.info("  [Seeder] Tạo {} sinh viên cho lớp {}", count, studentClass.getCode());
+        for (int i = 1; i <= count; i++) {
+            String suffix = String.format("%03d", i);
+            String username = prefix.toLowerCase() + ".sv" + suffix;
+            String email = username + "@nws.com.vn";
+            String studentCode = prefix + suffix;
+            String phone = "09" + String.format("%08d", i);
+            
+            upsertStudent(email, studentCode, dept, studentClass, phone);
+        }
     }
 
     private void upsertStudent(String email, String studentCode, Department department,
                                StudentClass studentClass, String phone) {
+        // Auto-create user if not exists
+        String username = email.split("@")[0];
+        upsertUser(username, email, "Student@123", Set.of(RoleType.STUDENT));
+        
         User user = userByEmail(email);
         studentRepository.findByUserId(user.getId()).ifPresentOrElse(existing -> {
             existing.setStudentCode(studentCode);
@@ -790,55 +820,55 @@ public class DataSeeder implements CommandLineRunner {
 
         // Java cho K25
         upsertSection("JAVA001_HK2_2526_01", "Lập trình Java CB - Nhóm 01",
-                hk2_2526, subjectByCode("JAVA001"), gvHoa, 40, 5, true);
+                hk2_2526, subjectByCode("JAVA001"), gvHoa, 120, 5, true);
         upsertSection("JAVA001_HK2_2526_02", "Lập trình Java CB - Nhóm 02",
-                hk2_2526, subjectByCode("JAVA001"), gvHoa, 40, 5, true);
+                hk2_2526, subjectByCode("JAVA001"), gvHoa, 120, 5, true);
 
         // Java nâng cao cho K24
         upsertSection("JAVA002_HK2_2526_01", "Lập trình Java NC - Nhóm 01",
-                hk2_2526, subjectByCode("JAVA002"), gvHoa, 35, 5, true);
+                hk2_2526, subjectByCode("JAVA002"), gvHoa, 120, 5, true);
 
         // Web Spring Boot
         upsertSection("WEB001_HK2_2526_01",  "Lập trình Web Spring Boot - Nhóm 01",
-                hk2_2526, subjectByCode("WEB001"), gvHoa, 45, 5, true);
+                hk2_2526, subjectByCode("WEB001"), gvHoa, 120, 5, true);
         upsertSection("WEB001_HK2_2526_02",  "Lập trình Web Spring Boot - Nhóm 02",
-                hk2_2526, subjectByCode("WEB001"), gvPhuc, 45, 5, true);
+                hk2_2526, subjectByCode("WEB001"), gvPhuc, 120, 5, true);
 
         // Cơ sở dữ liệu
         upsertSection("DB001_HK2_2526_01",   "Cơ sở dữ liệu - Nhóm 01",
-                hk2_2526, subjectByCode("DB001"), gvDuc, 50, 5, true);
+                hk2_2526, subjectByCode("DB001"), gvDuc, 120, 5, true);
         upsertSection("DB002_HK2_2526_01",   "CSDL nâng cao - Nhóm 01",
-                hk2_2526, subjectByCode("DB002"), gvDuc, 35, 5, true);
+                hk2_2526, subjectByCode("DB002"), gvDuc, 120, 5, true);
 
         // AI
         upsertSection("AI001_HK2_2526_01",   "Trí tuệ nhân tạo - Nhóm 01",
-                hk2_2526, subjectByCode("AI001"), gvPhuc, 40, 5, true);
+                hk2_2526, subjectByCode("AI001"), gvPhuc, 120, 5, true);
 
         // QTKD
         upsertSection("MKT001_HK2_2526_01",  "Marketing CB - Nhóm 01",
-                hk2_2526, subjectByCode("MKT001"), gvHung, 45, 5, true);
+                hk2_2526, subjectByCode("MKT001"), gvHung, 120, 5, true);
         upsertSection("FIN001_HK2_2526_01",  "Tài chính doanh nghiệp - Nhóm 01",
-                hk2_2526, subjectByCode("FIN001"), gvHung, 40, 5, true);
+                hk2_2526, subjectByCode("FIN001"), gvHung, 120, 5, true);
 
         // Kế toán
         upsertSection("ACC001_HK2_2526_01",  "Nguyên lý kế toán - Nhóm 01",
-                hk2_2526, subjectByCode("ACC001"), gvLan, 45, 5, true);
+                hk2_2526, subjectByCode("ACC001"), gvLan, 120, 5, true);
 
         // ===== Kỳ học phụ (secondary_active) =====
         upsertSection("JAVA001_PHU_2526_01", "Java CB - Kỳ phụ Hè",
-                hk_phu, subjectByCode("JAVA001"), gvVu, 30, 5, true);
+                hk_phu, subjectByCode("JAVA001"), gvVu, 120, 5, true);
         upsertSection("DB001_PHU_2526_01",   "CSDL - Kỳ phụ Hè",
-                hk_phu, subjectByCode("DB001"), gvDuc, 30, 5, true);
+                hk_phu, subjectByCode("DB001"), gvDuc, 120, 5, true);
 
         // ===== HK1 2025-2026 (đã kết thúc — dữ liệu lịch sử) =====
         upsertSection("JAVA001_HK1_2526_01", "Lập trình Java CB - Nhóm 01",
-                hk1_2526, subjectByCode("JAVA001"), gvHoa, 40, 5, false);
+                hk1_2526, subjectByCode("JAVA001"), gvHoa, 120, 5, false);
         upsertSection("DB001_HK1_2526_01",   "Cơ sở dữ liệu - Nhóm 01",
-                hk1_2526, subjectByCode("DB001"), gvDuc, 50, 5, false);
+                hk1_2526, subjectByCode("DB001"), gvDuc, 120, 5, false);
         upsertSection("NET001_HK1_2526_01",  "Mạng máy tính - Nhóm 01",
-                hk1_2526, subjectByCode("NET001"), gvPhuc, 40, 5, false);
+                hk1_2526, subjectByCode("NET001"), gvPhuc, 120, 5, false);
         upsertSection("MGMT001_HK2_2425_01", "Quản trị học - Nhóm 01",
-                hk2_2425, subjectByCode("MGMT001"), gvHung, 45, 5, false);
+                hk2_2425, subjectByCode("MGMT001"), gvHung, 120, 5, false);
     }
 
     private void upsertSection(String code, String name, Semester semester, Subject subject,
@@ -916,10 +946,10 @@ public class DataSeeder implements CommandLineRunner {
                 slot(2, "13:00", "16:15"),
                 slot(4, "13:00", "16:15")
         ));
-        // DB001 - Nhóm 01: T2 sáng và T4 chiều
+        // DB001 - Nhóm 01: T6 sáng và T7 sáng (đổi để tránh trùng JAVA001 T2/T4)
         replaceSectionSlots("DB001_HK2_2526_01", List.of(
-                slot(1, "07:30", "10:45"),
-                slot(3, "13:00", "16:15")
+                slot(5, "07:30", "10:45"),
+                slot(6, "07:30", "10:45")
         ));
         // DB002 NC: T6 sáng
         replaceSectionSlots("DB002_HK2_2526_01", List.of(
@@ -1030,6 +1060,56 @@ public class DataSeeder implements CommandLineRunner {
         // ===== Kỳ phụ =====
         enrollIfNotExists("JAVA001_PHU_2526_01", sv2);
         enrollIfNotExists("DB001_PHU_2526_01",   sv5);
+
+        // ===== BULK SEEDING FOR K25 CNTT (80 students) =====
+        seedBulkK25Enrollments();
+    }
+
+    private void seedBulkK25Enrollments() {
+        log.info("[Seeder] Tạo đăng ký học và điểm cho toàn bộ K25 CNTT...");
+        StudentClass cnttK25_01 = studentClassByCode("CNTT-K25-01");
+        
+        // Find all students in this class
+        List<Student> students = studentRepository.findByStudentClassId(cnttK25_01.getId());
+        
+        for (Student s : students) {
+            // Skip the explicitly named students we already handled (sv1, sv2...)
+            if (s.getUser().getEmail().startsWith("student") || 
+                s.getUser().getEmail().startsWith("tranthihinh") || 
+                s.getUser().getEmail().startsWith("lequoccuong")) {
+                continue;
+            }
+
+            // 1. Enroll in Semester 1 (Past) - JAVA001, DB001
+            // Use forceEnroll for past sections (inactive)
+            forceEnroll("JAVA001_HK1_2526_01", s);
+            forceEnroll("DB001_HK1_2526_01", s);
+
+            // 2. Give them random grades for Semester 1 (mostly pass)
+            double javaScore = 5.0 + (Math.random() * 5.0); // 5.0 - 10.0
+            double dbScore = 4.0 + (Math.random() * 6.0);   // 4.0 - 10.0
+            
+            enterGrade("JAVA001_HK1_2526_01", s.getUser().getEmail(), javaScore, javaScore);
+            enterGrade("DB001_HK1_2526_01", s.getUser().getEmail(), dbScore, dbScore);
+
+            // 3. Enroll in Semester 2 (Current) - JAVA002, DB002
+            // Distribute into groups
+            if (Math.random() > 0.5) {
+                enrollIfNotExists("JAVA001_HK2_2526_01", s); // Re-learning or just taking it? Wait, JAVA001 is Sem 1.
+                // Actually Program says: JAVA002 is Sem 2.
+                // But seedSections created JAVA002_HK2_2526_01 (Advanced Java).
+                // Let's enroll them in JAVA001_HK2 (maybe retake) or assume they passed.
+                // Program: JAVA002 is Compulsory Sem 2.
+                // Section: JAVA002_HK2_2526_01.
+                enrollIfNotExists("JAVA002_HK2_2526_01", s);
+            } else {
+                // Maybe they take Web?
+                enrollIfNotExists("WEB001_HK2_2526_01", s);
+            }
+            
+            // Enroll in DB002 (Sem 2)
+            enrollIfNotExists("DB002_HK2_2526_01", s);
+        }
     }
 
     private void enrollIfNotExists(String sectionCode, Student student) {
@@ -1046,6 +1126,32 @@ public class DataSeeder implements CommandLineRunner {
             log.debug("  [Enrollment] Đăng ký: {} - SV#{}", sectionCode, student.getStudentCode());
         } catch (Exception e) {
             log.warn("  [Enrollment] Lỗi đăng ký {} - SV#{}: {}", sectionCode, student.getStudentCode(), e.getMessage());
+        }
+    }
+
+    private void forceEnroll(String sectionCode, Student student) {
+        try {
+            Section section = sectionByCode(sectionCode);
+            if (enrollmentRepository.existsBySectionIdAndStudentId(section.getId(), student.getId())) {
+                log.debug("  [ForceEnroll] Đã tồn tại: {} - SV#{}", sectionCode, student.getStudentCode());
+                return;
+            }
+
+            Enrollment enrollment = Enrollment.builder()
+                    .section(section)
+                    .student(student)
+                    .status(EnrollmentStatus.ENROLLED)
+                    .build();
+
+            enrollmentRepository.save(enrollment);
+
+            // Update section count manually since we bypassed service
+            section.setCurrentStudents(section.getCurrentStudents() + 1);
+            sectionRepository.save(section);
+
+            log.debug("  [ForceEnroll] Đăng ký thành công: {} - SV#{}", sectionCode, student.getStudentCode());
+        } catch (Exception e) {
+            log.warn("  [ForceEnroll] Lỗi đăng ký {} - SV#{}: {}", sectionCode, student.getStudentCode(), e.getMessage());
         }
     }
 

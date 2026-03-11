@@ -58,14 +58,15 @@ public class ScheduleServiceImpl implements ScheduleService {
     private ScheduleResponse toScheduleResponse(SectionTimeSlotEntity entity) {
         String teacherName = "N/A";
         if (entity.getSection().getTeacher() != null && entity.getSection().getTeacher().getUser() != null) {
-            teacherName = entity.getSection().getTeacher().getUser().getFullName();
+            teacherName = entity.getSection().getTeacher().getUser().getUsername();
         }
 
         return ScheduleResponse.builder()
+                .id(entity.getId())
                 .sectionId(entity.getSection().getId())
                 .sectionName(entity.getSection().getName())
-                .subjectName(entity.getSection().getSubject().getName())
-                .subjectCode(entity.getSection().getSubject().getCode())
+                .subjectName(entity.getSection().getSubject() != null ? entity.getSection().getSubject().getName() : "N/A")
+                .subjectCode(entity.getSection().getSubject() != null ? entity.getSection().getSubject().getCode() : "N/A")
                 .teacherName(teacherName)
                 .dayOfWeek(entity.getDayOfWeek())
                 .startTime(entity.getStartTime())

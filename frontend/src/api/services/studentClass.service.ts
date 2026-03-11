@@ -31,24 +31,24 @@ export interface StudentProfile {
 
 export const studentClassService = {
     getAll(params: { keyword?: string; departmentId?: number; cohortId?: number; active?: boolean; page?: number; size?: number }) {
-        return api.get('/v1/student-classes', { params })
+        return api.get<StudentClass[]>('/v1/student-classes', { params })
     },
     getById(id: number) {
-        return api.get(`/v1/student-classes/${id}`)
+        return api.get<StudentClass>(`/v1/student-classes/${id}`)
     },
     getStudents(studentClassId: number) {
-        return api.get(`/v1/student-classes/${studentClassId}/students`)
+        return api.get<StudentProfile[]>(`/v1/student-classes/${studentClassId}/students`)
     },
     create(payload: any) {
-        return api.post('/v1/student-classes', payload)
+        return api.post<StudentClass>('/v1/student-classes', payload)
     },
     update(id: number, payload: any) {
-        return api.put(`/v1/student-classes/${id}`, payload)
+        return api.put<StudentClass>(`/v1/student-classes/${id}`, payload)
     },
     delete(id: number) {
         return api.delete(`/v1/student-classes/${id}`)
     },
     getGrades(studentClassId: number) {
-        return api.get(`/v1/student-classes/${studentClassId}/grades`)
+        return api.get<any[]>(`/v1/student-classes/${studentClassId}/grades`)
     }
 }

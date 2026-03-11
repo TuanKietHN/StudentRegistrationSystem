@@ -21,6 +21,9 @@ export interface SubjectParams {
 }
 
 export const subjectService = {
+  search(params?: SubjectParams) {
+    return api.get('/v1/subjects', { params });
+  },
   getAll(params?: SubjectParams) {
     return api.get('/v1/subjects', { params });
   },

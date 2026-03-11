@@ -30,7 +30,7 @@ public class StudentProgressController {
     private final TeacherJpaRepository teacherJpaRepository;
 
     @GetMapping("/{studentId}")
-    @PreAuthorize("hasAuthority('student_progress:read_all') or hasAuthority('student_progress:read_class') or hasAuthority('student_progress:read_self')")
+    @PreAuthorize("hasAuthority('STUDENT_PROGRESS:READ_ALL') or hasAuthority('STUDENT_PROGRESS:READ_CLASS') or hasAuthority('STUDENT_PROGRESS:READ_SELF')")
     @Operation(summary = "Xem tiến độ học tập của sinh viên")
     public StudentProgressResponse getProgress(@PathVariable Long studentId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -41,7 +41,7 @@ public class StudentProgressController {
                 .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        boolean canReadAll = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("student_progress:read_all"));
+        boolean canReadAll = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("STUDENT_PROGRESS:READ_ALL"));
         
         // 2. Check permissions
         if (!canReadAll) {
@@ -49,8 +49,8 @@ public class StudentProgressController {
             StudentEntity targetStudent = studentJpaRepository.findById(studentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
-            boolean canReadClass = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("student_progress:read_class"));
-            boolean canReadSelf = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("student_progress:read_self"));
+            boolean canReadClass = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("STUDENT_PROGRESS:READ_CLASS"));
+            boolean canReadSelf = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("STUDENT_PROGRESS:READ_SELF"));
 
             if (canReadSelf) {
                 // Check if reading self

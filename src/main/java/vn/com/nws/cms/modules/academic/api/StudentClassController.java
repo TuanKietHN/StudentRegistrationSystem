@@ -143,6 +143,25 @@ public class StudentClassController {
     @PreAuthorize("hasAuthority('STUDENT_CLASS:READ')")
     @Operation(summary = "Danh sách sinh viên theo lớp hành chính", description = "Lấy danh sách sinh viên của lớp hành chính")
     public ResponseEntity<ApiResponse<List<StudentResponse>>> getStudentClassStudents(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isTeacher = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER"));
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isTeacher && !isAdmin) {
+            String username = auth.getName();
+            UserEntity user = userRepository.findByUsername(username)
+                    .or(() -> userRepository.findByEmail(username))
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            
+            TeacherEntity teacher = teacherJpaRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new BusinessException("Teacher profile not found"));
+            
+            StudentClassResponse sc = studentClassService.getStudentClassById(id);
+            // Check ownership
+            if (sc.getAdvisorTeacherId() == null || !sc.getAdvisorTeacherId().equals(teacher.getId())) {
+                throw new BusinessException("Bạn không có quyền xem danh sách sinh viên lớp này");
+            }
+        }
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách sinh viên thành công", studentClassService.getStudentClassStudents(id)));
     }
 }

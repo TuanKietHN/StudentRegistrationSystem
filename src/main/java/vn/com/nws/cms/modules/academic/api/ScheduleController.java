@@ -54,11 +54,11 @@ public class ScheduleController {
         // Assuming user has only one primary role relevant for schedule (STUDENT or TEACHER)
         // If user has both, we might need a way to switch context or return merged schedule?
         // For now, prioritize TEACHER then STUDENT
-        String role = RoleType.STUDENT.name();
-        if (user.getRoles().contains(RoleType.TEACHER)) {
-            role = RoleType.TEACHER.name();
+        String role = "STUDENT";
+        if (user.getRoles().stream().anyMatch(r -> r.name().equals("TEACHER"))) {
+            role = "TEACHER";
         }
-
+        
         return ResponseEntity.ok(scheduleService.getMySchedule(user.getId(), role, semesterId));
     }
 }

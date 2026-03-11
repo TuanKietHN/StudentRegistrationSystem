@@ -203,7 +203,13 @@
       </v-card>
     </v-dialog>
 
-    <ConfirmDialog ref="confirm" />
+    <ConfirmDialog 
+      v-model="confirmState.show" 
+      :title="confirmState.title" 
+      :text="confirmState.text" 
+      :loading="confirmState.loading"
+      @confirm="executeConfirm"
+    />
   </v-container>
 </template>
 
@@ -218,7 +224,15 @@ import { useUiStore } from '@/stores/ui'
 import { unwrapApiResponse } from '@/api/response'
 
 const uiStore = useUiStore()
-const confirm = ref()
+
+// Confirm Dialog State
+const confirmState = reactive({
+  show: false,
+  title: '',
+  text: '',
+  loading: false,
+  action: null as (() => Promise<void>) | null
+})
 
 const loading = ref(false)
 const programs = ref<AcademicProgramResponse[]>([])
@@ -278,8 +292,10 @@ const loadData = async () => {
       academicProgramService.getAll(),
       departmentService.getAll()
     ])
-    programs.value = unwrapApiResponse(progRes) || []
-    departments.value = unwrapApiResponse(deptRes) || []
+    // @ts-ignore
+    programs.value = unwrapApiResponse(progRes)?.data || []
+    // @ts-ignore
+    departments.value = unwrapApiResponse(deptRes)?.data || []
   } catch (error) {
     uiStore.notify('Lỗi tải dữ liệu', 'error')
   } finally {
@@ -347,8 +363,10 @@ const saveProgram = async () => {
   }
 }
 
-const confirmDelete = async (item: AcademicProgramResponse) => {
-  if (await confirm.value.open('Xác nhận xóa', `Bạn có chắc muốn xóa chương trình "${item.name}"?`)) {
+const confirmDelete = (item: AcademicProgramResponse) => {
+  confirmState.title = 'Xác nhận xóa'
+  confirmState.text = `Bạn có chắc muốn xóa chương trình "${item.name}"?`
+  confirmState.action = async () => {
     try {
       await academicProgramService.delete(item.id)
       uiStore.notify('Xóa thành công', 'success')
@@ -356,6 +374,16 @@ const confirmDelete = async (item: AcademicProgramResponse) => {
     } catch (error: any) {
       uiStore.notify(error.response?.data?.message || 'Không thể xóa chương trình', 'error')
     }
+  }
+  confirmState.show = true
+}
+
+const executeConfirm = async () => {
+  if (confirmState.action) {
+    confirmState.loading = true
+    await confirmState.action()
+    confirmState.loading = false
+    confirmState.show = false
   }
 }
 
@@ -370,7 +398,8 @@ const loadProgramSubjects = async (programId: number) => {
   subjectsLoading.value = true
   try {
     const res = await academicProgramService.getSubjects(programId)
-    programSubjects.value = unwrapApiResponse(res) || []
+    // @ts-ignore
+    programSubjects.value = unwrapApiResponse(res)?.data || []
   } catch (error) {
     uiStore.notify('Lỗi tải danh sách môn học', 'error')
   } finally {
@@ -381,9 +410,10 @@ const loadProgramSubjects = async (programId: number) => {
 const openAddSubjectDialog = async () => {
   try {
     // Load all subjects for selection
-    // Note: Ideally should use a search/autocomplete API for better performance
-    const res = await subjectService.search({ page: 1, size: 1000, active: true })
-    availableSubjects.value = unwrapApiResponse(res)?.content || []
+    const res = await subjectService.getAll({ page: 1, size: 1000, active: true })
+    // @ts-ignore
+    const data = unwrapApiResponse(res)
+    availableSubjects.value = data?.data || []
     
     // Reset form
     Object.assign(newSubject, {
@@ -416,8 +446,10 @@ const saveSubject = async () => {
   }
 }
 
-const removeSubject = async (item: ProgramSubjectResponse) => {
-  if (await confirm.value.open('Xác nhận xóa', `Bạn có chắc muốn xóa môn "${item.subject.name}" khỏi chương trình?`)) {
+const removeSubject = (item: ProgramSubjectResponse) => {
+  confirmState.title = 'Xác nhận xóa'
+  confirmState.text = `Bạn có chắc muốn xóa môn "${item.subject.name}" khỏi chương trình?`
+  confirmState.action = async () => {
     try {
       await academicProgramService.removeSubject(item.id)
       uiStore.notify('Xóa môn học thành công', 'success')
@@ -428,6 +460,7 @@ const removeSubject = async (item: ProgramSubjectResponse) => {
       uiStore.notify('Lỗi khi xóa môn học', 'error')
     }
   }
+  confirmState.show = true
 }
 
 onMounted(() => {

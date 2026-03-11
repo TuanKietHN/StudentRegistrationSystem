@@ -3,6 +3,7 @@ package vn.com.nws.cms.modules.academic.infrastructure.persistence.repository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.domain.enums.SectionLifecycleStatus;
 import vn.com.nws.cms.modules.academic.domain.model.Section;
@@ -24,6 +25,7 @@ public class SectionRepositoryImpl implements SectionRepository {
     private final SectionMapper mapper;
 
     @Override
+    @Transactional
     public Section save(Section section) {
         SectionEntity entity = mapper.toEntity(section);
         if (section.getId() != null) {
@@ -43,26 +45,31 @@ public class SectionRepositoryImpl implements SectionRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Section> findById(Long id) {
         return jpaRepository.findById(id).map(mapper::toDomain);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Section> findByCode(String code) {
         return jpaRepository.findByCode(code).map(mapper::toDomain);
     }
 
     @Override
+    @Transactional
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean existsByCode(String code) {
         return jpaRepository.existsByCode(code);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Section> search(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, SectionLifecycleStatus status, int page, int size) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim();
         if (normalizedKeyword.isBlank() && semesterId == null && subjectId == null && teacherId == null && active == null && status == null) {
@@ -84,6 +91,7 @@ public class SectionRepositoryImpl implements SectionRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long count(String keyword, Long semesterId, Long subjectId, Long teacherId, Boolean active, SectionLifecycleStatus status) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim();
         if (normalizedKeyword.isBlank() && semesterId == null && subjectId == null && teacherId == null && active == null && status == null) {

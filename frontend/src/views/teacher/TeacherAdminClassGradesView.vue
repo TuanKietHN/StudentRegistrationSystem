@@ -42,10 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { unwrapApiResponse } from '@/api/response'
-import { studentClassService, type StudentClass } from '@/api/services/studentClass.service'
+import { studentClassService } from '@/api/services/studentClass.service'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
@@ -53,6 +53,13 @@ const route = useRoute()
 const router = useRouter()
 const uiStore = useUiStore()
 const studentClassId = Number(route.params.adminClassId)
+
+// Define local type for StudentClass since we only need basic fields
+interface StudentClass {
+  id: number
+  code: string
+  name: string
+}
 
 const studentClass = ref<StudentClass | null>(null)
 const loading = ref(false)
@@ -62,7 +69,8 @@ const allSubjects = computed(() => {
   const subjects = new Set<string>()
   rawGrades.value.forEach(student => {
     student.grades?.forEach((g: any) => {
-      subjects.add(g.subjectCode)
+      // Use subjectCode as the header
+      if (g.subjectCode) subjects.add(g.subjectCode)
     })
   })
   return Array.from(subjects).sort()
@@ -71,9 +79,18 @@ const allSubjects = computed(() => {
 const gradeRows = computed(() => {
   return rawGrades.value.map(student => {
     const gradesMap: Record<string, string> = {}
-    student.grades?.forEach((g: any) => {
-      gradesMap[g.subjectCode] = g.finalScore !== null ? g.finalScore.toString() : '-'
+    // Initialize all subjects with empty string
+    allSubjects.value.forEach(sub => {
+        gradesMap[sub] = '-'
     })
+    
+    // Fill in actual grades
+    student.grades?.forEach((g: any) => {
+      if (g.subjectCode) {
+        gradesMap[g.subjectCode] = g.finalScore !== null && g.finalScore !== undefined ? g.finalScore.toString() : '-'
+      }
+    })
+    
     return {
       studentId: student.studentId,
       studentCode: student.studentCode,
@@ -98,8 +115,10 @@ const fetchGrades = async () => {
       studentClassService.getById(studentClassId),
       studentClassService.getGrades(studentClassId)
     ])
+    // @ts-ignore
     studentClass.value = unwrapApiResponse<StudentClass>(classRes)
-    rawGrades.value = unwrapApiResponse<any[]>(gradesRes)
+    // @ts-ignore
+    rawGrades.value = unwrapApiResponse<any[]>(gradesRes) || []
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Không lấy được bảng điểm', 'error')
   } finally {

@@ -50,7 +50,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="c in myCourses" :key="c.id">
+          <tr v-for="c in courses" :key="c.id">
             <td>{{ c.code }}</td>
             <td>{{ c.name }}</td>
             <td>{{ c.semester?.code || '-' }}</td>
@@ -63,7 +63,7 @@
               </v-btn>
             </td>
           </tr>
-          <tr v-if="myCourses.length === 0">
+          <tr v-if="courses.length === 0">
             <td colspan="7" class="text-center py-6">Không có dữ liệu</td>
           </tr>
         </tbody>
@@ -79,13 +79,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLookupsStore } from '@/stores/lookups'
-import { unwrapPageResponse } from '@/api/response'
 import { sectionService, type Section, type SectionTimeSlot } from '@/api/services/section.service'
-import { useDebounceFn } from '@/composables/useDebounceFn'
 import { formatTimeSlotsVn } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
@@ -105,28 +103,37 @@ const subjectFilterId = ref<number | null>(null)
 const semesterOptions = computed(() => lookupsStore.semesterOptions)
 const subjectOptions = computed(() => lookupsStore.subjectOptions)
 
-const myCourses = computed(() => {
-  const username = authStore.currentUser?.username
-  if (!username) return []
-  return (courses.value || []).filter((c) => (c.teacher?.username || '') === username)
-})
-
-const formatTimeSlots = (slots?: SectionTimeSlot[] | null) => formatTimeSlotsVn(slots)
+const formatTimeSlots = (slots?: any) => {
+    if (!slots) return '-'
+    // If it's a string, try to parse or display as is
+    if (typeof slots === 'string') return slots
+    return formatTimeSlotsVn(slots as SectionTimeSlot[])
+}
 
 const fetchCourses = async () => {
   loading.value = true
   try {
+    // Teacher only sees their own sections.
+    // The backend SectionController automatically filters by current user if ROLE_TEACHER (and not ADMIN).
+    // So we don't need to pass teacherId explicitly if the backend handles it.
+    // However, if we want to be explicit, we could pass teacherId if we knew it.
+    // But let's rely on the backend logic first.
     const res = await sectionService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
       semesterId: semesterFilterId.value || undefined,
       subjectId: subjectFilterId.value || undefined,
-      active: true
+      // We don't filter by active=true because teacher might want to see past courses
     })
-    const data = unwrapPageResponse<Section>(res)
-    courses.value = data.data || []
-    totalPages.value = data.totalPages || 1
+    // @ts-ignore
+    const data = res.data?.data
+    if (data) {
+        courses.value = data.data || []
+        totalPages.value = data.totalPages || 1
+    }
+  } catch (e) {
+      console.error(e)
   } finally {
     loading.value = false
   }
@@ -142,19 +149,21 @@ const changePage = (p: number) => {
   fetchCourses()
 }
 
-const { debounced: debouncedSearch } = useDebounceFn(() => {
-  page.value = 1
-  fetchCourses()
-}, 350)
-
-const handleSearch = () => debouncedSearch()
+let timeout: any
+const handleSearch = () => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => {
+        page.value = 1
+        fetchCourses()
+    }, 300)
+}
 
 const goEnrollments = (sectionId: number) => {
   router.push({ name: 'TeacherSectionEnrollments', params: { sectionId } })
 }
 
 onMounted(async () => {
-  await lookupsStore.ensureAcademicLookups()
+  await lookupsStore.ensureAcademicLookups() // Ensure lookups are loaded
   await reload()
 })
 </script>

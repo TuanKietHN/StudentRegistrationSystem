@@ -57,40 +57,40 @@ export interface ProgramSubjectResponse {
 
 const academicProgramService = {
   getAll: async (): Promise<ApiResponse<AcademicProgramResponse[]>> => {
-    const response = await axios.get('/api/v1/academic-programs')
+    const response = await axios.get('/v1/academic-programs')
     return response.data
   },
 
   getById: async (id: number): Promise<ApiResponse<AcademicProgramResponse>> => {
-    const response = await axios.get(`/api/v1/academic-programs/${id}`)
+    const response = await axios.get(`/v1/academic-programs/${id}`)
     return response.data
   },
 
   create: async (data: AcademicProgramCreateRequest): Promise<ApiResponse<AcademicProgramResponse>> => {
-    const response = await axios.post('/api/v1/academic-programs', data)
+    const response = await axios.post('/v1/academic-programs', data)
     return response.data
   },
 
   update: async (id: number, data: AcademicProgramUpdateRequest): Promise<ApiResponse<AcademicProgramResponse>> => {
-    const response = await axios.put(`/api/v1/academic-programs/${id}`, data)
+    const response = await axios.put(`/v1/academic-programs/${id}`, data)
     return response.data
   },
 
   delete: async (id: number): Promise<void> => {
-    await axios.delete(`/api/v1/academic-programs/${id}`)
+    await axios.delete(`/v1/academic-programs/${id}`)
   },
 
   addSubject: async (programId: number, data: ProgramSubjectRequest): Promise<ApiResponse<ProgramSubjectResponse>> => {
-    const response = await axios.post(`/api/v1/academic-programs/${programId}/subjects`, data)
+    const response = await axios.post(`/v1/academic-programs/${programId}/subjects`, data)
     return response.data
   },
 
   removeSubject: async (programSubjectId: number): Promise<void> => {
-    await axios.delete(`/api/v1/academic-programs/subjects/${programSubjectId}`)
+    await axios.delete(`/v1/academic-programs/subjects/${programSubjectId}`)
   },
 
   getSubjects: async (programId: number): Promise<ApiResponse<ProgramSubjectResponse[]>> => {
-    const response = await axios.get(`/api/v1/academic-programs/${programId}/subjects`)
+    const response = await axios.get(`/v1/academic-programs/${programId}/subjects`)
     return response.data
   }
 }

@@ -194,6 +194,7 @@ public class StudentClassServiceImpl implements StudentClassService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<StudentResponse> getStudentClassStudents(Long id) {
         if (studentClassRepository.findById(id).isEmpty()) {
             throw new BusinessException("Student class not found");

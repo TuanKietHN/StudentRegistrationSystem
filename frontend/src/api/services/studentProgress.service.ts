@@ -26,7 +26,7 @@ export interface StudentProgressResponse {
 
 const studentProgressService = {
   getProgress: async (studentId: number): Promise<ApiResponse<StudentProgressResponse>> => {
-    const response = await axios.get(`/api/v1/student-progress/${studentId}`)
+    const response = await axios.get(`/v1/student-progress/${studentId}`)
     return response.data
   }
 }

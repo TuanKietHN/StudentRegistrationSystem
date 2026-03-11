@@ -258,9 +258,13 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getSectionEnrollments(Long sectionId, String username, boolean isAdmin, boolean isTeacher) {
         Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new BusinessException("Section not found"));
-        if (isTeacher) {
+        
+        // Only enforce ownership check if user is a Teacher AND NOT an Admin
+        // This allows users with dual roles (like 'giaovu') to bypass the check
+        if (isTeacher && !isAdmin) {
             assertTeacherOwnsSection(username, section);
         }
+        
         return enrollmentRepository.findBySectionId(sectionId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -480,11 +484,16 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         User currentUser = userRepository.findByUsername(username)
                 .or(() -> userRepository.findByEmail(username))
                 .orElseThrow(() -> new BusinessException("User not found"));
-        Teacher teacherProfile = teacherRepository.findByUserId(currentUser.getId())
+
+        // Ensure current user is a teacher
+        teacherRepository.findByUserId(currentUser.getId())
                 .orElseThrow(() -> new BusinessException("Teacher profile not found"));
+
+        // Compare USER ID of the section's teacher with current USER ID
+        // Because section.getTeacher() returns the User entity, not Teacher entity
         if (section.getTeacher() == null
                 || section.getTeacher().getId() == null
-                || !section.getTeacher().getId().equals(teacherProfile.getId())) {
+                || !section.getTeacher().getId().equals(currentUser.getId())) {
             throw new BusinessException("Bạn không có quyền thao tác lớp học phần này");
         }
     }

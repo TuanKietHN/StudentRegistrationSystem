@@ -7,6 +7,7 @@ import java.time.LocalTime;
 @Data
 @Builder
 public class ScheduleResponse {
+    private Long id;
     private Long sectionId;
     private String sectionName;
     private String subjectName;

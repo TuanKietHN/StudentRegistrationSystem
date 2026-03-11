@@ -59,7 +59,7 @@
           <td>{{ c.cohortName || '-' }}</td>
           <td>{{ c.intakeYear ?? '-' }}</td>
           <td>{{ c.program || '-' }}</td>
-          <td>{{ advisorTeacherLabel(c.advisorTeacherId) }}</td>
+          <td>{{ c.advisorTeacherId ? (teacherLabelById.get(c.advisorTeacherId) || `#${c.advisorTeacherId}`) : '-' }}</td>
           <td>
             <v-btn size="small" color="primary" variant="flat" class="mr-2" @click="goStudents(c.id)">Sinh viên</v-btn>
             <v-btn size="small" color="secondary" variant="flat" @click="goGrades(c.id)">Bảng điểm</v-btn>
@@ -86,7 +86,6 @@ import { useRouter } from 'vue-router'
 import { unwrapPageResponse } from '@/api/response'
 import { studentClassService, type StudentClass } from '@/api/services/studentClass.service'
 import { useLookupsStore } from '@/stores/lookups'
-import { useDebounceFn } from '@/composables/useDebounceFn'
 import { cohortService, type Cohort } from '@/api/services/cohort.service'
 import { teacherService, type Teacher } from '@/api/services/teacher.service'
 import { useUiStore } from '@/stores/ui'
@@ -120,9 +119,12 @@ const fetchAdminClasses = async () => {
       cohortId: cohortId.value || undefined,
       active: true
     })
-    const data = unwrapPageResponse<StudentClass>(res)
-    adminClasses.value = data.data || []
-    totalPages.value = data.totalPages || 1
+    // @ts-ignore
+    const data = res.data?.data
+    if (data) {
+        adminClasses.value = data.data || []
+        totalPages.value = data.totalPages || 1
+    }
   } catch (err: any) {
     adminClasses.value = []
     totalPages.value = 1
@@ -142,12 +144,14 @@ const changePage = (p: number) => {
   fetchAdminClasses()
 }
 
-const { debounced: debouncedSearch } = useDebounceFn(() => {
-  page.value = 1
-  fetchAdminClasses()
-}, 350)
-
-const handleSearch = () => debouncedSearch()
+let timeout: any
+const handleSearch = () => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => {
+        page.value = 1
+        fetchAdminClasses()
+    }, 300)
+}
 
 const goStudents = (adminClassId: number) => {
   router.push({ name: 'TeacherAdminClassStudents', params: { adminClassId } })
@@ -157,19 +161,17 @@ const goGrades = (adminClassId: number) => {
   router.push({ name: 'TeacherAdminClassGrades', params: { adminClassId } })
 }
 
-const advisorTeacherLabel = (id?: number | null) => {
-  if (!id) return '-'
-  return teacherLabelById.value.get(id) || `#${id}`
-}
-
 const loadCohorts = async () => {
   try {
     const res = await cohortService.getAll({ page: 1, size: 500, active: true })
-    const page = unwrapPageResponse<Cohort>(res)
-    cohortOptions.value = (page.data || []).map((c) => ({
-      title: `${c.code} - ${c.name}`,
-      value: c.id
-    }))
+    // @ts-ignore
+    const page = res.data?.data
+    if (page) {
+        cohortOptions.value = (page.data || []).map((c: any) => ({
+        title: `${c.code} - ${c.name}`,
+        value: c.id
+        }))
+    }
   } catch {
     cohortOptions.value = []
   }
@@ -178,8 +180,11 @@ const loadCohorts = async () => {
 const loadTeacherMap = async () => {
   try {
     const res = await teacherService.getAll({ page: 1, size: 500, active: true })
-    const page = unwrapPageResponse<Teacher>(res)
-    teacherLabelById.value = new Map((page.data || []).map((t) => [t.id, `${t.username}${t.email ? ` (${t.email})` : ''}`]))
+    // @ts-ignore
+    const page = res.data?.data
+    if (page) {
+        teacherLabelById.value = new Map((page.data || []).map((t: any) => [t.id, `${t.username}${t.email ? ` (${t.email})` : ''}`]))
+    }
   } catch {
     teacherLabelById.value = new Map()
   }

@@ -140,6 +140,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<User> search(String keyword, String role, int page, int size) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
         String normalizedRole = role == null || role.isBlank() ? null : role;
@@ -165,6 +166,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long count(String keyword, String role) {
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
         String normalizedRole = role == null || role.isBlank() ? null : role;

@@ -1,4 +1,5 @@
 import http from '@/api/axios'
+import type { ApiResponse } from '@/api/response'
 
 export interface ScheduleEvent {
   sectionId: number
@@ -13,9 +14,10 @@ export interface ScheduleEvent {
 }
 
 export const scheduleService = {
-  getMySchedule(semesterId?: number) {
-    return http.get<ScheduleEvent[]>('/schedules/mine', {
+  async getMySchedule(semesterId?: number): Promise<ApiResponse<ScheduleEvent[]>> {
+    const response = await http.get<ApiResponse<ScheduleEvent[]>>('/schedules/mine', {
       params: { semesterId }
     })
+    return response.data
   }
 }

@@ -14,6 +14,7 @@ import vn.com.nws.cms.modules.academic.domain.model.Subject;
 import vn.com.nws.cms.modules.academic.domain.repository.AcademicProgramRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.DepartmentRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.ProgramSubjectRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.StudentClassRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.SubjectRepository;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
     private final ProgramSubjectRepository programSubjectRepository;
     private final DepartmentRepository departmentRepository;
     private final SubjectRepository subjectRepository;
+    private final StudentClassRepository studentClassRepository;
     private final AcademicProgramDTOMapper mapper;
 
     @Override
@@ -101,7 +103,11 @@ public class AcademicProgramServiceImpl implements AcademicProgramService {
         if (!academicProgramRepository.findById(id).isPresent()) {
             throw new ResourceNotFoundException("Program not found with id: " + id);
         }
-        // TODO: Check if program is used by any student classes before delete
+        
+        if (studentClassRepository.existsByProgramId(id)) {
+            throw new IllegalArgumentException("Cannot delete program because it is being used by one or more classes.");
+        }
+        
         academicProgramRepository.deleteById(id);
     }
 

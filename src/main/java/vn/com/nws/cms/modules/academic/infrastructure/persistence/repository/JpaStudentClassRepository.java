@@ -20,6 +20,8 @@ public interface JpaStudentClassRepository extends JpaRepository<StudentClassEnt
 
     boolean existsByCodeAndIdNot(String code, Long id);
 
+    boolean existsByAcademicProgramId(Long programId);
+
     @EntityGraph(attributePaths = {"department", "cohort", "advisorTeacher", "advisorTeacher.user"})
     @Query("""
             SELECT c

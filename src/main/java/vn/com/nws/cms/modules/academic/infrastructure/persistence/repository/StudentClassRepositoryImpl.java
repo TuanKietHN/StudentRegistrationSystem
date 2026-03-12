@@ -98,6 +98,11 @@ public class StudentClassRepositoryImpl implements StudentClassRepository {
     }
 
     @Override
+    public boolean existsByProgramId(Long programId) {
+        return jpaRepository.existsByAcademicProgramId(programId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<StudentClass> search(String keyword, Long departmentId, Long cohortId, Long advisorTeacherId, Boolean active, Pageable pageable) {
         List<StudentClassEntity> base = jpaRepository.searchNoKeywordList(departmentId, cohortId, advisorTeacherId, active);

@@ -1,11 +1,13 @@
 package vn.com.nws.cms.modules.academic.infrastructure.persistence.repository;
 
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.modules.academic.domain.model.AcademicProgram;
 import vn.com.nws.cms.modules.academic.domain.repository.AcademicProgramRepository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.AcademicProgramEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.DepartmentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.AcademicProgramMapper;
 
 import java.util.List;
@@ -17,11 +19,18 @@ import java.util.stream.Collectors;
 public class AcademicProgramRepositoryImpl implements AcademicProgramRepository {
     private final JpaAcademicProgramRepository jpaRepository;
     private final AcademicProgramMapper mapper;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional
     public AcademicProgram save(AcademicProgram program) {
         AcademicProgramEntity entity = mapper.toEntity(program);
+        
+        // Handle Department reference
+        if (program.getDepartment() != null && program.getDepartment().getId() != null) {
+            entity.setDepartment(entityManager.getReference(DepartmentEntity.class, program.getDepartment().getId()));
+        }
+        
         return mapper.toDomain(jpaRepository.save(entity));
     }
 

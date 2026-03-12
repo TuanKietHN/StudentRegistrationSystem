@@ -51,12 +51,13 @@
         v-for="item in navItems"
         :key="item.name"
         :to="{ name: item.name }"
-        :title="item.title"
         :prepend-icon="item.icon"
         rounded="lg"
         class="admin-nav-item"
         active-class="admin-nav-item--active"
-      />
+      >
+        <v-list-item-title v-text="item.title"></v-list-item-title>
+      </v-list-item>
     </v-list>
 
     <div class="mt-auto">

@@ -279,7 +279,7 @@ const subjectHeaders = [
   { title: 'Học kỳ', key: 'semester' },
   { title: 'Mã HP', key: 'subject.code' },
   { title: 'Tên học phần', key: 'subject.name' },
-  { title: 'Tín chỉ', key: 'subject.credits' },
+  { title: 'Tín chỉ', key: 'subject.credit' },
   { title: 'Loại', key: 'subjectType' },
   { title: 'Điểm đạt', key: 'passScore' },
   { title: 'Hành động', key: 'actions', sortable: false, align: 'end' },
@@ -292,10 +292,16 @@ const loadData = async () => {
       academicProgramService.getAll(),
       departmentService.getAll()
     ])
-    // @ts-ignore
-    programs.value = unwrapApiResponse(progRes)?.data || []
-    // @ts-ignore
-    departments.value = unwrapApiResponse(deptRes)?.data || []
+    programs.value = progRes.data || []
+    
+    // departmentService returns AxiosResponse
+    // API returns ApiResponse<PageResponse<Department>>, so we need deptRes.data.data.data
+    const deptData = (deptRes.data as any)?.data
+    if (deptData && Array.isArray(deptData.data)) {
+      departments.value = deptData.data
+    } else {
+      departments.value = []
+    }
   } catch (error) {
     uiStore.notify('Lỗi tải dữ liệu', 'error')
   } finally {
@@ -403,8 +409,7 @@ const loadProgramSubjects = async (programId: number) => {
   subjectsLoading.value = true
   try {
     const res = await academicProgramService.getSubjects(programId)
-    // @ts-ignore
-    programSubjects.value = unwrapApiResponse(res)?.data || []
+    programSubjects.value = res.data || []
   } catch (error) {
     uiStore.notify('Lỗi tải danh sách môn học', 'error')
   } finally {
@@ -416,9 +421,14 @@ const openAddSubjectDialog = async () => {
   try {
     // Load all subjects for selection
     const res = await subjectService.getAll({ page: 1, size: 1000, active: true })
-    // @ts-ignore
-    const data = unwrapApiResponse(res)
-    availableSubjects.value = data?.data || []
+    
+    // API returns ApiResponse<PageResponse<Subject>>, so we need res.data.data.data
+    const subjectData = (res.data as any)?.data
+    if (subjectData && Array.isArray(subjectData.data)) {
+      availableSubjects.value = subjectData.data
+    } else {
+      availableSubjects.value = []
+    }
     
     // Reset form
     Object.assign(newSubject, {

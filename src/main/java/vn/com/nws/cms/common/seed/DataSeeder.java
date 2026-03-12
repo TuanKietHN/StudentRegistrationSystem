@@ -454,24 +454,69 @@ public class DataSeeder implements CommandLineRunner {
         Department qtkd = departmentByCode("QTKD");
         Department ketoan = departmentByCode("KETOAN");
 
-        AcademicProgram cnttProg = upsertAcademicProgram("CNTT_K25", "Kỹ thuật phần mềm K25", cntt, 130, "Chương trình chuẩn Kỹ thuật phần mềm K25");
-        AcademicProgram qtkdProg = upsertAcademicProgram("QTKD_K25", "Quản trị kinh doanh K25", qtkd, 120, "Chương trình chuẩn QTKD K25");
-        AcademicProgram ketoanProg = upsertAcademicProgram("KETOAN_K25", "Kế toán K25", ketoan, 125, "Chương trình chuẩn Kế toán K25");
+        // Seed cho nhiều khóa (K22-K25)
+        for (int year = 22; year <= 25; year++) {
+            String suffix = "K" + year;
+            AcademicProgram cnttP = upsertAcademicProgram("CNTT_" + suffix, "Kỹ thuật phần mềm " + suffix, cntt, 130, "Chương trình chuẩn CNTT " + suffix);
+            AcademicProgram qtkdP = upsertAcademicProgram("QTKD_" + suffix, "Quản trị kinh doanh " + suffix, qtkd, 120, "Chương trình chuẩn QTKD " + suffix);
+            AcademicProgram ketoanP = upsertAcademicProgram("KETOAN_" + suffix, "Kế toán " + suffix, ketoan, 125, "Chương trình chuẩn Kế toán " + suffix);
 
-        // Gán môn học vào chương trình
-        upsertProgramSubject(cnttProg, "JAVA001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(cnttProg, "JAVA002", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(cnttProg, "WEB001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(cnttProg, "DB001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(cnttProg, "DB002", 2, ProgramSubject.TYPE_ELECTIVE, 4.0);
-        upsertProgramSubject(cnttProg, "AI001", 4, ProgramSubject.TYPE_ELECTIVE, 4.0);
+            // Gán lộ trình môn học (Ví dụ cho CNTT)
+            seedProgramSubjectsCNTT(cnttP);
+            seedProgramSubjectsQTKD(qtkdP);
+        }
+    }
 
-        upsertProgramSubject(qtkdProg, "MKT001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(qtkdProg, "MGMT001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(qtkdProg, "FIN001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+    private void seedProgramSubjectsCNTT(AcademicProgram prog) {
+        // Học kỳ 1
+        upsertProgramSubject(prog, "JAVA001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "MATH001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "POL001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "ENG001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        
+        // Học kỳ 2
+        upsertProgramSubject(prog, "DB001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "MATH002", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "DS001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "SOFT001", 2, ProgramSubject.TYPE_ELECTIVE, 4.0);
+        
+        // Học kỳ 3
+        upsertProgramSubject(prog, "JAVA002", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "OS001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "MATH003", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "NET001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        
+        // Học kỳ 4
+        upsertProgramSubject(prog, "WEB001", 4, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "DB002", 4, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "DA001", 4, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "POL002", 4, ProgramSubject.TYPE_ELECTIVE, 4.0);
+        
+        // Học kỳ 5
+        upsertProgramSubject(prog, "AI001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "MOBILE001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "SE001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "PRJ001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        
+        // Học kỳ 6
+        upsertProgramSubject(prog, "CLOUD001", 6, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "SECURITY001", 6, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "PRJ002", 6, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "POL003", 6, ProgramSubject.TYPE_ELECTIVE, 4.0);
+        
+        // Học kỳ 7
+        upsertProgramSubject(prog, "INTERN001", 7, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        
+        // Học kỳ 8
+        upsertProgramSubject(prog, "THESIS001", 8, ProgramSubject.TYPE_COMPULSORY, 4.0);
+    }
 
-        upsertProgramSubject(ketoanProg, "ACC001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        upsertProgramSubject(ketoanProg, "ACC002", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+    private void seedProgramSubjectsQTKD(AcademicProgram prog) {
+        upsertProgramSubject(prog, "MKT001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "MGMT001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "FIN001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "POL001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
+        upsertProgramSubject(prog, "ENG001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
     }
 
     private AcademicProgram upsertAcademicProgram(String code, String name, Department dept, int credits, String description) {
@@ -761,6 +806,30 @@ public class DataSeeder implements CommandLineRunner {
         // Môn Kế toán
         upsertSubject("ACC001",    "Nguyên lý kế toán",                   3, ketoan, "Nguyên tắc kế toán, hệ thống tài khoản, BCTC",           (short)40, (short)60);
         upsertSubject("ACC002",    "Kế toán tài chính",                   3, ketoan, "Kế toán theo chuẩn VAS, lập báo cáo tài chính",           (short)40, (short)60);
+
+        // --- Bổ sung môn Đại Cương (Dùng chung) ---
+        Department ngoaingu = departmentByCode("NGOAINGU");
+        upsertSubject("ENG001",    "Tiếng Anh 1",                         3, ngoaingu, "Tiếng Anh giao tiếp cơ bản 1",                      (short)30, (short)70);
+        upsertSubject("ENG002",    "Tiếng Anh 2",                         3, ngoaingu, "Tiếng Anh giao tiếp cơ bản 2",                      (short)30, (short)70);
+        upsertSubject("MATH002",   "Giải tích 1",                         3, cntt,     "Đạo hàm, tích phân và ứng dụng",                    (short)30, (short)70);
+        upsertSubject("MATH003",   "Đại số tuyến tính",                   3, cntt,     "Ma trận, hệ phương trình tuyến tính",                (short)30, (short)70);
+        upsertSubject("POL001",    "Triết học Mác-Lênin",                 3, null,     "Nguyên lý cơ bản của chủ nghĩa Mác-Lênin",          (short)30, (short)70);
+        upsertSubject("POL002",    "Kinh tế chính trị",                   2, null,     "Kinh tế chính trị Mác-Lênin",                       (short)30, (short)70);
+        upsertSubject("POL003",    "Tư tưởng Hồ Chí Minh",                2, null,     "Hệ thống quan điểm về cách mạng Việt Nam",           (short)30, (short)70);
+        upsertSubject("SOFT001",   "Kỹ năng mềm",                         2, null,     "Kỹ năng giao tiếp, thuyết trình, làm việc nhóm",    (short)100, (short)0);
+        upsertSubject("PHYS001",   "Vật lý đại cương",                    3, cntt,     "Cơ nhiệt, điện từ, quang học",                      (short)30, (short)70);
+        
+        // --- Bổ sung môn Chuyên Ngành CNTT nâng cao ---
+        upsertSubject("DS001",     "Cấu trúc dữ liệu và giải thuật",      4, cntt,     "Stack, Queue, Tree, Graph, Sorting, Searching",      (short)40, (short)60);
+        upsertSubject("OS001",     "Hệ điều hành",                        3, cntt,     "Process, Thread, Memory Management, File System",   (short)40, (short)60);
+        upsertSubject("MOBILE001", "Lập trình di động",                   4, cntt,     "Android, iOS, Flutter/React Native",                (short)50, (short)50);
+        upsertSubject("CLOUD001",  "Điện toán đám mây",                   3, cntt,     "AWS, Azure, Docker, Kubernetes",                    (short)40, (short)60);
+        upsertSubject("SECURITY001","An toàn thông tin",                  3, cntt,     "Mã hóa, bảo mật mạng, tấn công và phòng thủ",       (short)40, (short)60);
+        upsertSubject("DA001",     "Phân tích thiết kế hệ thống",         3, cntt,     "UML, thiết kế hướng đối tượng",                     (short)40, (short)60);
+        upsertSubject("PRJ001",    "Đồ án chuyên ngành 1",                3, cntt,     "Xây dựng ứng dụng thực tế",                         (short)100, (short)0);
+        upsertSubject("PRJ002",    "Đồ án chuyên ngành 2",                3, cntt,     "Xây dựng ứng dụng phức tạp",                        (short)100, (short)0);
+        upsertSubject("INTERN001", "Thực tập tốt nghiệp",                 4, cntt,     "Thực tập tại doanh nghiệp",                         (short)100, (short)0);
+        upsertSubject("THESIS001", "Khóa luận tốt nghiệp",                10, cntt,    "Nghiên cứu và hoàn thành khóa luận",                (short)100, (short)0);
     }
 
     private void upsertSubject(String code, String name, int credits, Department department,

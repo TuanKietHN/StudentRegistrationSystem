@@ -10,6 +10,8 @@ export interface SubjectProgressDTO {
   grade4: number | null
   status: 'PASSED' | 'NOT_PASSED' | 'NOT_STARTED' | 'IN_PROGRESS'
   type: string
+  semester: number | null
+  isExtra: boolean
 }
 
 export interface StudentProgressResponse {

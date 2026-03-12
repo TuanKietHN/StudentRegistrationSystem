@@ -54,7 +54,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         // Fetch enrollments
         List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
         
-        // Group enrollments by subject code (or ID) and keep the best score
+        // Group enrollments by subject code and keep the best score
         Map<String, Enrollment> bestEnrollments = enrollments.stream()
                 .filter(e -> e.getSection() != null && e.getSection().getSubject() != null)
                 .collect(Collectors.toMap(
@@ -70,10 +70,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         List<SubjectProgressDTO> subjectProgressList = new ArrayList<>();
         int earnedCredits = 0;
         int totalCredits = 0;
-        
-        double totalWeightedScore10 = 0.0;
-        double totalWeightedScore4 = 0.0;
-        int totalCreditsForGpa = 0;
+        Set<String> processedSubjectCodes = new HashSet<>();
 
         if (program != null) {
             List<ProgramSubject> programSubjects = programSubjectRepository.findByProgramId(program.getId());
@@ -84,34 +81,40 @@ public class StudentProgressServiceImpl implements StudentProgressService {
                 Enrollment enrollment = bestEnrollments.get(subject.getCode());
                 
                 SubjectProgressDTO dto = buildSubjectProgressDTO(subject, enrollment, ps.getPassScore());
+                dto.setSemester(ps.getSemester());
+                dto.setType(ps.getSubjectType());
+                dto.setExtra(false);
+                
                 subjectProgressList.add(dto);
+                processedSubjectCodes.add(subject.getCode());
 
-                // Calculate progress
                 if ("PASSED".equals(dto.getStatus())) {
                     earnedCredits += subject.getCredits();
                 }
             }
-            
-            // Add extra subjects not in program (optional, maybe electives outside plan)
-            // For now let's stick to program subjects
-            
-        } else {
-            // No program defined, just list all enrollments
-            for (Enrollment enrollment : bestEnrollments.values()) {
-                Subject subject = enrollment.getSection().getSubject();
-                SubjectProgressDTO dto = buildSubjectProgressDTO(subject, enrollment, 4.0); // Default pass score
+        }
+
+        // Add extra subjects not in program
+        for (Enrollment enrollment : bestEnrollments.values()) {
+            Subject subject = enrollment.getSection().getSubject();
+            if (!processedSubjectCodes.contains(subject.getCode())) {
+                SubjectProgressDTO dto = buildSubjectProgressDTO(subject, enrollment, 4.0);
+                dto.setSemester(null); // Extra subjects don't have a fixed semester in program
+                dto.setExtra(true);
+                dto.setType("ELECTIVE");
                 subjectProgressList.add(dto);
                 
                 if ("PASSED".equals(dto.getStatus())) {
                     earnedCredits += subject.getCredits();
                 }
             }
-            // Use sum of subject credits as total? No, maybe 0.
         }
         
-        // Calculate GPA based on ALL passed subjects (or all attempted?)
-        // Usually GPA includes failed subjects too depending on policy.
-        // Let's assume GPA is calculated on all attempted subjects with a score.
+        // Calculate GPA based on ALL attempted subjects with a score
+        double totalWeightedScore10 = 0.0;
+        double totalWeightedScore4 = 0.0;
+        int totalCreditsForGpa = 0;
+
         for (Enrollment enrollment : bestEnrollments.values()) {
              if (enrollment.getFinalScore() != null) {
                  Subject subject = enrollment.getSection().getSubject();
@@ -130,12 +133,12 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         
         double completionRate = (totalCredits > 0) 
                 ? ((double) earnedCredits / totalCredits) * 100 
-                : 0.0;
+                : (processedSubjectCodes.isEmpty() ? 0.0 : 100.0); // If no program, maybe 100% of what's taken? Or just 0.
 
         return StudentProgressResponse.builder()
                 .studentId(student.getId())
-                .studentName(student.getUser().getFullName()) // Assuming User has fullName
-                .programName(program != null ? program.getName() : (studentClass.getProgram() != null ? studentClass.getProgram() : "N/A"))
+                .studentName(student.getUser().getFullName())
+                .programName(program != null ? program.getName() : "Chương trình chưa xác định")
                 .progressPercentage(round(completionRate, 2))
                 .totalCredits(totalCredits)
                 .earnedCredits(earnedCredits)

@@ -664,6 +664,9 @@ public class DataSeeder implements CommandLineRunner {
         StudentClass qtkdK25_01 = studentClassByCode("QTKD-K25-01");
         StudentClass ketoanK25  = studentClassByCode("KETOAN-K25-01");
         StudentClass cnttK24_01 = studentClassByCode("CNTT-K24-01");
+        
+        StudentClass cnttK22_01 = studentClassByCode("CNTT-K22-01");
+        StudentClass cnttK23_01 = studentClassByCode("CNTT-K23-01");
 
         // Gán sinh viên vào lớp hành chính
         // Tạo 80 sinh viên cho mỗi lớp
@@ -672,6 +675,8 @@ public class DataSeeder implements CommandLineRunner {
         seedStudentsForClass(qtkdK25_01, qtkd, "QTKD25", 80);
         seedStudentsForClass(ketoanK25, ketoan, "KETOAN25", 80);
         seedStudentsForClass(cnttK24_01, cntt, "CNTT24", 80);
+        seedStudentsForClass(cnttK22_01, cntt, "CNTT22", 40);
+        seedStudentsForClass(cnttK23_01, cntt, "CNTT23", 40);
         
         // Thêm tài khoản mẫu cũ (để test login)
         upsertStudent("student@nws.com.vn", "SV2500001", cntt, cnttK25_01, "0901111111");

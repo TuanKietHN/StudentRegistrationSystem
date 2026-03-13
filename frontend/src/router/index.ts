@@ -20,6 +20,7 @@ const AdminAdminClassesView = () => import('../views/admin/AdminAdminClassesView
 const AdminAdminClassStudentsView = () => import('../views/admin/AdminAdminClassStudentsView.vue')
 const AdminCourseEnrollmentsView = () => import('../views/admin/AdminCourseEnrollmentsView.vue')
 const AdminProgramListView = () => import('../views/academic/AdminProgramListView.vue')
+const AdminProgramSubjectsView = () => import('../views/academic/AdminProgramSubjectsView.vue')
 const StudentHomeView = () => import('../views/student/StudentHomeView.vue')
 const StudentCourseRegistrationView = () => import('../views/student/CourseRegistrationView.vue')
 const StudentMyEnrollmentsView = () => import('../views/student/MyEnrollmentsView.vue')
@@ -80,6 +81,7 @@ const router = createRouter({
         { path: 'admin-classes', name: 'AdminAdminClasses', component: AdminAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
         { path: 'admin-classes/:adminClassId/students', name: 'AdminAdminClassStudents', component: AdminAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
         { path: 'academic-programs', name: 'AdminPrograms', component: AdminProgramListView, meta: { permissions: ['ACADEMIC_PROGRAM:READ'] } },
+        { path: 'academic-programs/:programId/subjects', name: 'AdminProgramSubjects', component: AdminProgramSubjectsView, meta: { permissions: ['ACADEMIC_PROGRAM:READ', 'SUBJECT:READ'] } },
         { path: 'users', name: 'AdminUsers', component: UserList, meta: { permissions: ['USER:READ'] } }
       ]
     },

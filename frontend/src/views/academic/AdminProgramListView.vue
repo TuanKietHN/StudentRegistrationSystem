@@ -33,9 +33,16 @@
         </template>
 
         <template v-slot:item.actions="{ item }">
-          <v-btn icon="mdi-pencil" size="small" variant="text" color="primary" @click="editProgram(item)"></v-btn>
-          <v-btn icon="mdi-book-open-variant" size="small" variant="text" color="info" @click="manageSubjects(item)"></v-btn>
-          <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="confirmDelete(item)"></v-btn>
+          <v-btn icon="mdi-pencil" size="small" variant="text" color="primary" @click="editProgram(item)" v-tooltip="'Sửa thông tin'"></v-btn>
+          <v-btn 
+            icon="mdi-book-multiple" 
+            size="small" 
+            variant="text" 
+            color="info" 
+            :to="`/admin/academic-programs/${item.id}/subjects`"
+            v-tooltip="'Quản lý môn học'"
+          ></v-btn>
+          <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="confirmDelete(item)" v-tooltip="'Xóa chương trình'"></v-btn>
         </template>
       </v-data-table>
     </v-card>
@@ -107,101 +114,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Manage Subjects Dialog -->
-    <v-dialog v-model="subjectDialog" fullscreen transition="dialog-bottom-transition">
-      <v-card>
-        <v-toolbar color="primary">
-          <v-btn icon="mdi-close" @click="subjectDialog = false"></v-btn>
-          <v-toolbar-title>Quản lý môn học: {{ selectedProgram?.name }}</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-toolbar-items>
-            <v-btn variant="text" prepend-icon="mdi-plus" @click="openAddSubjectDialog">Thêm môn học</v-btn>
-          </v-toolbar-items>
-        </v-toolbar>
-        
-        <v-card-text>
-          <v-container>
-            <v-data-table
-              :headers="subjectHeaders"
-              :items="programSubjects"
-              :loading="subjectsLoading"
-              class="elevation-1"
-            >
-              <template v-slot:item.subjectType="{ item }">
-                <v-chip :color="item.subjectType === 'COMPULSORY' ? 'error' : 'info'" size="small">
-                  {{ item.subjectType === 'COMPULSORY' ? 'Bắt buộc' : 'Tự chọn' }}
-                </v-chip>
-              </template>
-              <template v-slot:item.subject.credits="{ item }">
-                {{ item.subject.credit }}
-              </template>
-              <template v-slot:item.actions="{ item }">
-                <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="removeSubject(item)"></v-btn>
-              </template>
-            </v-data-table>
-          </v-container>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-
-    <!-- Add Subject Dialog -->
-    <v-dialog v-model="addSubjectDialog" max-width="500px">
-      <v-card>
-        <v-card-title>Thêm môn học vào chương trình</v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-row>
-              <v-col cols="12">
-                <v-autocomplete
-                  v-model="newSubject.subjectId"
-                  :items="availableSubjects"
-                  item-title="name"
-                  item-value="id"
-                  label="Chọn môn học"
-                  required
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props" :subtitle="item.raw.code"></v-list-item>
-                  </template>
-                </v-autocomplete>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model.number="newSubject.semester"
-                  label="Học kỳ dự kiến"
-                  type="number"
-                  min="1"
-                  required
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model.number="newSubject.passScore"
-                  label="Điểm đạt (thang 10)"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="10"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-select
-                  v-model="newSubject.subjectType"
-                  :items="[{title: 'Bắt buộc', value: 'COMPULSORY'}, {title: 'Tự chọn', value: 'ELECTIVE'}]"
-                  label="Loại môn"
-                  required
-                ></v-select>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="grey" variant="text" @click="addSubjectDialog = false">Hủy</v-btn>
-          <v-btn color="primary" variant="text" @click="saveSubject">Thêm</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
 
     <ConfirmDialog 
       v-model="confirmState.show" 
@@ -241,13 +153,7 @@ const availableSubjects = ref<any[]>([])
 
 // Dialog states
 const dialog = ref(false)
-const subjectDialog = ref(false)
-const addSubjectDialog = ref(false)
-const subjectsLoading = ref(false)
-
 const editedIndex = ref(-1)
-const selectedProgram = ref<AcademicProgramResponse | null>(null)
-const programSubjects = ref<ProgramSubjectResponse[]>([])
 
 const editedItem = reactive({
   id: -1,
@@ -259,29 +165,12 @@ const editedItem = reactive({
   active: true
 })
 
-const newSubject = reactive({
-  subjectId: null as number | null,
-  semester: 1,
-  passScore: 4.0,
-  subjectType: 'COMPULSORY'
-})
-
 const headers = [
   { title: 'Mã CT', key: 'code' },
   { title: 'Tên chương trình', key: 'name' },
   { title: 'Khoa', key: 'department' },
   { title: 'Tổng tín chỉ', key: 'totalCredits' },
   { title: 'Trạng thái', key: 'active' },
-  { title: 'Hành động', key: 'actions', sortable: false, align: 'end' },
-]
-
-const subjectHeaders = [
-  { title: 'Học kỳ', key: 'semester' },
-  { title: 'Mã HP', key: 'subject.code' },
-  { title: 'Tên học phần', key: 'subject.name' },
-  { title: 'Tín chỉ', key: 'subject.credit' },
-  { title: 'Loại', key: 'subjectType' },
-  { title: 'Điểm đạt', key: 'passScore' },
   { title: 'Hành động', key: 'actions', sortable: false, align: 'end' },
 ]
 
@@ -398,85 +287,6 @@ const executeConfirm = async () => {
   }
 }
 
-// Subject Management
-const manageSubjects = async (item: AcademicProgramResponse) => {
-  selectedProgram.value = item
-  subjectDialog.value = true
-  await loadProgramSubjects(item.id)
-}
-
-const loadProgramSubjects = async (programId: number) => {
-  subjectsLoading.value = true
-  try {
-    const res = await academicProgramService.getSubjects(programId)
-    programSubjects.value = res.data || []
-  } catch (error) {
-    uiStore.notify('Lỗi tải danh sách môn học', 'error')
-  } finally {
-    subjectsLoading.value = false
-  }
-}
-
-const openAddSubjectDialog = async () => {
-  try {
-    // Load all subjects for selection
-    const res = await subjectService.getAll({ page: 1, size: 1000, active: true })
-    
-    // API returns ApiResponse<PageResponse<Subject>>, so we need res.data.data.data
-    const subjectData = (res.data as any)?.data
-    if (subjectData && Array.isArray(subjectData.data)) {
-      availableSubjects.value = subjectData.data
-    } else {
-      availableSubjects.value = []
-    }
-    
-    // Reset form
-    Object.assign(newSubject, {
-      subjectId: null,
-      semester: 1,
-      passScore: 4.0,
-      subjectType: 'COMPULSORY'
-    })
-    addSubjectDialog.value = true
-  } catch (error) {
-    uiStore.notify('Lỗi tải danh sách môn học', 'error')
-  }
-}
-
-const saveSubject = async () => {
-  if (!selectedProgram.value || !newSubject.subjectId) return
-  
-  try {
-    await academicProgramService.addSubject(selectedProgram.value.id, {
-      subjectId: newSubject.subjectId,
-      semester: Number(newSubject.semester),
-      subjectType: newSubject.subjectType,
-      passScore: Number(newSubject.passScore)
-    })
-    uiStore.notify('Thêm môn học thành công', 'success')
-    addSubjectDialog.value = false
-    loadProgramSubjects(selectedProgram.value.id)
-  } catch (error: any) {
-    uiStore.notify(error.response?.data?.message || 'Có lỗi xảy ra', 'error')
-  }
-}
-
-const removeSubject = (item: ProgramSubjectResponse) => {
-  confirmState.title = 'Xác nhận xóa'
-  confirmState.text = `Bạn có chắc muốn xóa môn "${item.subject.name}" khỏi chương trình?`
-  confirmState.action = async () => {
-    try {
-      await academicProgramService.removeSubject(item.id)
-      uiStore.notify('Xóa môn học thành công', 'success')
-      if (selectedProgram.value) {
-        loadProgramSubjects(selectedProgram.value.id)
-      }
-    } catch (error: any) {
-      uiStore.notify('Lỗi khi xóa môn học', 'error')
-    }
-  }
-  confirmState.show = true
-}
 
 onMounted(() => {
   loadData()

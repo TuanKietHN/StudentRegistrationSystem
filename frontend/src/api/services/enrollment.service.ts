@@ -52,21 +52,5 @@ export const enrollmentService = {
   },
   cancelEnrollment(id: number) {
     return api.delete(`/v1/enrollments/${id}`)
-  },
-  getSectionEnrollments(sectionId: number) {
-    return api.get(`/v1/enrollments/sections/${sectionId}`)
-  },
-  updateEnrollment(
-    id: number,
-    payload: { status?: string; grade?: number | null; processScore?: number | null; examScore?: number | null; overrideReason?: string }
-  ) {
-    return api.put(`/v1/enrollments/${id}`, payload)
-  },
-  importSectionGrades(sectionId: number, file: File) {
-    const form = new FormData()
-    form.append('file', file)
-    return api.post(`/v1/enrollments/sections/${sectionId}/grades/import`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
   }
 }

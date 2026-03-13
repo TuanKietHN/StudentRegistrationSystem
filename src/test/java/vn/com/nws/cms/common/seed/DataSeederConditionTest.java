@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
+import vn.com.nws.cms.modules.academic.application.SectionGradeService;
 import vn.com.nws.cms.modules.academic.domain.repository.*;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 import vn.com.nws.cms.modules.auth.infrastructure.persistence.repository.JpaPermissionRepository;
@@ -134,6 +135,11 @@ class DataSeederConditionTest {
         @Bean
         EnrollmentRepository enrollmentRepository() {
             return mock(EnrollmentRepository.class);
+        }
+
+        @Bean
+        SectionGradeService sectionGradeService() {
+            return mock(SectionGradeService.class);
         }
 
         @Bean

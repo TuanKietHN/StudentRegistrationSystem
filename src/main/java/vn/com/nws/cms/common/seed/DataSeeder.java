@@ -17,6 +17,8 @@ import vn.com.nws.cms.modules.academic.domain.enums.SectionLifecycleStatus;
 import vn.com.nws.cms.modules.academic.domain.model.*;
 import vn.com.nws.cms.modules.academic.domain.repository.*;
 import vn.com.nws.cms.modules.academic.application.EnrollmentService;
+import vn.com.nws.cms.modules.academic.application.SectionGradeService;
+import vn.com.nws.cms.modules.academic.api.dto.SectionGradeUpdateRequest;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.PermissionEntity;
@@ -74,6 +76,7 @@ public class DataSeeder implements CommandLineRunner {
     private final StudentClassRepository studentClassRepository;
 
     private final EnrollmentService enrollmentService;
+    private final SectionGradeService sectionGradeService;
     private final EnrollmentRepository enrollmentRepository;
     private final AcademicProgramRepository academicProgramRepository;
     private final ProgramSubjectRepository programSubjectRepository;
@@ -1277,10 +1280,10 @@ public class DataSeeder implements CommandLineRunner {
                 return;
             }
 
-            EnrollmentUpdateRequest req = new EnrollmentUpdateRequest();
+            SectionGradeUpdateRequest req = new SectionGradeUpdateRequest();
             req.setProcessScore(processScore);
             req.setExamScore(examScore);
-            enrollmentService.updateEnrollment(enrollment.getId(), "admin@nws.com.vn", true, false, req);
+            sectionGradeService.updateGrade(enrollment.getId(), "admin@nws.com.vn", true, false, req);
             log.debug("  [Grade] Nhập điểm: {} - {} (QT:{} | Thi:{})", sectionCode, studentEmail, processScore, examScore);
         } catch (Exception e) {
             log.warn("  [Grade] Lỗi nhập điểm {} - {}: {}", sectionCode, studentEmail, e.getMessage());

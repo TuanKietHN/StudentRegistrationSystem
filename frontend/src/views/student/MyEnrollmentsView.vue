@@ -18,7 +18,6 @@
             <th>Học kỳ</th>
             <th>Thời gian học</th>
             <th>Trạng thái</th>
-            <th>Điểm</th>
             <th>Hành động</th>
           </tr>
         </thead>
@@ -32,7 +31,6 @@
             <td>
               <v-chip color="blue" variant="tonal" size="small">{{ e.status }}</v-chip>
             </td>
-            <td>{{ e.grade ?? '-' }}</td>
             <td>
               <v-btn
                 size="small"
@@ -47,7 +45,7 @@
             </td>
           </tr>
           <tr v-if="enrollments.length === 0">
-            <td colspan="8" class="text-center py-6">Chưa có lớp đã đăng ký</td>
+            <td colspan="7" class="text-center py-6">Chưa có lớp đã đăng ký</td>
           </tr>
         </tbody>
       </v-table>

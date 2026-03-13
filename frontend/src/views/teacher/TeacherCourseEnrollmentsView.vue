@@ -118,7 +118,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { unwrapApiResponse } from '@/api/response'
 import { sectionService } from '@/api/services/section.service'
-import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
+import { sectionGradeService, type SectionGradeResponse } from '@/api/services/section-grade.service'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
@@ -127,7 +127,7 @@ const route = useRoute()
 
 const sectionId = Number(route.params.sectionId)
 const courseTitle = ref(`Danh sách sinh viên (Section #${sectionId})`)
-const enrollments = ref<Enrollment[]>([])
+const enrollments = ref<SectionGradeResponse[]>([])
 const loading = ref(false)
 const savingId = ref<number | null>(null)
 const importing = ref(false)
@@ -157,8 +157,8 @@ const loadSection = async () => {
 const reload = async () => {
   loading.value = true
   try {
-    const res = await enrollmentService.getSectionEnrollments(sectionId)
-    enrollments.value = unwrapApiResponse<Enrollment[]>(res) || []
+    const res = await sectionGradeService.getSectionGrades(sectionId)
+    enrollments.value = unwrapApiResponse<SectionGradeResponse[]>(res) || []
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Không tải được danh sách sinh viên', 'error', 4000)
   } finally {
@@ -184,7 +184,7 @@ const save = async (enrollmentId: number) => {
       payload.processScore = processScore
       payload.examScore = examScore
     }
-    await enrollmentService.updateEnrollment(enrollmentId, payload)
+    await sectionGradeService.updateGrade(enrollmentId, payload)
     uiStore.notify('Lưu thành công', 'success')
     await reload()
   } catch (err: any) {
@@ -198,7 +198,7 @@ const importGrades = async () => {
   if (!selectedFile.value) return
   importing.value = true
   try {
-    const res = await enrollmentService.importSectionGrades(sectionId, selectedFile.value)
+    const res = await sectionGradeService.importSectionGrades(sectionId, selectedFile.value)
     const data = unwrapApiResponse<any>(res)
     const imported = data?.imported ?? 0
     const skippedLocked = data?.skippedLocked ?? 0

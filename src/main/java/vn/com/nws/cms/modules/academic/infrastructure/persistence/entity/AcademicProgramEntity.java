@@ -1,6 +1,8 @@
 package vn.com.nws.cms.modules.academic.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +13,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "academic_programs")
+@SQLDelete(sql = "UPDATE academic_programs SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 @Data
 @Builder
 @NoArgsConstructor

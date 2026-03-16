@@ -24,8 +24,8 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="subjectFilterId"
-            :items="subjectOptions"
+            v-model="classFilterId"
+            :items="classOptions"
             item-title="title"
             item-value="value"
             label="Lọc môn học"
@@ -54,13 +54,14 @@
             <td>{{ c.code }}</td>
             <td>{{ c.name }}</td>
             <td>{{ c.semester?.code || '-' }}</td>
-            <td>{{ c.subject?.code || '-' }}</td>
+            <td>{{ c.clazz?.code || '-' }}</td>
             <td>{{ c.currentStudents }} / {{ c.maxStudents }}</td>
             <td>{{ formatTimeSlots(c.timeSlots) }}</td>
             <td>
               <v-btn size="small" color="primary" variant="flat" @click="goEnrollments(c.id)">
                 DS sinh viên / Nhập điểm
               </v-btn>
+              <v-btn size="small" variant="text" class="ml-2" @click="goAttendance(c.id)">Điểm danh</v-btn>
             </td>
           </tr>
           <tr v-if="myCourses.length === 0">
@@ -84,7 +85,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLookupsStore } from '@/stores/lookups'
 import { unwrapPageResponse } from '@/api/response'
-import { courseService, type Course, type CourseTimeSlot } from '@/api/services/course.service'
+import { cohortService, type Cohort, type CohortTimeSlot } from '@/api/services/cohort.service'
 import { useDebounceFn } from '@/composables/useDebounceFn'
 import { formatTimeSlotsVn } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -93,17 +94,17 @@ const router = useRouter()
 const authStore = useAuthStore()
 const lookupsStore = useLookupsStore()
 
-const courses = ref<Course[]>([])
+const courses = ref<Cohort[]>([])
 const loading = ref(false)
 const page = ref(1)
 const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
 const semesterFilterId = ref<number | null>(null)
-const subjectFilterId = ref<number | null>(null)
+const classFilterId = ref<number | null>(null)
 
 const semesterOptions = computed(() => lookupsStore.semesterOptions)
-const subjectOptions = computed(() => lookupsStore.subjectOptions)
+const classOptions = computed(() => lookupsStore.classOptions)
 
 const myCourses = computed(() => {
   const username = authStore.currentUser?.username
@@ -111,20 +112,20 @@ const myCourses = computed(() => {
   return (courses.value || []).filter((c) => (c.teacher?.username || '') === username)
 })
 
-const formatTimeSlots = (slots?: CourseTimeSlot[] | null) => formatTimeSlotsVn(slots)
+const formatTimeSlots = (slots?: CohortTimeSlot[] | null) => formatTimeSlotsVn(slots)
 
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const res = await courseService.getAll({
+    const res = await cohortService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
       semesterId: semesterFilterId.value || undefined,
-      subjectId: subjectFilterId.value || undefined,
+      classId: classFilterId.value || undefined,
       active: true
     })
-    const data = unwrapPageResponse<Course>(res)
+    const data = unwrapPageResponse<Cohort>(res)
     courses.value = data.data || []
     totalPages.value = data.totalPages || 1
   } finally {
@@ -149,8 +150,12 @@ const { debounced: debouncedSearch } = useDebounceFn(() => {
 
 const handleSearch = () => debouncedSearch()
 
-const goEnrollments = (courseId: number) => {
-  router.push({ name: 'TeacherCourseEnrollments', params: { courseId } })
+const goEnrollments = (cohortId: number) => {
+  router.push({ name: 'TeacherCohortEnrollments', params: { cohortId } })
+}
+
+const goAttendance = (cohortId: number) => {
+  router.push({ name: 'TeacherCohortAttendance', params: { cohortId } })
 }
 
 onMounted(async () => {

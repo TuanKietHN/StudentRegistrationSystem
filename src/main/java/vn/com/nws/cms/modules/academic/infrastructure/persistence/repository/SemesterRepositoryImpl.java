@@ -82,11 +82,25 @@ public class SemesterRepositoryImpl implements SemesterRepository {
     }
 
     @Override
+    public List<Semester> searchSecondaryActive(String keyword, int page, int size) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        return jpaSemesterRepository.searchSecondaryActive(normalizedKeyword, PageRequest.of(page - 1, size))
+                .getContent().stream()
+                .map(semesterMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Semester> findActiveSemester() {
         LocalDate now = LocalDate.now();
         return jpaSemesterRepository
                 .findFirstByActiveTrueAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(now, now)
                 .or(() -> jpaSemesterRepository.findFirstByActiveTrueOrderByStartDateDesc())
                 .map(semesterMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Semester> findSecondaryActiveSemester() {
+        return jpaSemesterRepository.findFirstBySecondaryActiveTrueOrderByStartDateDesc().map(semesterMapper::toDomain);
     }
 }

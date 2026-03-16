@@ -23,7 +23,7 @@
     <v-list density="comfortable" nav>
       <v-list-subheader>Chức năng</v-list-subheader>
       <v-list-item title="Trang chủ" :to="{ name: 'TeacherHome' }" prepend-icon="mdi-view-dashboard" />
-      <v-list-item title="Lớp tôi dạy" :to="{ name: 'TeacherCourses' }" prepend-icon="mdi-google-classroom" />
+      <v-list-item title="Lớp tôi dạy" :to="{ name: 'TeacherCohorts' }" prepend-icon="mdi-google-classroom" />
       <v-list-item title="Lớp hành chính" :to="{ name: 'TeacherAdminClasses' }" prepend-icon="mdi-account-multiple" />
     </v-list>
   </v-navigation-drawer>

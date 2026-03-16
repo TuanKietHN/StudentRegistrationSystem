@@ -19,4 +19,5 @@ public class Semester extends AuditEntity {
     private LocalDate startDate;
     private LocalDate endDate;
     private boolean active;
+    private boolean secondaryActive;
 }

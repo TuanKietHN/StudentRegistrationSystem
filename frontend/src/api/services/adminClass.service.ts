@@ -16,22 +16,21 @@ export interface AdminClass {
 export interface StudentProfile {
   id: number
   studentCode: string
-  user: {
-    id: number
-    username: string
-    email?: string | null
-  }
-  department?: {
-    id: number
-    code: string
-    name: string
-  } | null
+  userId?: number | null
+  username?: string | null
+  email?: string | null
+  departmentId?: number | null
+  departmentName?: string | null
+  phone?: string | null
   active: boolean
 }
 
 export const adminClassService = {
   getAll(params: { keyword?: string; departmentId?: number; intakeYear?: number; active?: boolean; page?: number; size?: number }) {
     return api.get('/v1/admin-classes', { params })
+  },
+  getById(id: number) {
+    return api.get(`/v1/admin-classes/${id}`)
   },
   getStudents(adminClassId: number) {
     return api.get(`/v1/admin-classes/${adminClassId}/students`)

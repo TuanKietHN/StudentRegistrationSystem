@@ -1,0 +1,80 @@
+package vn.com.nws.cms.modules.academic.infrastructure.persistence.repository;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Repository;
+import vn.com.nws.cms.modules.academic.domain.model.CourseClass;
+import vn.com.nws.cms.modules.academic.domain.repository.ClassRepository;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.CourseClassEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.ClassMapper;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Repository
+@RequiredArgsConstructor
+public class ClassRepositoryImpl implements ClassRepository {
+
+    private final JpaClassRepository jpaRepository;
+    private final ClassMapper mapper;
+
+    @Override
+    public CourseClass save(CourseClass clazz) {
+        CourseClassEntity entity = mapper.toEntity(clazz);
+        if (clazz.getId() != null) {
+            entity.setId(clazz.getId());
+        }
+        return mapper.toDomain(jpaRepository.save(entity));
+    }
+
+    @Override
+    public Optional<CourseClass> findById(Long id) {
+        return jpaRepository.findById(id).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<CourseClass> findByCode(String code) {
+        return jpaRepository.findByCode(code).map(mapper::toDomain);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        jpaRepository.deleteById(id);
+    }
+
+    @Override
+    public boolean existsByCode(String code) {
+        return jpaRepository.existsByCode(code);
+    }
+
+    @Override
+    public List<CourseClass> search(String keyword, Boolean active, int page, int size) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && active == null) {
+            return jpaRepository.findAll(PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(mapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        if (normalizedKeyword == null) {
+            return jpaRepository.findAllByActive(active, PageRequest.of(page - 1, size)).getContent().stream()
+                    .map(mapper::toDomain)
+                    .collect(Collectors.toList());
+        }
+        return jpaRepository.search(normalizedKeyword, active, PageRequest.of(page - 1, size)).getContent().stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long count(String keyword, Boolean active) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        if (normalizedKeyword == null && active == null) {
+            return jpaRepository.count();
+        }
+        if (normalizedKeyword == null) {
+            return jpaRepository.countByActive(active);
+        }
+        return jpaRepository.count(normalizedKeyword, active);
+    }
+}

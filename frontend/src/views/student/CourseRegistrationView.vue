@@ -24,8 +24,8 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="subjectFilterId"
-            :items="subjectOptions"
+            v-model="classFilterId"
+            :items="classOptions"
             item-title="title"
             item-value="value"
             label="Lọc môn học"
@@ -56,7 +56,7 @@
             <td>{{ c.code }}</td>
             <td>{{ c.name }}</td>
             <td>{{ c.semester?.code || '-' }}</td>
-            <td>{{ c.subject?.code || '-' }}</td>
+            <td>{{ c.clazz?.code || '-' }}</td>
             <td>{{ formatTimeSlots(c.timeSlots) }}</td>
             <td>{{ formatWindow(c.enrollmentStartDate, c.enrollmentEndDate) }}</td>
             <td>{{ c.currentStudents }} / {{ c.maxStudents }}</td>
@@ -98,7 +98,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useLookupsStore } from '@/stores/lookups'
 import { unwrapApiResponse, unwrapPageResponse } from '@/api/response'
-import { courseService, type Course, type CourseTimeSlot } from '@/api/services/course.service'
+import { cohortService, type Cohort, type CohortTimeSlot } from '@/api/services/cohort.service'
 import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
 import { useDebounceFn } from '@/composables/useDebounceFn'
 import { formatTimeSlotsVn } from '@/utils/schedule'
@@ -107,7 +107,7 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 const uiStore = useUiStore()
 const lookupsStore = useLookupsStore()
 
-const courses = ref<Course[]>([])
+const courses = ref<Cohort[]>([])
 const myEnrollments = ref<Enrollment[]>([])
 const enrollingId = ref<number | null>(null)
 
@@ -117,10 +117,10 @@ const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
 const semesterFilterId = ref<number | null>(null)
-const subjectFilterId = ref<number | null>(null)
+const classFilterId = ref<number | null>(null)
 
 const semesterOptions = computed(() => lookupsStore.semesterOptions)
-const subjectOptions = computed(() => lookupsStore.subjectOptions)
+const classOptions = computed(() => lookupsStore.classOptions)
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
@@ -130,16 +130,16 @@ const isWindowOpen = (start?: string | null, end?: string | null) => {
   return now >= start && now <= end
 }
 
-const isFull = (c: Course) => (c.currentStudents || 0) >= (c.maxStudents || 0)
+const isFull = (c: Cohort) => (c.currentStudents || 0) >= (c.maxStudents || 0)
 
-const isAlreadyEnrolled = (courseId: number) => myEnrollments.value.some((e) => e.course?.id === courseId && e.status === 'ENROLLED')
+const isAlreadyEnrolled = (cohortId: number) => myEnrollments.value.some((e) => e.cohort?.id === cohortId && e.status === 'ENROLLED')
 
 const toMinutes = (time: string) => {
   const [h, m] = time.split(':')
   return Number(h) * 60 + Number(m)
 }
 
-const overlap = (a: CourseTimeSlot, b: CourseTimeSlot) => {
+const overlap = (a: CohortTimeSlot, b: CohortTimeSlot) => {
   if (a.dayOfWeek !== b.dayOfWeek) return false
   const aStart = toMinutes(a.startTime)
   const aEnd = toMinutes(a.endTime)
@@ -148,7 +148,7 @@ const overlap = (a: CourseTimeSlot, b: CourseTimeSlot) => {
   return aStart < bEnd && aEnd > bStart
 }
 
-const isScheduleConflict = (c: Course) => {
+const isScheduleConflict = (c: Cohort) => {
   const slots = c.timeSlots || []
   if (!slots.length) return false
   const semesterId = c.semester?.id
@@ -156,8 +156,8 @@ const isScheduleConflict = (c: Course) => {
 
   for (const e of myEnrollments.value) {
     if (e.status !== 'ENROLLED') continue
-    if (e.course?.semester?.id !== semesterId) continue
-    const enrolledSlots = e.course?.timeSlots || []
+    if (e.cohort?.semester?.id !== semesterId) continue
+    const enrolledSlots = e.cohort?.timeSlots || []
     for (const s of slots) {
       for (const es of enrolledSlots) {
         if (overlap(s, es)) return true
@@ -167,25 +167,27 @@ const isScheduleConflict = (c: Course) => {
   return false
 }
 
-const statusText = (c: Course) => {
+const statusText = (c: Cohort) => {
   if (isAlreadyEnrolled(c.id)) return 'Đã đăng ký'
   if (!c.active) return 'Ngưng'
+  if (c.registrationEnabled === false) return 'Đóng đăng ký'
   if (!isWindowOpen(c.enrollmentStartDate, c.enrollmentEndDate)) return 'Hết hạn'
   if (isScheduleConflict(c)) return 'Trùng lịch'
   if (isFull(c)) return 'Đầy'
   return 'Có thể đăng ký'
 }
 
-const statusColor = (c: Course) => {
+const statusColor = (c: Cohort) => {
   const text = statusText(c)
   if (text === 'Có thể đăng ký') return 'green'
   if (text === 'Đã đăng ký') return 'blue'
   return 'orange'
 }
 
-const isDisabled = (c: Course) => {
+const isDisabled = (c: Cohort) => {
   if (isAlreadyEnrolled(c.id)) return true
   if (!c.active) return true
+  if (c.registrationEnabled === false) return true
   if (!isWindowOpen(c.enrollmentStartDate, c.enrollmentEndDate)) return true
   if (isFull(c)) return true
   if (isScheduleConflict(c)) return true
@@ -197,7 +199,7 @@ const formatWindow = (start?: string | null, end?: string | null) => {
   return `${start} → ${end}`
 }
 
-const formatTimeSlots = (slots?: CourseTimeSlot[] | null) => formatTimeSlotsVn(slots)
+const formatTimeSlots = (slots?: CohortTimeSlot[] | null) => formatTimeSlotsVn(slots)
 
 const fetchMyEnrollments = async () => {
   try {
@@ -212,15 +214,15 @@ const fetchMyEnrollments = async () => {
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const res = await courseService.getAll({
+    const res = await cohortService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
       semesterId: semesterFilterId.value || undefined,
-      subjectId: subjectFilterId.value || undefined,
+      classId: classFilterId.value || undefined,
       active: true
     })
-    const pageRes = unwrapPageResponse<Course>(res)
+    const pageRes = unwrapPageResponse<Cohort>(res)
     courses.value = pageRes.data || []
     totalPages.value = pageRes.totalPages || 1
   } finally {
@@ -244,7 +246,7 @@ const { debounced: debouncedSearch } = useDebounceFn(async () => {
 
 const handleSearch = () => debouncedSearch()
 
-const enroll = async (c: Course) => {
+const enroll = async (c: Cohort) => {
   enrollingId.value = c.id
   try {
     await enrollmentService.enrollSelf(c.id)

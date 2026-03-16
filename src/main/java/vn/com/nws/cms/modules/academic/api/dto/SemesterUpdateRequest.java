@@ -11,4 +11,5 @@ public class SemesterUpdateRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private Boolean active;
+    private Boolean secondaryActive;
 }

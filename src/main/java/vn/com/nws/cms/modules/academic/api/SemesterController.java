@@ -53,6 +53,13 @@ public class SemesterController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin học kỳ hiện tại thành công", response));
     }
 
+    @GetMapping("/active-secondary")
+    @Operation(summary = "Học kỳ phụ hiện tại", description = "Lấy thông tin học kỳ phụ/song song đang hoạt động")
+    public ResponseEntity<ApiResponse<SemesterResponse>> getSecondaryActiveSemester() {
+        SemesterResponse response = semesterService.getSecondaryActiveSemester();
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin học kỳ phụ hiện tại thành công", response));
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Tạo học kỳ mới", description = "Tạo mới một học kỳ (Admin)")

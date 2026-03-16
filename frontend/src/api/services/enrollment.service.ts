@@ -1,14 +1,16 @@
 import api from '@/api/axios'
 
-export interface EnrollmentCourse {
+export interface EnrollmentCohort {
   id: number
   name: string
   code: string
+  status?: string
   semester?: any
-  subject?: any
+  clazz?: any
   teacher?: any
   enrollmentStartDate?: string | null
   enrollmentEndDate?: string | null
+  registrationEnabled?: boolean
   timeSlots?: Array<{
     id: number
     dayOfWeek: number
@@ -21,13 +23,20 @@ export interface EnrollmentStudent {
   id: number
   username: string
   email?: string | null
+  role?: string | null
 }
 
 export interface Enrollment {
   id: number
-  course: EnrollmentCourse
+  cohort: EnrollmentCohort
   student?: EnrollmentStudent
   studentCode?: string | null
+  studentPhone?: string | null
+  studentActive?: boolean | null
+  studentDepartmentCode?: string | null
+  studentDepartmentName?: string | null
+  studentAdminClassCode?: string | null
+  studentAdminClassName?: string | null
   status: string
   grade?: number | null
   processScore?: number | null
@@ -40,8 +49,8 @@ export interface Enrollment {
 }
 
 export const enrollmentService = {
-  enrollSelf(courseId: number) {
-    return api.post('/v1/enrollments/self', { courseId })
+  enrollSelf(cohortId: number) {
+    return api.post('/v1/enrollments/self', { courseId: cohortId })
   },
   getMyEnrollments() {
     return api.get('/v1/enrollments/me')
@@ -49,8 +58,8 @@ export const enrollmentService = {
   cancelEnrollment(id: number) {
     return api.delete(`/v1/enrollments/${id}`)
   },
-  getCourseEnrollments(courseId: number) {
-    return api.get(`/v1/enrollments/course/${courseId}`)
+  getCohortEnrollments(cohortId: number) {
+    return api.get(`/v1/enrollments/course/${cohortId}`)
   },
   updateEnrollment(
     id: number,
@@ -58,10 +67,10 @@ export const enrollmentService = {
   ) {
     return api.put(`/v1/enrollments/${id}`, payload)
   },
-  importCourseGrades(courseId: number, file: File) {
+  importCohortGrades(cohortId: number, file: File) {
     const form = new FormData()
     form.append('file', file)
-    return api.post(`/v1/enrollments/course/${courseId}/grades/import`, form, {
+    return api.post(`/v1/enrollments/course/${cohortId}/grades/import`, form, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   }

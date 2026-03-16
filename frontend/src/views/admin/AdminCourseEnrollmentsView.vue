@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-text>
-      <PageHeader :title="`Danh sách sinh viên (Course #${courseId})`">
+      <PageHeader :title="courseTitle">
         <template #actions>
           <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
           <v-btn variant="text" :disabled="!selectedFile" :loading="importing" @click="importGrades">Import Excel</v-btn>
@@ -20,13 +20,20 @@
 
       <v-progress-linear v-if="loading" indeterminate class="mb-4" />
 
+      <v-alert variant="tonal" color="info" density="compact" class="mb-4">
+        Import Excel (.xlsx): cần cột định danh (studentCode/mssv hoặc username) và cột điểm (process/qt, exam/thi). Điểm theo thang 0–10.
+      </v-alert>
+
       <v-table>
         <thead>
           <tr>
-            <th>ID</th>
             <th>MSSV</th>
             <th>Sinh viên</th>
             <th>Email</th>
+            <th>SĐT</th>
+            <th>Khoa</th>
+            <th>Lớp HC</th>
+            <th>SV</th>
             <th>Trạng thái</th>
             <th>Điểm quá trình</th>
             <th>Điểm thi</th>
@@ -37,10 +44,17 @@
         </thead>
         <tbody>
           <tr v-for="e in enrollments" :key="e.id" :class="e.scoreOverridden ? 'bg-yellow-lighten-5' : ''">
-            <td>{{ e.id }}</td>
             <td>{{ e.studentCode || '-' }}</td>
             <td>{{ e.student?.username || '-' }}</td>
             <td>{{ e.student?.email || '-' }}</td>
+            <td>{{ e.studentPhone || '-' }}</td>
+            <td>{{ e.studentDepartmentCode || '-' }}</td>
+            <td>{{ e.studentAdminClassCode || '-' }}</td>
+            <td>
+              <v-chip :color="e.studentActive ? 'green' : 'grey'" variant="tonal" size="small">
+                {{ e.studentActive ? 'Đang học' : 'Ngưng' }}
+              </v-chip>
+            </td>
             <td style="min-width: 160px">
               <v-select
                 :items="statusOptions"
@@ -100,7 +114,7 @@
             </td>
           </tr>
           <tr v-if="enrollments.length === 0">
-            <td colspan="10" class="text-center py-6">Không có dữ liệu</td>
+            <td colspan="13" class="text-center py-6">Không có dữ liệu</td>
           </tr>
         </tbody>
       </v-table>
@@ -112,6 +126,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { unwrapApiResponse } from '@/api/response'
+import { cohortService } from '@/api/services/cohort.service'
 import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -119,25 +134,43 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 const uiStore = useUiStore()
 const route = useRoute()
 
-const courseId = Number(route.params.courseId)
+const cohortId = Number(route.params.cohortId)
+const courseTitle = ref(`Danh sách sinh viên (Cohort #${cohortId})`)
 const enrollments = ref<Enrollment[]>([])
 const loading = ref(false)
 const savingId = ref<number | null>(null)
 const importing = ref(false)
 const selectedFile = ref<File | null>(null)
 
-const statusOptions = ['ENROLLED', 'COMPLETED', 'DROPPED', 'CANCELLED']
+const statusOptions = [
+  { title: 'Đang tham gia', value: 'ENROLLED' },
+  { title: 'Hoàn thành', value: 'COMPLETED' },
+  { title: 'Rút lớp', value: 'DROPPED' },
+  { title: 'Hủy', value: 'CANCELLED' }
+]
 
 const draftStatus = reactive<Record<number, string>>({})
 const draftProcess = reactive<Record<number, any>>({})
 const draftExam = reactive<Record<number, any>>({})
 const draftReason = reactive<Record<number, string>>({})
 
+const loadCourse = async () => {
+  try {
+    const res = await cohortService.getById(cohortId)
+    const c = unwrapApiResponse<any>(res)
+    courseTitle.value = c?.code && c?.name ? `Danh sách sinh viên - ${c.code} - ${c.name}` : courseTitle.value
+  } catch {
+    courseTitle.value = `Danh sách sinh viên (Cohort #${cohortId})`
+  }
+}
+
 const reload = async () => {
   loading.value = true
   try {
-    const res = await enrollmentService.getCourseEnrollments(courseId)
+    const res = await enrollmentService.getCohortEnrollments(cohortId)
     enrollments.value = unwrapApiResponse<Enrollment[]>(res) || []
+  } catch (err: any) {
+    uiStore.notify(err?.response?.data?.message || 'Không tải được danh sách sinh viên', 'error', 4000)
   } finally {
     loading.value = false
   }
@@ -183,9 +216,17 @@ const importGrades = async () => {
   if (!selectedFile.value) return
   importing.value = true
   try {
-    const res = await enrollmentService.importCourseGrades(courseId, selectedFile.value)
+    const res = await enrollmentService.importCohortGrades(cohortId, selectedFile.value)
     const data = unwrapApiResponse<any>(res)
-    uiStore.notify(`Import xong: ${data?.imported ?? 0} dòng`, 'success')
+    const imported = data?.imported ?? 0
+    const skippedLocked = data?.skippedLocked ?? 0
+    const skippedNotFound = data?.skippedNotFound ?? 0
+    const skippedInvalid = data?.skippedInvalid ?? 0
+    uiStore.notify(
+      `Import xong: ${imported} dòng. Bỏ qua: khóa ${skippedLocked}, không tìm thấy ${skippedNotFound}, lỗi ${skippedInvalid}.`,
+      'success',
+      4500
+    )
     await reload()
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Import thất bại', 'error', 5000)
@@ -194,6 +235,8 @@ const importGrades = async () => {
   }
 }
 
-onMounted(() => reload())
+onMounted(async () => {
+  await loadCourse()
+  await reload()
+})
 </script>
-

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.AdminClassEntity;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -34,5 +35,16 @@ public interface JpaAdminClassRepository extends JpaRepository<AdminClassEntity,
               )
             """)
     Page<AdminClassEntity> search(String keyword, Long departmentId, Integer intakeYear, Boolean active, Pageable pageable);
-}
 
+    @EntityGraph(attributePaths = {"department"})
+    @Query("""
+            SELECT c
+            FROM AdminClassEntity c
+            LEFT JOIN c.department d
+            WHERE (:active IS NULL OR c.active = :active)
+              AND (:departmentId IS NULL OR d.id = :departmentId)
+              AND (:intakeYear IS NULL OR c.intakeYear = :intakeYear)
+            ORDER BY c.code ASC
+            """)
+    List<AdminClassEntity> searchNoKeywordList(Long departmentId, Integer intakeYear, Boolean active);
+}

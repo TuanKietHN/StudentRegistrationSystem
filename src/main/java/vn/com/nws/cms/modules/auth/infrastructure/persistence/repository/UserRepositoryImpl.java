@@ -97,7 +97,6 @@ public class UserRepositoryImpl implements UserRepository {
                 userRole.setId(new UserRoleId());
                 userRole.setUser(entity);
                 userRole.setRole(roleEntity);
-                userRole.setAssignedAt(LocalDateTime.now());
                 entity.getUserRoles().add(userRole);
             }
         }

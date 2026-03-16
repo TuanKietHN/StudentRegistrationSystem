@@ -13,18 +13,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "role_permissions")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
 public class RolePermissionEntity {
 
     @EmbeddedId
@@ -39,8 +33,4 @@ public class RolePermissionEntity {
     @MapsId("permissionId")
     @JoinColumn(name = "permission_id")
     private PermissionEntity permission;
-
-    @Column(name = "granted_at", nullable = false, updatable = false)
-    @CreatedDate
-    private LocalDateTime grantedAt;
 }

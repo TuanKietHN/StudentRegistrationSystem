@@ -40,8 +40,6 @@ public class EnrollmentEntity extends AuditEntity {
     @Column(nullable = false)
     private EnrollmentStatus status;
 
-    private Double grade;
-
     @Column(name = "process_score", precision = 4, scale = 2)
     private BigDecimal processScore;
 

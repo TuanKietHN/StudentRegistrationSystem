@@ -23,7 +23,7 @@ public class SectionGradeResponse {
     private String studentClassCode;
     private String studentClassName;
     private EnrollmentStatus status;
-    private Double grade;
+
     private BigDecimal processScore;
     private BigDecimal examScore;
     private BigDecimal finalScore;

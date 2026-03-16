@@ -5,18 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "user_roles")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
 public class UserRoleEntity {
 
     @EmbeddedId
@@ -31,8 +25,4 @@ public class UserRoleEntity {
     @MapsId("roleId")
     @JoinColumn(name = "role_id")
     private RoleEntity role;
-
-    @Column(name = "assigned_at", nullable = false, updatable = false)
-    @CreatedDate
-    private LocalDateTime assignedAt;
 }

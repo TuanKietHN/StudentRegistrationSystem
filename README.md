@@ -87,3 +87,12 @@ Dự án được xây dựng theo kiến trúc **Modular Monolith**, gom nhóm 
 - **`src/main/java/vn/com/nws/cms/modules/`**: Nơi chứa các thư mục module cốt lõi. Mỗi module sẽ có cấu trúc layer chuẩn (API, Core/Domain, Infrastructure).
 - **`src/main/resources/db/migration/`**: Nơi lưu trữ các version script `.sql` của Flyway phụ trách thiết lập database.
 - **`frontend/`**: Chứa toàn bộ giao diện phía người dùng.
+
+## Lỗi thường  gặp
+### Lỗi trùng cổng 8080
+Chạy lệnh trong Powershell bằng quyền Admin:
+```bash
+Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue | 
+Select-Object -ExpandProperty OwningProcess | 
+ForEach-Object { Stop-Process -Id $_ -Force }
+```

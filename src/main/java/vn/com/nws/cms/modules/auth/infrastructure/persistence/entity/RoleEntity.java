@@ -27,6 +27,6 @@ public class RoleEntity extends AuditEntity {
 
     private String description;
 
-    @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "role")
     private List<UserRoleEntity> userRoles = new ArrayList<>();
 }

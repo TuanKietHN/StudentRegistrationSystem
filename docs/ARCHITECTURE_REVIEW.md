@@ -428,17 +428,12 @@ frontend/src/
 
 #### 5.4.1 Advanced Features
 
-1. **E-learning Integration**
-   - SCORM support
-   - xAPI statements collection
-   - Learning Record Store (LRS)
-
-2. **Performance Optimization**
+1. **Performance Optimization**
    - Database query optimization
    - Connection pooling tuning
    - Horizontal scaling support
 
-3. **Enhanced Security**
+2. **Enhanced Security**
    - Two-Factor Authentication (2FA)
    - Single Sign-On (SSO)
    - Audit Logging
@@ -563,7 +558,7 @@ The CMS project has **excellent documentation** and a **solid foundation** in th
 2. **Week 3-4**: Build Academic module (Course, Semester, Section)
 3. **Month 2**: Build Enrollment and Grading modules
 4. **Month 3**: Frontend completion + integration
-5. **Month 4+**: Performance optimization, E-learning features
+5. **Month 4+**: Performance optimization
 
 ---
 

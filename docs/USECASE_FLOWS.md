@@ -47,7 +47,7 @@ sequenceDiagram
     participant Database
 
     User->>Frontend: Nhập Username/Password
-    Frontend->>AuthController: POST /api/auth/login
+    Frontend->>AuthController: POST /api/v1/auth/login
     
     AuthController->>AuthService: Xác thực người dùng
     AuthService->>Database: Tìm User & Hash Password
@@ -81,7 +81,7 @@ sequenceDiagram
     participant Redis
     participant JwtProvider
 
-    Frontend->>AuthController: POST /api/auth/refresh (RefreshToken)
+    Frontend->>AuthController: POST /api/v1/auth/refresh (RefreshToken)
     AuthController->>AuthService: verifyRefreshToken(token)
     
     AuthService->>Redis: Get Key rt:{username}

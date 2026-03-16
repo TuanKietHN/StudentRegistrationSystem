@@ -15,8 +15,12 @@ import vn.com.nws.cms.modules.auth.infrastructure.persistence.mapper.UserMapper;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
@@ -44,6 +48,11 @@ public class UserRepositoryImpl implements UserRepository {
                 existing.setPassword(mappedEntity.getPassword());
                 existing.setEmail(mappedEntity.getEmail());
                 existing.setAvatar(mappedEntity.getAvatar());
+                existing.setFailedLoginAttempts(mappedEntity.getFailedLoginAttempts());
+                existing.setLockUntil(mappedEntity.getLockUntil());
+                existing.setLastLoginAt(mappedEntity.getLastLoginAt());
+                existing.setLastLoginIp(mappedEntity.getLastLoginIp());
+                existing.setLastLoginUserAgent(mappedEntity.getLastLoginUserAgent());
                 entity = existing;
             } else {
                 entity = userMapper.toEntity(user);
@@ -55,27 +64,39 @@ public class UserRepositoryImpl implements UserRepository {
 
         // Map roles manually using UserRoleEntity
         if (user.getRoles() != null) {
-            // Clear existing roles if we are updating, or start fresh
             if (entity.getUserRoles() == null) {
                 entity.setUserRoles(new ArrayList<>());
-            } else {
-                entity.getUserRoles().clear();
             }
 
-            final UserEntity finalEntity = entity; // Make final for lambda use
-            for (RoleType roleType : user.getRoles()) {
-                jpaRoleRepository.findByName(roleType.authority())
-                        .ifPresent(roleEntity -> {
-                            UserRoleEntity userRole = new UserRoleEntity();
-                            // If iam ID is null (new iam), ID part will be null.
-                            // However, we can set association and let JPA handle it if we use @MapsId properly or save iam first.
-                            // With composite key and @MapsId, we usually just set the relation.
-                            userRole.setId(new UserRoleId(finalEntity.getId(), roleEntity.getId())); 
-                            userRole.setUser(finalEntity);
-                            userRole.setRole(roleEntity);
-                            userRole.setAssignedAt(LocalDateTime.now());
-                            finalEntity.getUserRoles().add(userRole);
-                        });
+            Set<String> desiredRoleNames = user.getRoles().stream()
+                    .map(RoleType::authority)
+                    .collect(Collectors.toCollection(HashSet::new));
+
+            Map<String, UserRoleEntity> existingByRoleName = new HashMap<>();
+            for (UserRoleEntity ur : entity.getUserRoles()) {
+                if (ur.getRole() != null && ur.getRole().getName() != null) {
+                    existingByRoleName.put(ur.getRole().getName(), ur);
+                }
+            }
+
+            entity.getUserRoles().removeIf(ur -> ur.getRole() == null || ur.getRole().getName() == null || !desiredRoleNames.contains(ur.getRole().getName()));
+
+            for (String roleName : desiredRoleNames) {
+                if (existingByRoleName.containsKey(roleName)) {
+                    continue;
+                }
+                RoleEntity roleEntity = jpaRoleRepository.findByName(roleName)
+                        .orElseGet(() -> jpaRoleRepository.save(RoleEntity.builder()
+                                .name(roleName)
+                                .description(roleName)
+                                .build()));
+
+                UserRoleEntity userRole = new UserRoleEntity();
+                userRole.setId(new UserRoleId());
+                userRole.setUser(entity);
+                userRole.setRole(roleEntity);
+                userRole.setAssignedAt(LocalDateTime.now());
+                entity.getUserRoles().add(userRole);
             }
         }
 
@@ -115,15 +136,24 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public List<User> search(String keyword, String role, int page, int size) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        String normalizedRole = role == null || role.isBlank() ? null : role;
+
         String roleName = null;
-        if (role != null && !role.isEmpty()) {
-            if (!role.startsWith("ROLE_")) {
-                roleName = "ROLE_" + role;
+        if (normalizedRole != null) {
+            if (!normalizedRole.startsWith("ROLE_")) {
+                roleName = "ROLE_" + normalizedRole;
             } else {
-                roleName = role;
+                roleName = normalizedRole;
             }
         }
-        Page<UserEntity> entities = jpaUserRepository.search(keyword, roleName, PageRequest.of(page - 1, size));
+
+        Page<UserEntity> entities;
+        if (normalizedKeyword == null && roleName == null) {
+            entities = jpaUserRepository.findAll(PageRequest.of(page - 1, size));
+        } else {
+            entities = jpaUserRepository.search(normalizedKeyword, roleName, PageRequest.of(page - 1, size));
+        }
         return entities.getContent().stream()
                 .map(userMapper::toDomain)
                 .collect(Collectors.toList());
@@ -131,14 +161,20 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public long count(String keyword, String role) {
+        String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword;
+        String normalizedRole = role == null || role.isBlank() ? null : role;
+
         String roleName = null;
-        if (role != null && !role.isEmpty()) {
-            if (!role.startsWith("ROLE_")) {
-                roleName = "ROLE_" + role;
+        if (normalizedRole != null) {
+            if (!normalizedRole.startsWith("ROLE_")) {
+                roleName = "ROLE_" + normalizedRole;
             } else {
-                roleName = role;
+                roleName = normalizedRole;
             }
         }
-        return jpaUserRepository.count(keyword, roleName);
+        if (normalizedKeyword == null && roleName == null) {
+            return jpaUserRepository.count();
+        }
+        return jpaUserRepository.count(normalizedKeyword, roleName);
     }
 }

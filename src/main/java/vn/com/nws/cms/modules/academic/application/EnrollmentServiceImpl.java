@@ -2,18 +2,31 @@ package vn.com.nws.cms.modules.academic.application;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.api.dto.*;
-import vn.com.nws.cms.modules.academic.domain.model.Course;
+import vn.com.nws.cms.modules.academic.domain.enums.CohortLifecycleStatus;
+import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
+import vn.com.nws.cms.modules.academic.domain.model.Cohort;
 import vn.com.nws.cms.modules.academic.domain.model.Enrollment;
-import vn.com.nws.cms.modules.academic.domain.repository.CourseRepository;
+import vn.com.nws.cms.modules.academic.domain.model.Student;
+import vn.com.nws.cms.modules.academic.domain.repository.CohortRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.CohortTimeSlotRepository;
 import vn.com.nws.cms.modules.academic.domain.repository.EnrollmentRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.repository.AttendanceRecordJpaRepository;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 import vn.com.nws.cms.modules.iam.api.dto.UserResponse;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,38 +34,107 @@ import java.util.stream.Collectors;
 public class EnrollmentServiceImpl implements EnrollmentService {
 
     private final EnrollmentRepository enrollmentRepository;
-    private final CourseRepository courseRepository;
+    private final CohortRepository cohortRepository;
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
+    private final CohortTimeSlotRepository cohortTimeSlotRepository;
+    private final AttendanceService attendanceService;
+    private final AttendanceRecordJpaRepository attendanceRecordJpaRepository;
 
+    /**
+     * REQUIRES_NEW: Luôn tạo transaction độc lập, suspend TX cha nếu có.
+     *
+     * Quan trọng: Method này nhận studentId = student PROFILE id (không phải userId).
+     * Lý do: EnrollmentEntity.student là StudentEntity (profile), không phải UserEntity.
+     * EnrollmentCreateRequest.studentId phải là Student.id (profile).
+     *
+     * REQUIRES_NEW đảm bảo khi throw BusinessException:
+     * - Chỉ TX con của method này rollback
+     * - TX cha (nếu có, ví dụ DataSeeder.run()) KHÔNG bị mark rollback-only
+     * - Caller catch exception → tiếp tục bình thường
+     */
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public EnrollmentResponse enrollStudent(EnrollmentCreateRequest request) {
+        Cohort cohort = cohortRepository.findById(request.getCourseId())
+                .orElseThrow(() -> new BusinessException("Cohort not found"));
+
+        // request.getStudentId() = student profile id
+        Student studentProfile = studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"));
+
+        return enrollInternal(cohort, studentProfile, true);
+    }
+
+    /**
+     * enrollSelf gọi từ API trực tiếp — không cần REQUIRES_NEW.
+     * REQUIRED là đủ: không có TX cha nào bị ảnh hưởng.
+     */
     @Override
     @Transactional
-    public EnrollmentResponse enrollStudent(EnrollmentCreateRequest request) {
-        if (enrollmentRepository.existsByCourseIdAndStudentId(request.getCourseId(), request.getStudentId())) {
+    public EnrollmentResponse enrollSelf(String username, EnrollmentSelfRequest request) {
+        Cohort cohort = cohortRepository.findById(request.getCourseId())
+                .orElseThrow(() -> new BusinessException("Cohort not found"));
+        Student studentProfile = resolveStudentByUsername(username);
+        return enrollInternal(cohort, studentProfile, false);
+    }
+
+    private EnrollmentResponse enrollInternal(Cohort cohort, Student studentProfile, boolean bypassEnrollmentWindow) {
+        // --- Business rule checks ---
+        if (!cohort.isActive()) {
+            throw new BusinessException("Cohort is not active");
+        }
+
+        if (cohort.getStatus() != null && cohort.getStatus() != CohortLifecycleStatus.OPEN) {
+            throw new BusinessException("Cohort is not open for enrollment");
+        }
+
+        if (!bypassEnrollmentWindow) {
+            if (!cohort.isRegistrationEnabled()) {
+                throw new BusinessException("Lớp học phần đang đóng đăng ký");
+            }
+            assertEnrollmentWindowOpen(cohort);
+        }
+
+        if (!studentProfile.isActive()) {
+            throw new BusinessException("Hồ sơ sinh viên không hoạt động");
+        }
+
+        // Check trùng enrollment theo studentProfileId — khớp với EnrollmentEntity.student (StudentEntity)
+        if (enrollmentRepository.existsByCourseIdAndStudentId(cohort.getId(), studentProfile.getId())) {
             throw new BusinessException("Student already enrolled in this course");
         }
 
-        Course course = courseRepository.findById(request.getCourseId())
-                .orElseThrow(() -> new BusinessException("Course not found"));
-
-        if (!course.isActive()) {
-            throw new BusinessException("Course is not active");
+        if (cohort.getCurrentStudents() >= cohort.getMaxStudents()) {
+            throw new BusinessException("Cohort is full");
         }
 
-        if (course.getCurrentStudents() >= course.getMaxStudents()) {
-            throw new BusinessException("Course is full");
+        // --- Schedule conflict check ---
+        var slots = cohortTimeSlotRepository.findByCohortId(cohort.getId());
+        if (!slots.isEmpty()) {
+            for (var slot : slots) {
+                boolean conflict = cohortTimeSlotRepository.existsStudentScheduleConflict(
+                        studentProfile.getId(),
+                        cohort.getSemester().getId(),
+                        cohort.getId(),
+                        slot.getDayOfWeek(),
+                        slot.getStartTime(),
+                        slot.getEndTime()
+                );
+                if (conflict) {
+                    throw new BusinessException("Trùng lịch với lớp học phần đã đăng ký");
+                }
+            }
         }
 
-        User student = userRepository.findById(request.getStudentId())
-                .orElseThrow(() -> new BusinessException("Student not found"));
-
-        // Increase current students count
-        course.setCurrentStudents(course.getCurrentStudents() + 1);
-        courseRepository.save(course);
+        // --- Persist ---
+        cohort.setCurrentStudents(cohort.getCurrentStudents() + 1);
+        cohortRepository.save(cohort);
 
         Enrollment enrollment = Enrollment.builder()
-                .course(course)
-                .student(student)
-                .status("ENROLLED")
+                .cohort(cohort)
+                .student(studentProfile)
+                .status(EnrollmentStatus.ENROLLED)
                 .build();
 
         enrollment = enrollmentRepository.save(enrollment);
@@ -61,21 +143,68 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     @Override
     @Transactional
-    public EnrollmentResponse updateEnrollment(Long id, EnrollmentUpdateRequest request) {
+    public EnrollmentResponse updateEnrollment(Long id, String username, boolean isAdmin, boolean isTeacher, EnrollmentUpdateRequest request) {
         Enrollment enrollment = enrollmentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Enrollment not found"));
 
+        Cohort cohort = enrollment.getCohort();
+        if (isTeacher) {
+            assertTeacherOwnsCohort(username, cohort);
+        }
+
         if (request.getStatus() != null) {
-            // If dropping, decrease count
-            if ("DROPPED".equals(request.getStatus()) && !"DROPPED".equals(enrollment.getStatus())) {
-                Course course = enrollment.getCourse();
-                course.setCurrentStudents(course.getCurrentStudents() - 1);
-                courseRepository.save(course);
+            if (request.getStatus() == EnrollmentStatus.DROPPED
+                    && enrollment.getStatus() != EnrollmentStatus.DROPPED) {
+                cohort.setCurrentStudents(Math.max(0, cohort.getCurrentStudents() - 1));
+                cohortRepository.save(cohort);
             }
             enrollment.setStatus(request.getStatus());
         }
-        
-        if (request.getGrade() != null) {
+
+        boolean hasComponentScores = request.getProcessScore() != null || request.getExamScore() != null;
+        if (hasComponentScores) {
+            if (!isAdmin && !isTeacher) {
+                throw new BusinessException("Không có quyền nhập điểm");
+            }
+            if (isTeacher && enrollment.isScoreLocked()) {
+                throw new BusinessException("Điểm đã được nhập. Vui lòng liên hệ Admin để thay đổi");
+            }
+
+            BigDecimal processScore = request.getProcessScore() == null ? enrollment.getProcessScore() : BigDecimal.valueOf(request.getProcessScore());
+            BigDecimal examScore = request.getExamScore() == null ? enrollment.getExamScore() : BigDecimal.valueOf(request.getExamScore());
+            if (processScore == null || examScore == null) {
+                throw new BusinessException("Cần nhập đủ điểm quá trình và điểm thi");
+            }
+
+            if (!isAdmin && request.getExamScore() != null && attendanceService.isExamBanned(cohort.getId(), enrollment.getId())) {
+                throw new BusinessException("Sinh viên bị cấm thi do vắng quá 20% tổng số tiết");
+            }
+
+            BigDecimal finalScore = calculateFinalScore(cohort, processScore, examScore);
+
+            if (isAdmin && enrollment.isScoreLocked()) {
+                if (!enrollment.isScoreOverridden()) {
+                    enrollment.setProcessScoreBeforeOverride(enrollment.getProcessScore());
+                    enrollment.setExamScoreBeforeOverride(enrollment.getExamScore());
+                    enrollment.setFinalScoreBeforeOverride(enrollment.getFinalScore());
+                }
+                enrollment.setScoreOverridden(true);
+                enrollment.setScoreOverrideReason(request.getOverrideReason());
+                enrollment.setScoreOverriddenAt(LocalDateTime.now());
+            }
+
+            enrollment.setProcessScore(processScore);
+            enrollment.setExamScore(examScore);
+            enrollment.setFinalScore(finalScore);
+            enrollment.setGrade(finalScore.doubleValue());
+            if (!enrollment.isScoreLocked()) {
+                enrollment.setScoredAt(LocalDateTime.now());
+            }
+            enrollment.setScoreLocked(true);
+        } else if (request.getGrade() != null) {
+            if (isTeacher && enrollment.isScoreLocked()) {
+                throw new BusinessException("Điểm đã được nhập. Vui lòng liên hệ Admin để thay đổi");
+            }
             enrollment.setGrade(request.getGrade());
         }
 
@@ -85,21 +214,36 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     @Override
     @Transactional
-    public void deleteEnrollment(Long id) {
+    public void cancelEnrollment(Long id, String username, boolean isAdmin) {
         Enrollment enrollment = enrollmentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Enrollment not found"));
 
-        // Decrease count
-        Course course = enrollment.getCourse();
-        if (course.getCurrentStudents() > 0) {
-            course.setCurrentStudents(course.getCurrentStudents() - 1);
-            courseRepository.save(course);
+        Cohort cohort = enrollment.getCohort();
+        if (!isAdmin) {
+            assertEnrollmentWindowOpen(cohort);
         }
 
+        if (!isAdmin) {
+            User currentUser = userRepository.findByUsername(username)
+                    .or(() -> userRepository.findByEmail(username))
+                    .orElseThrow(() -> new BusinessException("User not found"));
+
+            if (enrollment.getStudent() == null
+                    || enrollment.getStudent().getUser() == null
+                    || enrollment.getStudent().getUser().getId() == null
+                    || !enrollment.getStudent().getUser().getId().equals(currentUser.getId())) {
+                throw new BusinessException("Bạn không có quyền hủy đăng ký này");
+            }
+        }
+
+        cohort.setCurrentStudents(Math.max(0, cohort.getCurrentStudents() - 1));
+        cohortRepository.save(cohort);
+        attendanceRecordJpaRepository.deleteByEnrollmentId(id);
         enrollmentRepository.deleteById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EnrollmentResponse> getStudentEnrollments(Long studentId) {
         return enrollmentRepository.findByStudentId(studentId).stream()
                 .map(this::toResponse)
@@ -107,30 +251,318 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     @Override
-    public List<EnrollmentResponse> getCourseEnrollments(Long courseId) {
+    @Transactional(readOnly = true)
+    public List<EnrollmentResponse> getMyEnrollments(String username) {
+        Student student = resolveStudentByUsername(username);
+        return enrollmentRepository.findByStudentId(student.getId()).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EnrollmentResponse> getCourseEnrollments(Long courseId, String username, boolean isAdmin, boolean isTeacher) {
+        Cohort cohort = cohortRepository.findById(courseId).orElseThrow(() -> new BusinessException("Cohort not found"));
+        if (isTeacher) {
+            assertTeacherOwnsCohort(username, cohort);
+        }
         return enrollmentRepository.findByCourseId(courseId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public GradesImportResultResponse importCourseGrades(Long courseId, String username, boolean isAdmin, boolean isTeacher, org.springframework.web.multipart.MultipartFile file) {
+        if (!isAdmin && !isTeacher) {
+            throw new BusinessException("Không có quyền import điểm");
+        }
+        Cohort course = cohortRepository.findById(courseId).orElseThrow(() -> new BusinessException("Cohort not found"));
+        if (isTeacher) {
+            assertTeacherOwnsCohort(username, course);
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("File không hợp lệ");
+        }
+
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        Map<String, Enrollment> byStudentCode = new HashMap<>();
+        Map<String, Enrollment> byUsername = new HashMap<>();
+        for (Enrollment e : enrollments) {
+            if (e.getStudent() == null || e.getStudent().getUser() == null) continue;
+            if (e.getStudent().getStudentCode() != null) {
+                byStudentCode.put(e.getStudent().getStudentCode().trim().toUpperCase(), e);
+            }
+            if (e.getStudent().getUser().getUsername() != null) {
+                byUsername.put(e.getStudent().getUser().getUsername().trim().toLowerCase(), e);
+            }
+        }
+
+        int totalRows = 0;
+        int imported = 0;
+        int skippedLocked = 0;
+        int skippedNotFound = 0;
+        int skippedInvalid = 0;
+        List<String> errors = new ArrayList<>();
+
+        try (var is = file.getInputStream();
+             var wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook(is)) {
+            var sheet = wb.getNumberOfSheets() > 0 ? wb.getSheetAt(0) : null;
+            if (sheet == null) {
+                throw new BusinessException("File Excel không có sheet");
+            }
+
+            int firstRow = sheet.getFirstRowNum();
+            var headerRow = sheet.getRow(firstRow);
+            if (headerRow == null) {
+                throw new BusinessException("File Excel thiếu header");
+            }
+
+            Map<String, Integer> headerIndex = new HashMap<>();
+            for (int c = headerRow.getFirstCellNum(); c < headerRow.getLastCellNum(); c++) {
+                var cell = headerRow.getCell(c);
+                String v = cell == null ? null : cell.getStringCellValue();
+                if (v == null) continue;
+                headerIndex.put(v.trim().toLowerCase(), c);
+            }
+
+            Integer colStudentCode = findFirstHeader(headerIndex, "studentcode", "mssv", "ma sv", "mã sv", "student_code");
+            Integer colUsername = findFirstHeader(headerIndex, "username", "tai khoan", "tài khoản", "user");
+            Integer colProcess = findFirstHeader(headerIndex, "process", "diem qua trinh", "điểm quá trình", "qt");
+            Integer colExam = findFirstHeader(headerIndex, "exam", "diem thi", "điểm thi", "thi");
+
+            if ((colStudentCode == null && colUsername == null) || colProcess == null || colExam == null) {
+                throw new BusinessException("Header cần có: studentCode/username, processScore, examScore");
+            }
+
+            for (int r = firstRow + 1; r <= sheet.getLastRowNum(); r++) {
+                var row = sheet.getRow(r);
+                if (row == null) continue;
+                totalRows++;
+
+                String keyStudentCode = colStudentCode == null ? null : readCellAsString(row.getCell(colStudentCode));
+                String keyUsername = colUsername == null ? null : readCellAsString(row.getCell(colUsername));
+                Enrollment enrollment = null;
+                if (keyStudentCode != null && !keyStudentCode.isBlank()) {
+                    enrollment = byStudentCode.get(keyStudentCode.trim().toUpperCase());
+                }
+                if (enrollment == null && keyUsername != null && !keyUsername.isBlank()) {
+                    enrollment = byUsername.get(keyUsername.trim().toLowerCase());
+                }
+                if (enrollment == null) {
+                    skippedNotFound++;
+                    continue;
+                }
+
+                if (!isAdmin && enrollment.isScoreLocked()) {
+                    skippedLocked++;
+                    continue;
+                }
+
+                Double p = readCellAsDouble(row.getCell(colProcess));
+                Double e = readCellAsDouble(row.getCell(colExam));
+                if (p == null || e == null) {
+                    skippedInvalid++;
+                    continue;
+                }
+
+                EnrollmentUpdateRequest req = new EnrollmentUpdateRequest();
+                req.setProcessScore(p);
+                req.setExamScore(e);
+                if (isAdmin && enrollment.isScoreLocked()) {
+                    req.setOverrideReason("Excel import by admin");
+                }
+
+                EnrollmentResponse updated = updateEnrollment(enrollment.getId(), username, isAdmin, isTeacher, req);
+                if (updated != null) imported++;
+            }
+        } catch (BusinessException be) {
+            throw be;
+        } catch (Exception ex) {
+            throw new BusinessException("Không đọc được file Excel");
+        }
+
+        return GradesImportResultResponse.builder()
+                .totalRows(totalRows)
+                .imported(imported)
+                .skippedLocked(skippedLocked)
+                .skippedNotFound(skippedNotFound)
+                .skippedInvalid(skippedInvalid)
+                .errors(errors)
+                .build();
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
     private EnrollmentResponse toResponse(Enrollment enrollment) {
-        // Simplified mapping for brevity
+        Cohort cohort = enrollment.getCohort();
+        List<CohortTimeSlotResponse> timeSlots = cohortTimeSlotRepository.findByCohortId(cohort.getId())
+                .stream().map(CohortTimeSlotResponse::fromDomain).toList();
+
         return EnrollmentResponse.builder()
                 .id(enrollment.getId())
                 .status(enrollment.getStatus())
-                .grade(enrollment.getGrade())
+                .grade(enrollment.getFinalScore() != null ? Double.valueOf(enrollment.getFinalScore().doubleValue()) : enrollment.getGrade())
+                .processScore(enrollment.getProcessScore())
+                .examScore(enrollment.getExamScore())
+                .finalScore(enrollment.getFinalScore())
+                .scoreLocked(enrollment.isScoreLocked())
+                .scoreOverridden(enrollment.isScoreOverridden())
                 .createdAt(enrollment.getCreatedAt())
                 .updatedAt(enrollment.getUpdatedAt())
-                .course(CourseResponse.builder()
-                        .id(enrollment.getCourse().getId())
-                        .name(enrollment.getCourse().getName())
-                        .code(enrollment.getCourse().getCode())
+                .cohort(CohortResponse.builder()
+                        .id(cohort.getId())
+                        .name(cohort.getName())
+                        .code(cohort.getCode())
+                        .maxStudents(cohort.getMaxStudents())
+                        .currentStudents(cohort.getCurrentStudents())
+                        .active(cohort.isActive())
+                        .status(cohort.getStatus())
+                        .minStudents(cohort.getMinStudents())
+                        .canceledAt(cohort.getCanceledAt())
+                        .canceledReason(cohort.getCanceledReason())
+                        .mergedIntoCohortId(cohort.getMergedIntoCohortId())
+                        .semester(cohort.getSemester() != null
+                                ? SemesterResponse.builder()
+                                .id(cohort.getSemester().getId())
+                                .name(cohort.getSemester().getName())
+                                .code(cohort.getSemester().getCode())
+                                .build()
+                                : null)
+                        .clazz(cohort.getClazz() != null
+                                ? ClassResponse.builder()
+                                .id(cohort.getClazz().getId())
+                                .name(cohort.getClazz().getName())
+                                .code(cohort.getClazz().getCode())
+                                .credit(cohort.getClazz().getCredits())
+                                .processWeight(cohort.getClazz().getProcessWeight())
+                                .examWeight(cohort.getClazz().getExamWeight())
+                                .build()
+                                : null)
+                        .teacher(cohort.getTeacher() != null
+                                ? UserResponse.builder()
+                                .id(cohort.getTeacher().getId())
+                                .username(cohort.getTeacher().getUsername())
+                                .email(cohort.getTeacher().getEmail())
+                                .role(cohort.getTeacher().getRoles().stream().map(Enum::name).collect(Collectors.joining(",")))
+                                .build()
+                                : null)
+                        .enrollmentStartDate(cohort.getEnrollmentStartDate())
+                        .enrollmentEndDate(cohort.getEnrollmentEndDate())
+                        .registrationEnabled(cohort.isRegistrationEnabled())
+                        .timeSlots(timeSlots)
                         .build())
-                .student(UserResponse.builder()
-                        .id(enrollment.getStudent().getId())
-                        .username(enrollment.getStudent().getUsername())
-                        .email(enrollment.getStudent().getEmail())
-                        .build())
+                .student(enrollment.getStudent() != null
+                        && enrollment.getStudent().getUser() != null
+                        ? UserResponse.builder()
+                        .id(enrollment.getStudent().getUser().getId())
+                        .username(enrollment.getStudent().getUser().getUsername())
+                        .email(enrollment.getStudent().getUser().getEmail())
+                        .build()
+                        : null)
+                .studentCode(enrollment.getStudent() != null ? enrollment.getStudent().getStudentCode() : null)
+                .studentPhone(enrollment.getStudent() != null ? enrollment.getStudent().getPhone() : null)
+                .studentActive(enrollment.getStudent() != null ? enrollment.getStudent().isActive() : null)
+                .studentDepartmentCode(enrollment.getStudent() != null && enrollment.getStudent().getDepartment() != null
+                        ? enrollment.getStudent().getDepartment().getCode()
+                        : null)
+                .studentDepartmentName(enrollment.getStudent() != null && enrollment.getStudent().getDepartment() != null
+                        ? enrollment.getStudent().getDepartment().getName()
+                        : null)
+                .studentAdminClassCode(enrollment.getStudent() != null && enrollment.getStudent().getAdminClass() != null
+                        ? enrollment.getStudent().getAdminClass().getCode()
+                        : null)
+                .studentAdminClassName(enrollment.getStudent() != null && enrollment.getStudent().getAdminClass() != null
+                        ? enrollment.getStudent().getAdminClass().getName()
+                        : null)
                 .build();
+    }
+
+    private void assertTeacherOwnsCohort(String username, Cohort cohort) {
+        User currentUser = userRepository.findByUsername(username)
+                .or(() -> userRepository.findByEmail(username))
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (cohort.getTeacher() == null || cohort.getTeacher().getId() == null || !cohort.getTeacher().getId().equals(currentUser.getId())) {
+            throw new BusinessException("Bạn không có quyền thao tác lớp học phần này");
+        }
+    }
+
+    private BigDecimal calculateFinalScore(Cohort cohort, BigDecimal processScore, BigDecimal examScore) {
+        short processWeight = 40;
+        short examWeight = 60;
+        if (cohort.getClazz() != null) {
+            if (cohort.getClazz().getProcessWeight() != null) processWeight = cohort.getClazz().getProcessWeight();
+            if (cohort.getClazz().getExamWeight() != null) examWeight = cohort.getClazz().getExamWeight();
+        }
+        BigDecimal hundred = BigDecimal.valueOf(100);
+        BigDecimal p = processScore.multiply(BigDecimal.valueOf(processWeight)).divide(hundred);
+        BigDecimal e = examScore.multiply(BigDecimal.valueOf(examWeight)).divide(hundred);
+        return p.add(e).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    private Integer findFirstHeader(Map<String, Integer> headerIndex, String... keys) {
+        for (String k : keys) {
+            Integer idx = headerIndex.get(k);
+            if (idx != null) return idx;
+        }
+        return null;
+    }
+
+    private String readCellAsString(org.apache.poi.ss.usermodel.Cell cell) {
+        if (cell == null) return null;
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue();
+            case NUMERIC -> {
+                double v = cell.getNumericCellValue();
+                long lv = (long) v;
+                yield String.valueOf(lv);
+            }
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA -> cell.getCellFormula();
+            default -> null;
+        };
+    }
+
+    private Double readCellAsDouble(org.apache.poi.ss.usermodel.Cell cell) {
+        if (cell == null) return null;
+        try {
+            return switch (cell.getCellType()) {
+                case NUMERIC -> cell.getNumericCellValue();
+                case STRING -> {
+                    String s = cell.getStringCellValue();
+                    if (s == null || s.isBlank()) yield null;
+                    yield Double.parseDouble(s.trim());
+                }
+                default -> null;
+            };
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Student resolveStudentByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .or(() -> userRepository.findByEmail(username))
+                .orElseThrow(() -> new BusinessException("User not found"));
+        return studentRepository.findByUserId(user.getId()).orElseGet(() -> studentRepository.save(Student.builder()
+                .user(user)
+                .studentCode("SV" + user.getId())
+                .active(true)
+                .build()));
+    }
+
+    private void assertEnrollmentWindowOpen(Cohort cohort) {
+        LocalDate start = cohort.getEnrollmentStartDate();
+        LocalDate end   = cohort.getEnrollmentEndDate();
+        if (start == null || end == null) {
+            throw new BusinessException("Ngoài thời gian mở đăng ký");
+        }
+        LocalDate now = LocalDate.now();
+        if (now.isBefore(start) || now.isAfter(end)) {
+            throw new BusinessException("Ngoài thời gian mở đăng ký");
+        }
     }
 }

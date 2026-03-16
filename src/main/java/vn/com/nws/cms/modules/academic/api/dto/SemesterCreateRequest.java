@@ -21,4 +21,6 @@ public class SemesterCreateRequest {
     private LocalDate endDate;
 
     private boolean active;
+
+    private boolean secondaryActive;
 }

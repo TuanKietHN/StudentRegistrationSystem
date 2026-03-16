@@ -3,14 +3,14 @@
 ## 1) Thiết lập hiện tại
 
 ### Backend đang chạy theo hướng nào?
-- `spring.flyway.enabled=false` (tắt Flyway auto-migrate)
-- `spring.jpa.hibernate.ddl-auto=update` (Hibernate tự “update schema” theo entity)
+- Flyway là nguồn schema duy nhất (enabled + baseline-on-migrate)
+- `spring.jpa.hibernate.ddl-auto=validate` để JPA chỉ validate schema
 
-Tổ hợp này có rủi ro drift schema: migrations mô tả một schema “chuẩn”, nhưng runtime lại có thể tạo/đổi schema theo entity. Khi hai nguồn sự thật không đồng bộ, sẽ khó đảm bảo production có schema giống môi trường dev.
+Mục tiêu là tránh drift schema: schema chỉ được thay đổi qua migrations, ứng dụng chỉ validate.
 
 Nguồn:
-- `application.properties`: `spring.flyway.enabled=false`, `spring.jpa.hibernate.ddl-auto=update`
-- Migrations: `src/main/resources/db/migration/V1..V8`
+- `application.properties`
+- Migrations: `src/main/resources/db/migration/V1..V11`
 
 ## 2) Nhóm bảng theo bounded context
 
@@ -46,17 +46,7 @@ Entity hiện có:
 
 Nhận xét nổi bật:
 - API/Service hiện gọi `Course` là “lớp học phần”, tức một course gắn với `semester_id` và `subject_id` (mô hình V1).
-- Migrations V4–V6 lại coi `courses` là “khóa học e-learning” để gắn lesson/quiz/attendance.
-
-### 2.3. Lesson / Assessment / Attendance (đã có trong DB, chưa có module Java)
-
-Schema theo migrations:
-- V4: `lessons`, `lesson_contents`, `lesson_attachments`, `lesson_sections`, `student_lesson_progress`
-- V5: `assignments`, `assignment_submissions`, `assignment_submission_files`, `quizzes`, `quiz_questions`, `quiz_answers`, `quiz_attempts`, `quiz_attempt_answers`
-- V6: `class_sessions`, `attendance`, `attendance_qr_codes`
-
-Hiện trạng code:
-- Chưa có package/module Java tương ứng dưới `vn.com.nws.cms.modules.*` cho lesson/assessment/attendance, nên các bảng này đang “chưa được dùng” ở layer ứng dụng.
+- Phần schema LMS (V4–V6) đã bị loại khỏi scope và bị drop bằng V9.
 
 ## 3) Các điểm lệch schema ↔ entity/domain cần chú ý
 
@@ -77,8 +67,7 @@ Hệ quả:
 - View `v_courses_with_teacher` có nguy cơ sai (JOIN nhầm cột) nếu `teacher_id` thực tế là user_id.
 
 Khuyến nghị chuẩn hoá (chọn 1 trong 2 hướng):
-1. Hướng A (đơn giản): giữ `courses.teacher_id` → `users(id)` và sửa view để JOIN `teachers.user_id = courses.teacher_id`.
-2. Hướng B (giàu profile): migrate `courses.teacher_id` → `teachers(id)` + sửa entity/domain/service theo `Teacher`.
+1. Chuẩn hoá `courses.teacher_id` → `teachers(id)` để enforce ở DB (V12), và join sang users qua `teachers.user_id`.
 
 ### 3.2. `subjects.credit` vs `subjects.credits`
 
@@ -92,18 +81,7 @@ Hệ quả:
 - Schema có khả năng tồn tại đồng thời 2 cột cùng ý nghĩa; dữ liệu seed ở V1 đi vào `credit` sẽ không tự “điền” sang `credits` nếu không có migration chuyển đổi.
 
 Khuyến nghị:
-- Viết migration hợp nhất (copy dữ liệu `credit` → `credits` nếu `credits` null, sau đó drop `credit`) hoặc đổi entity dùng `credit` cho đến khi schema được làm sạch.
-
-### 3.3. Nullability/constraints giữa migration và entity
-
-Ví dụ:
-- V3 thêm `courses.credits INTEGER` không NOT NULL, nhưng `CourseEntity.credits` lại đánh dấu `nullable=false`.
-
-Hệ quả:
-- Nếu schema thực sự theo migrations (không NOT NULL), insert/update qua JPA có thể tạo dữ liệu null mà code không dự tính; hoặc nếu Hibernate đã “update schema” thành NOT NULL thì dữ liệu migration cũ có thể gây lỗi.
-
-Khuyến nghị:
-- Quy về 1 nguồn schema (ưu tiên Flyway), tắt `ddl-auto=update`, và đảm bảo entity phản ánh đúng constraints trong migrations.
+- Đã hợp nhất bằng V11 (copy dữ liệu và drop `credit`).
 
 ## 4) Kết luận nhanh về DB readiness cho “quản lý khóa học nội bộ”
 
@@ -112,13 +90,6 @@ Phần đã “đủ dùng” (có API + entity + domain):
 - Quản lý người dùng (admin) + avatar (MinIO)
 - Môn học (Subject), Học kỳ (Semester), Lớp học phần (Course), Đăng ký (Enrollment)
 
-Phần đã “có schema” nhưng chưa có code để thành tính năng:
-- Lesson/content/progress (V4)
-- Assignment/Quiz/submission (V5)
-- Attendance/session/QR (V6)
-
-Điểm cần xử lý trước khi mở rộng:
-- Chuẩn hoá khái niệm Course (khóa học) vs Course offering (lớp học phần)
-- Chuẩn hoá quan hệ Teacher (users vs teachers)
-- Chọn 1 cơ chế quản trị schema (Flyway hoặc Hibernate), tránh chạy song song.
-
+Điểm cần xử lý trước khi mở rộng (theo hướng nội bộ):
+- Bổ sung module teachers/departments ở layer API/service nếu cần quản trị hồ sơ giảng viên/khoa
+- Mở rộng lớp học phần với lịch học/phòng học/điểm danh theo buổi (nếu nghiệp vụ yêu cầu)

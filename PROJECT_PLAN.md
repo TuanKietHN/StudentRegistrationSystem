@@ -2,7 +2,7 @@
 
 ## 1. Tổng quan Dự án
 *   **Tên dự án**: Course Management System (CMS)
-*   **Mục tiêu**: Xây dựng hệ thống quản lý khóa học nội bộ hiện đại, hỗ trợ chuẩn E-learning.
+*   **Mục tiêu**: Xây dựng hệ thống quản lý khóa học nội bộ hiện đại (không bao gồm LMS/khóa học online).
 *   **Kiến trúc**: Modular Monolith (Clean Architecture).
 *   **Môi trường**: Java 21, Spring Boot 4.0.2.
 
@@ -57,7 +57,7 @@ cms-root/
 │   │   ├── common/
 │   │   └── modules/
 │   │       ├── auth/
-│   │       ├── user/
+│   │       ├── iam/
 │   │       ├── academic/
 │   │       ├── storage/ (New)
 │   │       └── notification/ (New)
@@ -86,7 +86,7 @@ cms-root/
 
 ### Quy trình Build & Run
 1.  **Development**:
-    *   Spring Boot: Run port `8080`.
+    *   Spring Boot: Run port `8081`.
     *   Vue.js: Run `npm run dev` port `5173`.
     *   **Proxy**: Vite config proxy `/api` -> `localhost:8080`.
 2.  **Production**:
@@ -115,15 +115,20 @@ cms-root/
 - [x] Tích hợp MinIO để lưu trữ file/avatar.
 
 ### Giai đoạn 2: Frontend Setup (Vue.js)
-- [ ] Khởi tạo dự án Vue 3 + Vite + TS trong thư mục `frontend`.
-- [ ] Cấu hình Axios & Interceptor (Auto attach Token).
-- [ ] Setup Layouts (Admin/User) & Router.
-- [ ] Implement trang Login/Register kết nối API.
+- [x] Khởi tạo dự án Vue 3 + Vite + TS trong thư mục `frontend`.
+- [x] Cấu hình Axios instance + interceptor attach JWT.
+- [x] Setup Router + guards `requiresAuth`.
+- [x] Implement Login/Register/Forgot/Reset kết nối API.
+- [x] Chuẩn UI nền tảng với Vuetify theme + components dùng lại (Phase 1).
+- [x] Làm snackbar/toast global (Pinia UI store + hiển thị trong App).
+- [x] Hoàn thiện luồng refresh token (401 → refresh → retry).
+- [x] Thêm route-level authorization `roles` (admin-only routes).
+- [x] Lazy-load routes (tối ưu bundle) theo Phase 3.
+- [x] Chuẩn hoá helper parse `ApiResponse<T>`/`PageResponse<T>` để giảm lặp.
 
 ### Giai đoạn 3: Core Features (Fullstack)
 - [ ] **User Management**: API + UI (Profile, Admin Dashboard).
 - [ ] **Academic**: API + UI (Quản lý Học kỳ, Môn học).
 
 ### Giai đoạn 4: E-learning Features
-- [ ] Tham khảo chuẩn xAPI/SCORM cho cấu trúc dữ liệu khóa học.
-- [ ] Implement chức năng học tập (Bài giảng, Video, Quiz).
+N/A (ngoài phạm vi dự án hiện tại).

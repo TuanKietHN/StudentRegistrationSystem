@@ -34,4 +34,7 @@ public class SemesterEntity extends AuditEntity {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Column(name = "secondary_active", nullable = false)
+    private boolean secondaryActive;
 }

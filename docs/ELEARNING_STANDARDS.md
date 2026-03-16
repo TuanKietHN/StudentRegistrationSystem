@@ -1,5 +1,7 @@
 # Tiêu chuẩn E-learning & So sánh với REST API
 
+Tài liệu này được giữ lại như tài liệu tham khảo. Dự án CMS hiện tại **không triển khai LMS/khóa học online/video** và schema liên quan đã được loại bỏ khỏi DB migrations.
+
 ## 1. Giới thiệu các Tiêu chuẩn
 
 ### 1.1. SCORM (Sharable Content Object Reference Model)
@@ -74,9 +76,9 @@ Content-Type: application/json
 ```
 
 ## 3. Khuyến nghị cho Dự án CMS này
-Với yêu cầu hiện tại (Quản lý khóa học nội bộ), bạn **KHÔNG NHẤT THIẾT** phải implement đầy đủ LRS hay xAPI ngay lập tức vì nó rất phức tạp.
+Với yêu cầu hiện tại (Quản lý khóa học nội bộ), hệ thống **không implement** LRS/xAPI trong cùng schema vì tăng độ phức tạp và làm lệch core domain.
 
 Tuy nhiên, để hệ thống "xAPI-ready" (dễ mở rộng sau này), bạn nên:
 1.  **Thiết kế Event-Driven**: Khi User hoàn thành khóa học, bắn một Event nội bộ.
 2.  **Activity Log**: Tạo bảng log lưu lại các hành động quan trọng (Ai, Làm gì, Lúc nào).
-3.  **Tách biệt**: Nếu cần hỗ trợ SCORM/xAPI, nên dùng một module riêng hoặc tích hợp thư viện (như Rustici Engine hoặc các Open Source LRS) thay vì viết lại từ đầu trong Core CMS.
+3.  **Tách biệt**: Nếu cần hỗ trợ SCORM/xAPI, nên tách thành hệ thống/dịch vụ riêng hoặc tích hợp giải pháp sẵn có thay vì viết lại trong Core CMS.

@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
 import vn.com.nws.cms.domain.enums.RoleType;
+
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Data
@@ -20,4 +22,9 @@ public class User extends AuditEntity {
     private String email;
     private String avatar;
     private Set<RoleType> roles;
+    private int failedLoginAttempts;
+    private LocalDateTime lockUntil;
+    private LocalDateTime lastLoginAt;
+    private String lastLoginIp;
+    private String lastLoginUserAgent;
 }

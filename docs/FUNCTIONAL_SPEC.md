@@ -5,7 +5,7 @@
 Module này xử lý việc đăng nhập, cấp token và quản lý phiên làm việc sử dụng JWT và Redis.
 
 ### 1.1 Luồng Đăng nhập (Login)
-1.  **Người dùng** gửi `username` và `password` đến API `/api/auth/login`.
+1.  **Người dùng** gửi `username` và `password` đến API `/api/v1/auth/login`.
 2.  **Hệ thống** xác thực thông tin từ Database (so khớp hash password).
 3.  Nếu đúng:
     *   Tạo **Access Token** (JWT): Chứa thông tin user (id, username, roles). Thời hạn: 15-30 phút.
@@ -15,7 +15,7 @@ Module này xử lý việc đăng nhập, cấp token và quản lý phiên là
 
 ### 1.2 Luồng Làm mới Token (Refresh Token)
 1.  **Client** phát hiện Access Token hết hạn (hoặc sắp hết hạn).
-2.  Gửi request đến `/api/auth/refresh` kèm `refreshToken`.
+2.  Gửi request đến `/api/v1/auth/refresh` kèm `refreshToken`.
 3.  **Hệ thống** kiểm tra `refreshToken` có tồn tại trong **Redis** không.
 4.  Nếu tồn tại và khớp:
     *   Tạo cặp Access Token & Refresh Token mới.
@@ -24,7 +24,7 @@ Module này xử lý việc đăng nhập, cấp token và quản lý phiên là
 5.  Nếu không tồn tại/không khớp: Trả về lỗi 401 (Yêu cầu đăng nhập lại).
 
 ### 1.3 Luồng Đăng xuất (Logout)
-1.  **Client** gọi API `/api/auth/logout`.
+1.  **Client** gọi API `/api/v1/auth/logout`.
 2.  **Hệ thống** xóa Refresh Token tương ứng khỏi **Redis**.
 3.  (Tùy chọn) Đưa Access Token hiện tại vào **Blacklist** trên Redis với TTL bằng thời gian còn lại của token.
 

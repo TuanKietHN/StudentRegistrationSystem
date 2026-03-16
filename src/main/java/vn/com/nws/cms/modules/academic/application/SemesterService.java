@@ -10,4 +10,5 @@ public interface SemesterService {
     SemesterResponse updateSemester(Long id, SemesterUpdateRequest request);
     void deleteSemester(Long id);
     SemesterResponse getActiveSemester();
+    SemesterResponse getSecondaryActiveSemester();
 }

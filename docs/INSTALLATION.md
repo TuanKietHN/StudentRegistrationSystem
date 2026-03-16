@@ -75,12 +75,25 @@ spring.data.redis.password=cms_redis_password
 spring.data.redis.timeout=2000
 
 # --- JWT Configuration ---
-# Secret Key (Base64 Encoded - ít nhất 256 bit)
-jwt.secret=5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
+# Secret Key (Base64 - ít nhất 256 bit / 32 bytes)
+# Khuyến nghị cấu hình qua biến môi trường JWT_SECRET_B64 và dùng jwt.secret-b64
+jwt.secret-b64=${JWT_SECRET_B64}
 # Thời hạn Access Token (ms) - 15 phút
 jwt.expiration=900000
 # Thời hạn Refresh Token (ms) - 7 ngày
 jwt.refresh-expiration=604800000
+```
+
+Tạo JWT secret (Base64) và cấu hình qua `.env`:
+
+```bash
+openssl rand -base64 32
+```
+
+Sau đó đặt vào `.env`:
+
+```properties
+JWT_SECRET_B64=<giá trị_base64_ở_trên>
 ```
 
 ### 2.3 Build & Run

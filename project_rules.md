@@ -76,4 +76,4 @@
   - Use `MapStruct` for object mapping.
 - **Enums**: avoid typo; easy refactor
 ## E-Learning Standards
-- **Compliance**: System should be designed with SCORM and xAPI (Tin Can API) standards in mind.
+- Ngoài phạm vi dự án hiện tại. Nếu cần LMS/SCORM/xAPI, tách thành hệ thống/dịch vụ riêng.

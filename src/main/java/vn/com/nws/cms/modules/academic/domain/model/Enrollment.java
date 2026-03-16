@@ -5,7 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import vn.com.nws.cms.common.audit.AuditEntity;
-import vn.com.nws.cms.modules.auth.domain.model.User;
+import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -13,8 +16,19 @@ import vn.com.nws.cms.modules.auth.domain.model.User;
 @AllArgsConstructor
 public class Enrollment extends AuditEntity {
     private Long id;
-    private Course course;
-    private User student;
-    private String status; // ENROLLED, COMPLETED, DROPPED, CANCELLED
+    private Cohort cohort;
+    private Student student;
+    private EnrollmentStatus status;
     private Double grade;
+    private BigDecimal processScore;
+    private BigDecimal examScore;
+    private BigDecimal finalScore;
+    private LocalDateTime scoredAt;
+    private boolean scoreLocked;
+    private boolean scoreOverridden;
+    private String scoreOverrideReason;
+    private LocalDateTime scoreOverriddenAt;
+    private BigDecimal processScoreBeforeOverride;
+    private BigDecimal examScoreBeforeOverride;
+    private BigDecimal finalScoreBeforeOverride;
 }

@@ -1,9 +1,9 @@
 # API Documentation: Authentication Module
 
-Base URL: `/api/auth`
+Base URL: `/api/v1/auth`
 
 ## 1. Đăng ký (Register)
-*   **Endpoint**: `POST /register`
+*   **Endpoint**: `POST /api/v1/auth/register`
 *   **Description**: Đăng ký tài khoản mới.
 *   **Request Body**:
     ```json
@@ -24,7 +24,7 @@ Base URL: `/api/auth`
     ```
 
 ## 2. Đăng nhập (Login)
-*   **Endpoint**: `POST /login`
+*   **Endpoint**: `POST /api/v1/auth/login`
 *   **Description**: Đăng nhập lấy Token.
 *   **Request Body**:
     ```json
@@ -44,13 +44,13 @@ Base URL: `/api/auth`
         "tokenType": "Bearer",
         "expiresIn": 900,
         "username": "student1",
-        "role": "ROLE_STUDENT"
+        "role": "STUDENT"
       }
     }
     ```
 
 ## 3. Làm mới Token (Refresh Token)
-*   **Endpoint**: `POST /refresh`
+*   **Endpoint**: `POST /api/v1/auth/refresh`
 *   **Description**: Cấp lại Access Token mới khi hết hạn.
 *   **Request Body**:
     ```json
@@ -69,13 +69,13 @@ Base URL: `/api/auth`
         "tokenType": "Bearer",
         "expiresIn": 900,
         "username": "student1",
-        "role": "ROLE_STUDENT"
+        "role": "STUDENT"
       }
     }
     ```
 
 ## 4. Đăng xuất (Logout)
-*   **Endpoint**: `POST /logout`
+*   **Endpoint**: `POST /api/v1/auth/logout`
 *   **Description**: Hủy Refresh Token.
 *   **Request Body**:
     ```json
@@ -93,7 +93,7 @@ Base URL: `/api/auth`
     ```
 
 ## 5. Quên Mật khẩu (Forgot Password)
-*   **Endpoint**: `POST /forgot-password`
+*   **Endpoint**: `POST /api/v1/auth/forgot-password`
 *   **Description**: Gửi token reset mật khẩu qua email (Hiện tại đang log ra console để test).
 *   **Request Body**:
     ```json
@@ -111,7 +111,7 @@ Base URL: `/api/auth`
     ```
 
 ## 6. Đặt lại Mật khẩu (Reset Password)
-*   **Endpoint**: `POST /reset-password`
+*   **Endpoint**: `POST /api/v1/auth/reset-password`
 *   **Description**: Đặt mật khẩu mới sử dụng token nhận được.
 *   **Request Body**:
     ```json
@@ -134,7 +134,7 @@ Base URL: `/api/auth`
 2.  **Interceptor**:
     *   Tự động đính kèm `Authorization: Bearer <accessToken>` cho mọi request (trừ auth).
     *   Xử lý lỗi `401 Unauthorized`:
-        *   Nếu lỗi từ API bình thường -> Gọi `/refresh`.
-        *   Nếu `/refresh` thành công -> Retry request cũ.
-        *   Nếu `/refresh` thất bại -> Redirect về Login & Xóa token.
-3.  **CORS**: Đã được cấu hình cho `localhost:3000`.
+        *   Nếu lỗi từ API bình thường -> Gọi `POST /api/v1/auth/refresh` kèm `refreshToken`.
+        *   Nếu refresh thành công -> Retry request cũ.
+        *   Nếu refresh thất bại -> Redirect về Login & xóa token.
+3.  **CORS**: Cấu hình theo origin frontend (Vite mặc định `http://localhost:5173`).

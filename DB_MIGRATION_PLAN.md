@@ -1,32 +1,25 @@
 # Database Migration & Update Plan
 
 ## Objective
-Align the Java codebase and Database Schema to resolve the conflict between Simple Enum Mapping (Java) and Relational RBAC (Database).
+Chuẩn hoá hệ thống theo các quyết định:
+- `courses` là **lớp học phần** theo V1 (không triển khai LMS/online).
+- Teacher là **profile tuỳ chọn** của `users` (User + Optional Role Profile).
+- Quy về **1 nguồn schema là Flyway** (JPA chỉ validate).
 
-**Decision:** We will adopt the **Relational RBAC** approach defined in Flyway V2, as it is more robust and extensible. This means we need to update the Java `User` entity to map to `Role` entities, not just Enums.
+## Scope
+- Giữ lại: Auth/IAM (RBAC), Academic core (subjects/semesters/courses/enrollments), departments/teachers profiles.
+- Loại bỏ khỏi schema: lesson/assessment/attendance (V4–V6).
 
-## Phase 1: Fix Java Domain Model
-1.  **Create `Role` Entity:**
-    - Create `vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.RoleEntity`.
-    - Map to `roles` table.
-2.  **Update `UserEntity`:**
-    - Change `Set<RoleType> roles` to `Set<RoleEntity> roles`.
-    - Use `@ManyToMany` annotation instead of `@ElementCollection`.
-    - Map to `user_roles` join table.
-3.  **Update `User` Domain Model:**
-    - It can keep `Set<RoleType>` if we map `RoleEntity` -> `RoleType` in the Mapper.
-    - OR change it to hold `Set<String>` or `Set<Role>` domain object. *Recommendation: Keep `Set<RoleType>` in Domain for simplicity if roles are static, but since DB has dynamic roles table, `Set<String>` or a `Role` domain object is better.*
+## Thay đổi migration (đã/đang áp dụng)
+1. V9: drop toàn bộ schema LMS/online + views/functions liên quan.
+2. V10: bỏ các cột “e-learning oriented” khỏi `courses`, giữ `courses` theo V1; sửa view `v_courses_with_teacher` theo `teacher_id = users.id`.
+3. V11: hợp nhất `subjects.credit` → `subjects.credits` và drop `credit`.
 
-## Phase 2: Update Data Seeder
-1.  **Stop creating Users blindly:** `DataSeeder` should check if Roles exist first.
-2.  **Fetch Roles from DB:** Instead of `Set.of(RoleType.ADMIN)`, fetch the Role entity "ROLE_ADMIN" from repositories and assign it.
-3.  **Remove Duplicate Logic:** Rely on Flyway for structural data (Roles, Permissions). Use Seeder only for Demo Data (Users, Courses).
+## Chuẩn hoá seeding strategy
+Nguyên tắc:
+- Flyway seed: dữ liệu nền tảng, deterministic, có thể chạy lại an toàn (`ON CONFLICT DO NOTHING`).
+- Application seeder: chỉ cho dev/demo, được bật qua profile/property, và idempotent.
 
-## Phase 3: Cleanup Database (Optional/Later)
-1.  **Drop Obsolete Column:** Create V7 migration to drop `role` column from `users` table to remove confusion.
-
-## Execution Steps (Immediate Actions)
-1.  **Refactor `UserEntity`**: Change from `@ElementCollection` (Enum) to `@ManyToMany` (Entity).
-2.  **Create `RoleEntity`**: To map to the existing `roles` table.
-3.  **Update `DataSeeder`**: To fetch roles via Repository instead of creating sets of Enums.
-4.  **Update `UserService/AuthService`**: To handle Role Entities during registration/update.
+## Cấu hình runtime (bắt buộc)
+- `spring.flyway.enabled=true`
+- `spring.jpa.hibernate.ddl-auto=validate`

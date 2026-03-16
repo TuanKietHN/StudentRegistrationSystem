@@ -30,8 +30,8 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-              v-model="classFilterId"
-              :items="classOptions"
+              v-model="subjectFilterId"
+              :items="subjectOptions"
               item-title="title"
               item-value="value"
               label="Lọc môn học"
@@ -89,7 +89,7 @@
           <td>{{ c.code }}</td>
           <td>{{ c.name }}</td>
           <td>{{ c.semester?.code || '-' }}</td>
-          <td>{{ c.clazz?.code || '-' }}</td>
+          <td>{{ c.subject?.code || '-' }}</td>
           <td>{{ c.teacher?.username || '-' }}</td>
           <td>{{ c.maxStudents }}</td>
           <td>{{ c.enrollmentStartDate || '-' }} → {{ c.enrollmentEndDate || '-' }}</td>
@@ -105,7 +105,6 @@
           </td>
           <td>
             <v-btn size="small" variant="text" @click="goEnrollments(c.id)">DS sinh viên / Điểm</v-btn>
-            <v-btn size="small" variant="text" @click="goAttendance(c.id)">Điểm danh</v-btn>
             <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(c)">Sửa</v-btn>
             <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(c)">Xóa</v-btn>
           </td>
@@ -152,12 +151,12 @@
             </v-col>
             <v-col cols="12" md="4">
               <v-select
-                  v-model="form.classId"
-                  :items="classOptions"
+                  v-model="form.subjectId"
+                  :items="subjectOptions"
                   item-title="title"
                   item-value="value"
                   label="Môn học"
-                  :rules="rules.classId"
+                  :rules="rules.subjectId"
                   density="comfortable"
                   variant="outlined"
               />
@@ -249,7 +248,7 @@ import { useUiStore } from '@/stores/ui'
 import { useLookupsStore } from '@/stores/lookups'
 import { useDebounceFn } from '@/composables/useDebounceFn'
 import { unwrapPageResponse } from '@/api/response'
-import { cohortService, type Cohort } from '@/api/services/cohort.service'
+import { sectionService, type Section } from '@/api/services/section.service'
 import { teacherService } from '@/api/services/teacher.service'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -260,28 +259,24 @@ const uiStore = useUiStore()
 const lookupsStore = useLookupsStore()
 const isAdmin = computed(() => (authStore.currentUser?.role || '').split(',').includes('ADMIN'))
 
-const courses = ref<Cohort[]>([])
+const courses = ref<Section[]>([])
 const loading = ref(false)
 const page = ref(1)
 const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
 const semesterFilterId = ref<number | null>(null)
-const classFilterId = ref<number | null>(null)
+const subjectFilterId = ref<number | null>(null)
 const teacherFilterUserId = ref<number | null>(null)
 const activeFilter = ref<boolean | null>(null)
 const teacherOptions = ref<Array<{ title: string; value: number }>>([])
 const semesterOptions = computed(() => lookupsStore.semesterOptions)
-const classOptions = computed(() => lookupsStore.classOptions)
+const subjectOptions = computed(() => lookupsStore.subjectOptions)
 const activeSemesterId = computed(() => lookupsStore.activeSemesterId)
 const activeSemesterLabel = computed(() => lookupsStore.activeSemesterLabel)
 
-const goEnrollments = (cohortId: number) => {
-  router.push({ name: 'AdminCohortEnrollments', params: { cohortId } })
-}
-
-const goAttendance = (cohortId: number) => {
-  router.push({ name: 'AdminCohortAttendance', params: { cohortId } })
+const goEnrollments = (sectionId: number) => {
+  router.push({ name: 'AdminSectionEnrollments', params: { sectionId } })
 }
 
 const activeOptions = [
@@ -294,14 +289,14 @@ const deleteOpen = ref(false)
 const saving = ref(false)
 const deletingLoading = ref(false)
 const editingId = ref<number | null>(null)
-const deleting = ref<Cohort | null>(null)
+const deleting = ref<Section | null>(null)
 const formRef = ref<any>(null)
 
 const form = ref({
   code: '',
   name: '',
   semesterId: null as number | null,
-  classId: null as number | null,
+  subjectId: null as number | null,
   teacherUserId: null as number | null,
   maxStudents: 1,
   active: true,
@@ -314,7 +309,7 @@ const rules = {
   code: [(v: string) => !!v || 'Mã lớp là bắt buộc'],
   name: [(v: string) => !!v || 'Tên lớp là bắt buộc'],
   semesterId: [(v: number | null) => !!v || 'Học kỳ là bắt buộc'],
-  classId: [(v: number | null) => !!v || 'Môn học là bắt buộc'],
+  subjectId: [(v: number | null) => !!v || 'Môn học là bắt buộc'],
   maxStudents: [(v: number) => v >= 1 || 'Sĩ số tối đa phải >= 1'],
   enrollmentStartDate: [(v: string) => !!v || 'Ngày mở đăng ký là bắt buộc'],
   enrollmentEndDate: [(v: string) => !!v || 'Ngày kết thúc đăng ký là bắt buộc']
@@ -323,16 +318,16 @@ const rules = {
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const res = await cohortService.getAll({
+    const res = await sectionService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
       semesterId: semesterFilterId.value || undefined,
-      classId: classFilterId.value || undefined,
+      subjectId: subjectFilterId.value || undefined,
       teacherId: teacherFilterUserId.value || undefined,
       active: activeFilter.value ?? undefined
     })
-    const data = unwrapPageResponse<Cohort>(res)
+    const data = unwrapPageResponse<Section>(res)
     courses.value = data.data
     totalPages.value = data.totalPages
   } catch (err: any) {
@@ -377,7 +372,7 @@ const resetForm = () => {
     code: '',
     name: '',
     semesterId: activeSemesterId.value || semesterFilterId.value || null,
-    classId: null,
+    subjectId: null,
     teacherUserId: null,
     maxStudents: 1,
     active: true,
@@ -394,14 +389,14 @@ const openCreateDialog = () => {
   dialogOpen.value = true
 }
 
-const openEditDialog = (c: Cohort) => {
+const openEditDialog = (c: Section) => {
   if (!isAdmin.value) return
   editingId.value = c.id
   form.value = {
     code: c.code,
     name: c.name,
     semesterId: c.semester?.id ?? null,
-    classId: c.clazz?.id ?? null,
+    subjectId: c.subject?.id ?? null,
     teacherUserId: c.teacher?.id ?? null,
     maxStudents: c.maxStudents,
     active: !!c.active,
@@ -423,7 +418,7 @@ const saveCourse = async () => {
       code: form.value.code,
       name: form.value.name,
       semesterId: form.value.semesterId,
-      classId: form.value.classId,
+      subjectId: form.value.subjectId,
       maxStudents: form.value.maxStudents,
       active: !!form.value.active,
       enrollmentStartDate: form.value.enrollmentStartDate,
@@ -433,10 +428,10 @@ const saveCourse = async () => {
     if (form.value.teacherUserId) payload.teacherId = form.value.teacherUserId
 
     if (editingId.value) {
-      await cohortService.update(editingId.value, payload)
+      await sectionService.update(editingId.value, payload)
       uiStore.notify('Cập nhật lớp học thành công', 'success')
     } else {
-      await cohortService.create(payload)
+      await sectionService.create(payload)
       uiStore.notify('Tạo lớp học thành công', 'success')
     }
     dialogOpen.value = false
@@ -455,7 +450,7 @@ const saveCourse = async () => {
   }
 }
 
-const openDeleteDialog = (c: Cohort) => {
+const openDeleteDialog = (c: Section) => {
   if (!isAdmin.value) return
   deleting.value = c
   deleteOpen.value = true
@@ -465,7 +460,7 @@ const confirmDelete = async () => {
   if (!deleting.value) return
   deletingLoading.value = true
   try {
-    await cohortService.delete(deleting.value.id)
+    await sectionService.delete(deleting.value.id)
     uiStore.notify('Xóa lớp học thành công', 'success')
     deleteOpen.value = false
     fetchCourses()

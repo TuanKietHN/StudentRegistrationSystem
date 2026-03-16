@@ -10,6 +10,10 @@ import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.domain.enums.RoleType;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
+import vn.com.nws.cms.modules.academic.domain.model.Department;
+import vn.com.nws.cms.modules.academic.domain.model.Student;
+import vn.com.nws.cms.modules.academic.domain.repository.DepartmentRepository;
+import vn.com.nws.cms.modules.academic.domain.repository.StudentRepository;
 import vn.com.nws.cms.modules.iam.api.dto.*;
 
 import java.io.IOException;
@@ -28,6 +32,8 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
+    private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     // Cấu hình đường dẫn lưu file avatar
@@ -88,6 +94,40 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         user = userRepository.save(user);
+
+        // Tự động tạo hồ sơ sinh viên nếu user có role STUDENT
+        if (roles.contains(RoleType.STUDENT)) {
+            // Kiểm tra xem đã tồn tại chưa (phòng trường hợp logic khác đã tạo)
+            if (studentRepository.findByUserId(user.getId()).isEmpty()) {
+                String studentCode = request.getStudentCode();
+                
+                // Nếu không nhập mã SV thì tự sinh
+                if (studentCode == null || studentCode.isBlank()) {
+                    studentCode = "SV" + user.getId();
+                } else {
+                    // Nếu nhập thì check trùng
+                    if (studentRepository.existsByStudentCode(studentCode)) {
+                        throw new BusinessException("Mã sinh viên đã tồn tại: " + studentCode);
+                    }
+                }
+
+                Student student = Student.builder()
+                        .user(user)
+                        .studentCode(studentCode)
+                        .phone(request.getPhone())
+                        .active(true)
+                        .build();
+
+                if (request.getDepartmentId() != null) {
+                    Department department = departmentRepository.findById(request.getDepartmentId())
+                            .orElseThrow(() -> new BusinessException("Khoa không tồn tại: " + request.getDepartmentId()));
+                    student.setDepartment(department);
+                }
+
+                studentRepository.save(student);
+            }
+        }
+
         return toUserResponse(user);
     }
 

@@ -22,6 +22,7 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     @Operation(summary = "Danh sách khoa", description = "Lấy danh sách khoa có phân trang và tìm kiếm")
     public ResponseEntity<ApiResponse<PageResponse<DepartmentResponse>>> getDepartments(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -40,6 +41,7 @@ public class DepartmentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     @Operation(summary = "Chi tiết khoa", description = "Lấy thông tin chi tiết của một khoa")
     public ResponseEntity<ApiResponse<DepartmentResponse>> getDepartmentById(@PathVariable Long id) {
         DepartmentResponse response = departmentService.getDepartmentById(id);
@@ -47,7 +49,7 @@ public class DepartmentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DEPARTMENT:CREATE')")
     @Operation(summary = "Tạo khoa mới", description = "Tạo mới một khoa (Admin)")
     public ResponseEntity<ApiResponse<DepartmentResponse>> createDepartment(@Valid @RequestBody DepartmentCreateRequest request) {
         DepartmentResponse response = departmentService.createDepartment(request);
@@ -55,7 +57,7 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DEPARTMENT:UPDATE')")
     @Operation(summary = "Cập nhật khoa", description = "Cập nhật thông tin khoa (Admin)")
     public ResponseEntity<ApiResponse<DepartmentResponse>> updateDepartment(
             @PathVariable Long id,
@@ -65,7 +67,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('DEPARTMENT:DELETE')")
     @Operation(summary = "Xóa khoa", description = "Xóa khoa (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteDepartment(@PathVariable Long id) {
         departmentService.deleteDepartment(id);

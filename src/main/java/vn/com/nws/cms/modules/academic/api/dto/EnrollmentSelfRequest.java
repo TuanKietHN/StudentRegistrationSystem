@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class EnrollmentSelfRequest {
-    @NotNull(message = "Course ID is required")
-    private Long courseId;
+    @NotNull(message = "Section ID is required")
+    private Long sectionId;
 }
-

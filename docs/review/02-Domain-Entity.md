@@ -1,74 +1,107 @@
-# 02. Domain/entity review cho hệ thống quản lý khóa học nội bộ
+# 02. Domain/Entity Review — Kiến trúc tầng domain & entity
 
-## 1) Mục tiêu nghiệp vụ “quản lý khóa học nội bộ” (tham chiếu)
+> Cập nhật: 2026-03-11 — phản ánh trạng thái sau khi refactor layer leak.
 
-Một hệ thống nội bộ tối thiểu thường có:
-- Danh mục môn/khóa học (catalog)
-- Kỳ học (semester/term)
-- Lớp học phần/đợt mở lớp (offering/section) kèm lịch học, phòng, giảng viên
-- Đăng ký học phần (enrollment) + kiểm tra điều kiện (tiên quyết, trùng lịch, quota)
-- Điểm số/đánh giá (gradebook)
-- Điểm danh (nếu có học theo buổi)
+## 1) Kiến trúc phân tầng (Clean Architecture)
 
-## 2) Hiện trạng domain model vs entity
+Dự án áp dụng Clean Architecture theo mô hình:
 
-### 2.1. Academic core đang có
+```
+api (Controllers + DTOs)
+  ↓
+application (Service interface + Impl)
+  ↓
+domain (Model + Repository interface)
+  ↓
+infrastructure/persistence (Entity + JPA Repository + Mapper)
+```
 
-Trong code hiện tại:
-- `Subject` đại diện “môn học” (catalog)
-- `Semester` đại diện “học kỳ”
-- `Course` đang được gọi và expose như “lớp học phần”
-  - Có `semester`, `subject`, `teacher`, quota
-- `Enrollment` là đăng ký học phần (student ↔ course)
+Đánh giá: **Triển khai tốt và nhất quán** trên toàn bộ module (academic, auth, iam).
 
-Đây là một “skeleton” phù hợp để bắt đầu quản lý học vụ cơ bản.
+### 1.1. Ưu điểm kiến trúc
 
-### 2.2. Vấn đề lớn: khái niệm `Course`
+| Tiêu chí | Đánh giá |
+|----------|----------|
+| Tách biệt domain model vs JPA entity | ✅ Tất cả module |
+| Repository interface ở domain layer | ✅ RepositoryImpl ở infrastructure |
+| Mapper entity ↔ domain model | ✅ Đầy đủ (12 mapper cho academic + 1 user mapper) |
+| Service interface + Impl | ✅ 12 service trong academic + 2 trong iam + 7 trong auth |
+| DTO request/response riêng biệt | ✅ Mỗi entity có Create/Update/Response/Filter DTOs |
 
-Trong API:
-- Controller ghi rõ `Course` = “lớp học phần”.
+### 1.2. Điểm đã cải thiện (Đã sửa)
 
-Quyết định chuẩn hoá:
-- `courses` được coi là **lớp học phần** theo V1 (gắn `semester_id`, `subject_id`, `teacher_id`, quota).
-- Không triển khai LMS/online trong cùng schema; các bảng V4–V6 được loại bỏ ở migrations (V9).
+| # | Vấn đề | Trạng thái |
+|---|--------|------------|
+| 1 | **Layer leak trong `StudentProgressController`** (trực tiếp inject `StudentJpaRepository`, `TeacherJpaRepository`, `UserEntity`) | ✅ Đã sửa — chỉ còn inject `StudentProgressService`. Logic phân quyền chi tiết đã được chuyển vào service layer. |
+| 2 | **Layer leak trong `AuthenticationService`** (import `StudentEntity`, `TeacherEntity`, `StudentJpaRepository`, `TeacherJpaRepository`) | ✅ Đã sửa — giờ dùng domain repositories `StudentRepository`/`TeacherRepository` và domain models `Student`/`Teacher`. |
+| 3 | `CourseClass.java` trong domain/model | ❓ Cần xác nhận còn dùng không. |
 
-## 3) Teacher/Department modeling
+## 2) Domain Models — Tổng quan
 
-Hiện có cả:
-- `users` (tài khoản đăng nhập)
-- `teachers` (profile giảng viên) liên kết 1-1 với `users`
-- `departments` có `head_teacher_id` FK → `teachers(id)`
+### 2.1. Auth Module
 
-Nhưng:
-- `CourseEntity.teacher` hiện map tới `UserEntity`
-- Không có module/API quản lý teachers/departments nên các bảng V3 chưa “sống” trong hệ thống
+| Domain Model | Mô tả | Quan hệ |
+|-------------|-------|---------|
+| `User` | Tài khoản đăng nhập | roles (Set\<RoleType\>), login audit fields |
 
-Đề xuất:
-- Teacher là một profile tuỳ chọn của `User` (User + Optional Role Profile).
-- `courses.teacher_id` tham chiếu `teachers(id)` để enforce ở DB, còn dữ liệu login nằm ở `users` và liên kết qua `teachers.user_id`.
-- Dùng role (`user_roles`) để xác định “user này có vai TEACHER”.
+Đặc biệt: `User` domain model **không chứa** entity quan hệ JPA, chỉ dùng enum `RoleType`. Đây là đúng cách Clean Architecture.
 
-## 4) Domain ↔ entity mismatch đang gây rủi ro khi mở rộng
+Các field bảo mật đã có: `failedLoginAttempts`, `lockUntil`, `lastLoginAt`, `lastLoginIp`, `lastLoginUserAgent`.
 
-### 4.1. Array columns (prerequisite IDs) chưa được map
+### 2.2. Academic Module (13 domain models)
 
-Migrations dùng `BIGINT[]` cho `subjects.prerequisite_subject_ids`.
+| Domain Model | Mô tả | Quan hệ quan trọng |
+|-------------|-------|---------------------|
+| `Department` | Khoa/bộ môn | parent (self-ref), headTeacher |
+| `Teacher` | Giảng viên | user (User), department |
+| `Student` | Sinh viên | user (User), department, studentClass |
+| `Subject` | Môn học | departmentId (ID, không object ref) |
+| `Semester` | Học kỳ | active, secondaryActive |
+| `Cohort` | Niên khóa | startYear – endYear |
+| `AcademicProgram` | Chương trình đào tạo | department |
+| `ProgramSubject` | Môn trong CTĐT | programId, subject |
+| `StudentClass` | Lớp hành chính | department, cohort, advisorTeacher, academicProgram |
+| `Section` | Lớp học phần | subject, semester, teacher (User) |
+| `SectionTimeSlot` | Lịch học | sectionId |
+| `Enrollment` | Đăng ký học phần | section, student + scoring fields |
+| `CourseClass` | ❓ Legacy | Cần xác nhận |
 
-Hiện code chưa map kiểu array này trong JPA.
+### 2.3. Enrollment — Rich domain model
 
-Khuyến nghị:
-- Dùng table quan hệ chuẩn hoá (many-to-many) thay vì array nếu muốn query/constraint chặt chẽ
-- Hoặc dùng custom Hibernate type cho Postgres array nếu chấp nhận trade-off
+Enrollment là domain model phức tạp nhất, hỗ trợ:
+- Trạng thái: ENROLLED/DROPPED/COMPLETED
+- Điểm: processScore / examScore / finalScore
+- Khóa điểm: scoreLocked
+- Phúc khảo: scoreOverridden + reason + timestamp + giá trị cũ (trước override)
 
-## 5) Kết luận: đã phù hợp chưa?
+→ **Thiết kế tốt** để hỗ trợ quy trình nhập điểm / phúc khảo thực tế.
 
-### Đủ cho “quản lý học vụ cơ bản”
-- CRUD Subject/Semester/Course(lớp học phần)
-- Enrollment + nhập điểm tổng (grade) theo enrollment
-- Quản lý người dùng + phân quyền role-based
+## 3) Đánh giá domain model cho "quản lý khóa học nội bộ"
 
-### Chưa đủ cho “quản lý khóa học nội bộ” theo nghĩa đầy đủ
-Thiếu hoặc chưa kết nối:
-- Teacher/Department module (API + nghiệp vụ)
-- Lịch học/phòng học/buổi học (class sessions) gắn với offering
-- Attendance/gradebook chi tiết
+### ✅ Đã đủ
+
+- CRUD Subject/Semester/Section (lớp học phần)
+- Teacher/Student profiles liên kết 1:1 với User
+- Department (hỗ trợ phân cấp)
+- Enrollment + scoring + score locking + override
+- Academic Program + Program Subjects
+- Cohort + StudentClass (niên khóa + lớp hành chính)
+- Section time slots (lịch học)
+- Schedule API (lịch cá nhân)
+- Student Progress tracking
+
+### ⚠️ Chưa có nhưng có thể cần
+
+| Tính năng | Ghi chú |
+|-----------|---------|
+| Attendance (điểm danh) | Enum `AttendanceStatus` đã có nhưng entity/table chưa implement |
+| Prerequisite tracking | Không có bảng quan hệ prerequisite cho subjects |
+| Room management | `section_time_slots.room` chỉ là VARCHAR text, không có bảng riêng |
+| Notification system | Chưa có domain model cho thông báo |
+| Gradebook chi tiết | Chỉ có process_score + exam_score, chưa chia nhỏ thành phần |
+
+## 4) Kết luận
+
+Domain model hiện tại **phù hợp tốt** cho "hệ thống quản lý khóa học nội bộ" mức trung bình. Kiến trúc Clean Architecture được triển khai nhất quán, có một vài layer leak cần refactor nhỏ (chủ yếu ở `StudentProgressController` và `AuthenticationService`).
+
+Điểm mạnh nhất: separation of concerns rõ ràng giữa domain/entity, enrollment model phong phú, hỗ trợ score audit trail.

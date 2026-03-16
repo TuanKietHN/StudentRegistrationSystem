@@ -60,6 +60,14 @@ public class AuthSessionService {
         sessionRepository.revokeAll(username);
     }
 
+    public void blacklist(String jti, long ttlMs) {
+        sessionRepository.blacklist(jti, ttlMs);
+    }
+
+    public boolean isBlacklisted(String jti) {
+        return sessionRepository.isBlacklisted(jti);
+    }
+
     public List<SessionData> listSessions(String username) {
         return sessionRepository.listSessions(username).stream()
                 .map(s -> new SessionData(

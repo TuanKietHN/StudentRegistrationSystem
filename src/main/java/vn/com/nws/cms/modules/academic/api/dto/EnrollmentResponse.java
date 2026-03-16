@@ -12,22 +12,16 @@ import java.time.LocalDateTime;
 @Builder
 public class EnrollmentResponse {
     private Long id;
-    private CohortResponse cohort;
+    private SectionResponse section;
     private UserResponse student;
     private String studentCode;
     private String studentPhone;
     private Boolean studentActive;
     private String studentDepartmentCode;
     private String studentDepartmentName;
-    private String studentAdminClassCode;
-    private String studentAdminClassName;
+    private String studentClassCode;
+    private String studentClassName;
     private EnrollmentStatus status;
-    private Double grade;
-    private BigDecimal processScore;
-    private BigDecimal examScore;
-    private BigDecimal finalScore;
-    private boolean scoreLocked;
-    private boolean scoreOverridden;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

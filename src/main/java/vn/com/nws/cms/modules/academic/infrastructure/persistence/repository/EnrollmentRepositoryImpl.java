@@ -5,8 +5,8 @@ import org.springframework.stereotype.Repository;
 import vn.com.nws.cms.common.exception.BusinessException;
 import vn.com.nws.cms.modules.academic.domain.model.Enrollment;
 import vn.com.nws.cms.modules.academic.domain.repository.EnrollmentRepository;
-import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.CohortEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.EnrollmentEntity;
+import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.SectionEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.entity.StudentEntity;
 import vn.com.nws.cms.modules.academic.infrastructure.persistence.mapper.EnrollmentMapper;
 
@@ -21,7 +21,7 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
     private final JpaEnrollmentRepository jpaEnrollmentRepository;
     private final EnrollmentMapper enrollmentMapper;
     private final StudentJpaRepository studentJpaRepository;
-    private final JpaCohortRepository cohortJpaRepository;
+    private final JpaSectionRepository sectionJpaRepository;
 
     @Override
     public Enrollment save(Enrollment enrollment) {
@@ -31,10 +31,10 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
                     .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ sinh viên"));
             entity.setStudent(studentEntity);
         }
-        if (enrollment.getCohort() != null && enrollment.getCohort().getId() != null) {
-            CohortEntity cohortEntity = cohortJpaRepository.findById(enrollment.getCohort().getId())
+        if (enrollment.getSection() != null && enrollment.getSection().getId() != null) {
+            SectionEntity sectionEntity = sectionJpaRepository.findById(enrollment.getSection().getId())
                     .orElseThrow(() -> new BusinessException("Không tìm thấy lớp học phần"));
-            entity.setCohort(cohortEntity);
+            entity.setSection(sectionEntity);
         }
         if (enrollment.getId() != null) {
             entity.setId(enrollment.getId());
@@ -54,13 +54,13 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
     }
 
     @Override
-    public boolean existsByCourseIdAndStudentId(Long courseId, Long studentId) {
-        return jpaEnrollmentRepository.existsByCohortIdAndStudentId(courseId, studentId);
+    public boolean existsBySectionIdAndStudentId(Long sectionId, Long studentId) {
+        return jpaEnrollmentRepository.existsBySection_IdAndStudent_Id(sectionId, studentId);
     }
 
     @Override
-    public List<Enrollment> findByCourseId(Long courseId) {
-        return jpaEnrollmentRepository.findByCohortId(courseId).stream()
+    public List<Enrollment> findBySectionId(Long sectionId) {
+        return jpaEnrollmentRepository.findBySection_Id(sectionId).stream()
                 .map(enrollmentMapper::toDomain)
                 .collect(Collectors.toList());
     }
@@ -73,7 +73,7 @@ public class EnrollmentRepositoryImpl implements EnrollmentRepository {
     }
 
     @Override
-    public long countByCourseId(Long courseId) {
-        return jpaEnrollmentRepository.countByCohortId(courseId);
+    public long countBySectionId(Long sectionId) {
+        return jpaEnrollmentRepository.countBySection_Id(sectionId);
     }
 }

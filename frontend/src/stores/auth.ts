@@ -2,10 +2,35 @@ import { defineStore } from 'pinia'
 import router from '@/router'
 import { authService, type LoginPayload, type TokenResponse } from '@/api/services/auth.service'
 import { unwrapApiResponse } from '@/api/response'
+import { useLookupsStore } from './lookups'
+
+function base64UrlDecode(input: string): string {
+  const padded = input.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(input.length / 4) * 4, '=')
+  return atob(padded)
+}
+
+function authoritiesFromToken(token: string | null): string[] {
+  if (!token) return []
+  const parts = token.split('.')
+  if (parts.length < 2) return []
+  try {
+    const payloadJson = base64UrlDecode(parts[1])
+    const payload = JSON.parse(payloadJson) as { scope?: unknown }
+    const scope = typeof payload.scope === 'string' ? payload.scope : ''
+    return scope
+      .split(' ')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  } catch {
+    return []
+  }
+}
 
 interface User {
   username: string
   role: string
+  studentId?: number
+  teacherId?: number
 }
 
 interface AuthState {
@@ -28,6 +53,8 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     currentUser: (state) => state.user,
     isLoggedIn: (state) => state.isAuthenticated,
+    authorities: (): string[] => authoritiesFromToken(localStorage.getItem('accessToken')),
+    permissions: (): string[] => authoritiesFromToken(localStorage.getItem('accessToken')).filter((a) => !a.startsWith('ROLE_')),
     roles: (state): string[] =>
       (state.user?.role || '')
         .split(',')
@@ -45,11 +72,11 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setSession(payload: Pick<TokenResponse, 'accessToken' | 'username' | 'role'>) {
-      const { accessToken, username, role } = payload
+    setSession(payload: TokenResponse) {
+      const { accessToken, username, role, studentId, teacherId } = payload
 
       this.token = accessToken
-      this.user = { username, role }
+      this.user = { username, role, studentId, teacherId }
       this.isAuthenticated = true
 
       localStorage.setItem('accessToken', accessToken)
@@ -74,6 +101,10 @@ export const useAuthStore = defineStore('auth', {
         await authService.logout()
       } catch {
       }
+      
+      const lookupsStore = useLookupsStore()
+      lookupsStore.reset()
+
       this.token = null
       this.user = null
       this.isAuthenticated = false
@@ -88,6 +119,12 @@ export const useAuthStore = defineStore('auth', {
 
     hasAnyRole(required: string[]) {
       return required.some((r) => this.roles.includes(r))
+    },
+
+    hasPermissions(required: string[]) {
+      if (!required?.length) return true
+      const set = new Set(this.permissions)
+      return required.every((p) => set.has(p))
     },
 
     hydrateRoleContext() {

@@ -4,14 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.common.domain.model.Audit;
 import vn.com.nws.cms.modules.auth.domain.model.User;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Teacher extends AuditEntity {
+public class Teacher extends Audit {
     private Long id;
     private User user;
     private String employeeCode;

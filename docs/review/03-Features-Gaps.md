@@ -1,76 +1,193 @@
-# 03. Chức năng hiện có và đề xuất mở rộng
+# 03. Chức năng hiện có, đánh giá chất lượng & khoảng trống
 
-## 1) Chức năng hiện có (theo code)
+> Cập nhật: 2026-03-11 — phản ánh trạng thái sau khi refactor layer leak và GlobalExceptionHandler.
 
-### 1.1. Auth (JWT)
-API dưới `/api/v1/auth`:
-- Đăng nhập (access + refresh token)
-- Đăng ký tài khoản
-- Làm mới token (refresh)
-- Đăng xuất (revoke refresh token)
-- Quên mật khẩu / đặt lại mật khẩu
+## 1) Chức năng hiện có — Backend API
 
-Async:
-- Có RabbitMQ producer/consumer phục vụ email (reset password, v.v.)
+### 1.1. Auth Module (7 services, 2 controllers)
 
-### 1.2. User (Admin)
-API dưới `/api/v1/users` (bị chặn `hasRole('ADMIN')` ở controller):
-- Danh sách user (search + filter role)
-- Chi tiết user
-- Tạo user
-- Cập nhật user
-- Xoá user
-- Upload avatar (MinIO)
+| Endpoint | Chức năng | Trạng thái |
+|----------|-----------|-----------|
+| `POST /api/v1/auth/login` | Đăng nhập (JWT + Refresh Token cookie) | ✅ |
+| `POST /api/v1/auth/register` | Đăng ký tài khoản | ✅ |
+| `POST /api/v1/auth/refresh` | Làm mới access token | ✅ |
+| `POST /api/v1/auth/logout` | Đăng xuất + blacklist JWT | ✅ |
+| `POST /api/v1/auth/forgot-password` | Quên mật khẩu (qua email) | ✅ |
+| `POST /api/v1/auth/reset-password` | Đặt lại mật khẩu | ✅ |
+| `GET /api/v1/auth/me` | Thông tin phiên hiện tại | ✅ |
+| `GET /api/v1/auth/sessions` | Quản lý sessions | ✅ |
 
-### 1.3. Academic (Học vụ cơ bản)
-API:
-- `/api/v1/subjects`: CRUD + list/filter
-- `/api/v1/semesters`: CRUD + list/filter + lấy học kỳ active
-- `/api/v1/courses`: CRUD + list/filter (controller mô tả là “lớp học phần”)
-- `/api/v1/enrollments`:
-  - Sinh viên đăng ký học phần
-  - Teacher/Admin cập nhật trạng thái/điểm
-  - Admin huỷ đăng ký
-  - Danh sách enrollment theo student / theo course
+Tính năng bảo mật nâng cao đã implement:
+- ✅ JWT blacklisting (Redis) khi logout
+- ✅ Refresh token rotation (detect reuse → lock account)
+- ✅ Rate limiting cho login failures
+- ✅ Account locking sau N lần thất bại
+- ✅ Auth audit logging (ghi lại mọi sự kiện auth)
+- ✅ Device ID tracking qua cookie
+- ✅ CSRF protection (SPA-compatible)
+- ✅ XSS filter + CSP headers
+- ✅ Session management qua Redis
 
-Frontend:
-- Chỉ có màn login và home (rất tối giản), chưa thấy UI quản trị học vụ.
+### 1.2. IAM Module (User Management)
 
-## 2) Các khoảng trống (so với “quản lý khóa học nội bộ”)
+| Endpoint | Chức năng | Phân quyền |
+|----------|-----------|------------|
+| `GET /api/v1/users` | Danh sách user (search + filter) | ADMIN |
+| `GET /api/v1/users/{id}` | Chi tiết user | ADMIN |
+| `POST /api/v1/users` | Tạo user | ADMIN |
+| `PUT /api/v1/users/{id}` | Cập nhật user | ADMIN |
+| `DELETE /api/v1/users/{id}` | Xóa user | ADMIN |
+| `POST /api/v1/users/{id}/avatar` | Upload avatar (MinIO) | ADMIN |
 
-### 2.1. Học vụ/đào tạo
-- Lịch học, phòng học, ca học (section schedule)
-- Trùng lịch khi đăng ký, quota/waitlist, điều kiện tiên quyết
-- Chia điểm thành phần (gradebook), export bảng điểm
-- Điểm danh theo buổi và báo cáo chuyên cần (nếu áp dụng)
-- Quy trình mở lớp: duyệt mở lớp, mở/đóng đăng ký theo thời gian
+### 1.3. Academic Module (12 controllers, 12 services)
 
-### 2.2. Tổ chức nhân sự học thuật
-- Quản lý khoa/phòng ban (departments): CRUD + phân cấp
-- Quản lý hồ sơ giảng viên (teachers): employee_code, khoa, học hàm, bio…
-- Gán giảng viên cho lớp / thay giảng / đồng giảng (co-teaching)
+| Resource | CRUD | Tính năng đặc biệt | Phân quyền |
+|----------|------|---------------------|------------|
+| **Department** | ✅ Full | Hỗ trợ parent (phân cấp) | Permission-based |
+| **Teacher** | ✅ Full | Profile liên kết User 1:1 | Permission-based |
+| **Student** | ✅ Full | Profile liên kết User 1:1 + StudentClass | Permission-based |
+| **Subject** | ✅ Full | Credits, grade weights | Permission-based |
+| **Semester** | ✅ Full | Active/secondary_active | Permission-based |
+| **Cohort** | ✅ Full | Cancel, merge | Permission-based |
+| **AcademicProgram** | ✅ Full | Program ↔ Subject mapping | Permission-based |
+| **StudentClass** | ✅ Full | Lớp hành chính | Permission-based |
+| **Section** | ✅ Full | Cancel, merge, time slots | Permission-based |
+| **Enrollment** | ✅ Full | Self-enroll, grades, import Excel | Permission + Role |
+| **Schedule** | ✅ Read | Lịch cá nhân (student/teacher) | Role-based |
+| **StudentProgress** | ✅ Read | Tiến độ học tập theo CTĐT | Permission-based (fine-grained) |
 
-### 2.3. Quản trị hệ thống
-- Permission-based authorization (DB có permissions nhưng code chưa áp dụng)
-- Audit log nghiệp vụ (ai đổi điểm/ai hủy enrollment/ai đổi lịch lớp)
-- Import/export (CSV/Excel) user/subject/course/enrollment
-- Thống kê & dashboard (theo khoa/giảng viên/học kỳ)
+Tính năng enrollment nổi bật:
+- ✅ Sinh viên tự đăng ký lớp học phần (`POST /enrollments/self`)
+- ✅ Kiểm tra thời gian đăng ký (enrollment start/end date)
+- ✅ Kiểm tra sĩ số (maxStudents)
+- ✅ Import điểm từ Excel (`POST /enrollments/sections/{id}/grades/import`)
+- ✅ Score locking (teacher nhập 1 lần, admin phúc khảo)
+- ✅ Score override với audit trail
 
-## 3) Đề xuất tính năng bổ sung (ưu tiên theo giai đoạn)
+### 1.4. Infrastructure
 
-### Giai đoạn 1 (tăng độ “đủ dùng” cho nội bộ)
-- Chuẩn hoá mô hình Course theo V1 (lớp học phần) và teacher=user profile
-- CRUD departments/teachers, gán teacher cho lớp
-- Enrollment rules: giới hạn sĩ số + chặn đăng ký khi quá hạn/đóng đăng ký
-- Lịch học tối thiểu: lưu ngày/giờ/phòng cho lớp học phần (1..n buổi)
-- Báo cáo: danh sách lớp, danh sách SV theo lớp, export CSV
+| Component | Công nghệ | Trạng thái |
+|-----------|-----------|-----------|
+| Database | PostgreSQL | ✅ |
+| Cache | Redis | ✅ |
+| Message Queue | RabbitMQ (email) | ✅ |
+| File Storage | MinIO | ✅ |
+| API Docs | Swagger/OpenAPI | ✅ |
+| Migration | Flyway (auto-config) | ✅ |
 
-### Giai đoạn 2 (đào tạo có đánh giá/điểm danh)
-- Attendance theo buổi + QR check-in (nếu tổ chức học theo buổi)
-- Gradebook: điểm thành phần + tổng kết + lịch sử chỉnh sửa điểm
-- Thông báo: email/app notification khi đổi lịch/điểm/đóng đăng ký
+## 2) Chức năng hiện có — Frontend
 
-## 4) Các rủi ro kỹ thuật cần xử lý sớm
+### 2.1. Tổng quan (28 views, Vite + Vue 3 + Vuetify + TypeScript)
 
-- Quy về 1 nguồn schema là Flyway; tránh chạy song song với `ddl-auto=update` để không drift schema.
-- Một số docs trong repo đang lệch so với schema/code hiện tại; cần đồng bộ để giảm chi phí onboarding/bảo trì.
+| Nhóm | Views | Mô tả |
+|------|-------|-------|
+| Auth | 4 views | Login, Register, ForgotPassword, ResetPassword |
+| General | 3 views | Home, RootRedirect, NotFound, Schedule |
+| Academic (admin) | 7 views | Department, Subject, Semester, Teacher, CourseList, AdminClasses, Program |
+| Student | 3 views | Home, CourseRegistration, MyEnrollments |
+| Teacher | 6 views | Home, Courses, Enrollments, AdminClasses, Students, Grades |
+| IAM | 1 view | UserList |
+
+Frontend có 15 API services tương ứng với backend, dùng Axios interceptors.
+
+### 2.2. Đánh giá frontend
+
+| Tiêu chí | Đánh giá |
+|----------|----------|
+| Tech stack | ✅ Hiện đại (Vue 3 + Vite + TS + Vuetify) |
+| API integration | ✅ 15 services cover toàn bộ backend |
+| Role-based views | ✅ Student/Teacher/Admin views tách biệt |
+| Schedule view | ✅ Xem lịch cá nhân |
+| Student progress | ✅ Xem tiến độ theo CTĐT |
+
+## 3) Phân quyền — Đánh giá chi tiết
+
+### 3.1. Mô hình RBAC hiện tại
+
+```
+User ← M:N → Role (ADMIN, TEACHER, STUDENT)
+Role ← M:N → Permission (RESOURCE:ACTION)
+```
+
+- 48+ permissions, 12 resources (USER, DEPARTMENT, SUBJECT, SEMESTER, COHORT, SECTION, TEACHER, STUDENT, STUDENT_CLASS, ENROLLMENT, ACADEMIC_PROGRAM, STUDENT_PROGRESS)
+- Controller dùng `@PreAuthorize("hasAuthority('RESOURCE:ACTION')")` kết hợp `hasRole()`
+- AuthenticationService build scope = roles + permissions vào JWT
+
+### 3.2. Vấn đề nhỏ
+
+| # | Vấn đề | Chi tiết |
+|---|--------|----------|
+| 1 | Phân quyền chưa nhất quán | Một số controller dùng `hasRole()`, một số dùng `hasAuthority()`, một số kết hợp cả hai. Nên chuẩn hoá. |
+| 2 | Role check inline trong controller | Nhiều controller tự check `isAdmin/isTeacher` bằng code thay vì dùng `@PreAuthorize` + SpEL. Gây duplicate logic. |
+| 3 | `ScheduleController` dùng `hasAnyRole()` thay vì permission | Không nhất quán với các controller khác dùng hasAuthority. |
+
+## 4) Chất lượng code — Đánh giá tổng thể
+
+### 4.1. Điểm mạnh
+
+| # | Điểm mạnh | Mô tả |
+|---|-----------|-------|
+| 1 | Clean Architecture | Tách biệt rõ api → application → domain → infrastructure |
+| 2 | Comprehensive RBAC | Permission-based, không chỉ role-based |
+| 3 | Auth security | JWT blacklist, token rotation, rate limit, audit log, account lock |
+| 4 | DataSeeder phong phú | 1230 dòng, tạo ~400 students, 18 sections, enrollments, grades |
+| 5 | Score audit trail | Override + lý do + timestamp + giá trị cũ |
+| 6 | Section lifecycle | OPEN/CLOSED/CANCELED/MERGED + cancel/merge API |
+| 7 | Swagger/OpenAPI | Tất cả endpoints có documentation |
+| 8 | Global exception handler | Xử lý đầy đủ: Business, NotFound, Validation, Auth, Access Denied |
+
+### 4.2. Điểm cần cải thiện
+
+| # | Vấn đề | Mức độ | Trạng thái |
+|---|--------|--------|------------|
+| 1 | Layer leak (Controller → JPA entity) | 🟡 Trung bình | ✅ Đã sửa — `StudentProgressController` chỉ còn inject `StudentProgressService`; `AuthenticationService` dùng domain repository thay JPA entity. |
+| 2 | `auth_audit_events` thiếu migration | 🔴 Cao | ⏳ Chưa sửa — cần tạo migration V4. |
+| 3 | Test coverage chưa rõ | 🟡 Trung bình | ⏳ Chưa có unit/integration test cho services. |
+| 4 | isAdmin/isTeacher check duplicate | 🟡 Trung bình | ⏳ Chưa sửa. |
+| 5 | `GlobalExceptionHandler` catch `RuntimeException` quá rộng | 🟡 Trung bình | ✅ Đã sửa — tất cả handler đều log stack trace đầy đủ (`log.error("...", e)`). |
+| 6 | `CourseClass.java` legacy file | 🟢 Thấp | ⏳ Cần xác nhận và xóa nếu không dùng. |
+| 7 | `Course*` DTOs (legacy) | 🟢 Thấp | ⏳ Chưa dọn dẹp. |
+| 8 | `PasswordEncoder` bean trong `SecurityConfig` | 🟢 Thấp | ⏳ Chưa sửa. |
+
+## 5) Khoảng trống — VS "quản lý khóa học nội bộ" hoàn chỉnh
+
+### 5.1. Đã có → hoàn chỉnh
+
+- ✅ Auth + Security (advanced level)
+- ✅ User management (CRUD + avatar)
+- ✅ Department/Teacher/Student profiles
+- ✅ Subject/Semester/Section (lớp học phần) CRUD
+- ✅ Enrollment (self-enroll + admin enroll + scoring + import Excel)
+- ✅ Academic Program (CTĐT) + Student Progress tracking
+- ✅ Schedule (lịch cá nhân)
+- ✅ Cohort + StudentClass (niên khóa + lớp hành chính)
+
+### 5.2. Chưa có → cân nhắc bổ sung
+
+| # | Tính năng | Ưu tiên | Ghi chú |
+|---|-----------|---------|---------|
+| 1 | Attendance (điểm danh) | 🟡 | Enum đã có, cần entity + table + API |
+| 2 | Notification system | 🟡 | Email qua RabbitMQ đã sẵn, cần in-app notification |
+| 3 | Prerequisite enforcement | 🟢 | Kiểm tra môn tiên quyết khi đăng ký |
+| 4 | Room/building management | 🟢 | section_time_slots.room chỉ lưu text |
+| 5 | Gradebook chi tiết | 🟢 | Chia nhỏ process_score thành các cột thành phần |
+| 6 | Export reports (PDF/Excel) | 🟡 | Bảng điểm, DSSV, báo cáo |
+| 7 | Dashboard & statistics | 🟡 | Thống kê theo khoa/học kỳ/giảng viên |
+| 8 | Audit log nghiệp vụ | 🟢 | Ai đổi điểm, ai hủy enrollment... (auth audit có, business audit chưa) |
+
+## 6) Kết luận
+
+Dự án đã phát triển **đáng kể** so với lần review trước:
+
+| So sánh | Trước | Hiện tại |
+|---------|-------|----------|
+| Java files | ~50 | 70+ |
+| Controllers | 4 | 14 |
+| Services | 4 | 21+ |
+| Domain models | 4 | 13+ |
+| Frontend views | 2 | 28 |
+| API services (FE) | 0 | 15 |
+| Auth features | JWT cơ bản | JWT + blacklist + session + audit + rate limit |
+| RBAC | Role only | 48+ permissions |
+
+Backend đạt mức **production-ready** cho hệ thống quản lý khóa học nội bộ trung bình. Cần bổ sung: unit test, fix migration cho `auth_audit_events`, refactor một vài layer leak nhỏ.

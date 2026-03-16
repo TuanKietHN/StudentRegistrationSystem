@@ -76,14 +76,14 @@ const scheduleDays = computed<ScheduleDay[]>(() => {
   const items: ScheduleItem[] = [];
   for (const e of enrollments.value) {
     if (e.status !== "ENROLLED") continue;
-    const slots = e.cohort?.timeSlots || [];
+    const slots = e.section?.timeSlots || [];
     for (const s of slots) {
       const time = `${s.startTime.slice(0, 5)}-${s.endTime.slice(0, 5)}`;
       items.push({
         key: `${e.id}-${s.id}`,
         day: s.dayOfWeek,
         time,
-        title: `${e.cohort?.code || ""} - ${e.cohort?.name || ""}`.trim(),
+        title: `${e.section?.code || ""} - ${e.section?.name || ""}`.trim(),
         start: s.startTime,
       });
     }

@@ -1,78 +1,119 @@
 <template>
-  <v-card>
-    <v-card-text>
-      <PageHeader title="Danh sách Giảng viên">
-        <template #actions>
-          <v-btn v-if="isAdmin" color="primary" variant="flat" @click="openCreateDialog">Thêm mới</v-btn>
-        </template>
-      </PageHeader>
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-text-field
+  <div>
+    <PageHeader
+      title="Quản lý Giảng viên"
+      subtitle="Danh sách tất cả giảng viên trong hệ thống."
+    >
+      <template #actions>
+        <v-btn
+          v-if="isAdmin"
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-plus"
+          @click="openCreateDialog"
+        >
+          Thêm giảng viên
+        </v-btn>
+      </template>
+    </PageHeader>
+
+    <v-card class="admin-panel mb-6" variant="flat">
+      <v-card-text class="pa-4">
+        <v-row>
+          <v-col cols="12" md="7">
+            <v-text-field
               v-model="keyword"
-              label="Tìm kiếm theo mã, tên..."
+              class="admin-input"
+              placeholder="Tìm kiếm mã NV, tên..."
+              prepend-inner-icon="mdi-magnify"
+              variant="solo-filled"
+              bg-color="#F7F6F8"
+              hide-details
               @update:model-value="handleSearch"
-          />
-        </v-col>
-        <v-col cols="12" md="6">
-          <v-select
+            />
+          </v-col>
+          <v-col cols="12" md="5">
+            <v-select
               v-model="departmentFilterId"
+              class="admin-input"
               :items="departmentOptions"
               item-title="title"
               item-value="value"
-              label="Lọc theo khoa"
+              placeholder="Tất cả khoa"
+              prepend-inner-icon="mdi-domain"
+              variant="solo-filled"
+              bg-color="#F7F6F8"
+              hide-details
               clearable
               @update:model-value="handleSearch"
+            />
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
+    <v-card class="admin-panel" variant="flat">
+      <v-progress-linear v-if="loading" indeterminate />
+      <v-card-text class="pa-0">
+        <v-table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Mã NV</th>
+              <th>Username</th>
+              <th>Họ tên</th>
+              <th>Khoa</th>
+              <th>Chức danh</th>
+              <th>Trạng thái</th>
+              <th class="text-right">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="teacher in teachers" :key="teacher.id">
+              <td>{{ teacher.id }}</td>
+              <td>{{ teacher.employeeCode }}</td>
+              <td>{{ teacher.username }}</td>
+              <td>{{ teacher.fullName || '-' }}</td>
+              <td>{{ teacher.departmentName || '-' }}</td>
+              <td>{{ teacher.title || '-' }}</td>
+              <td>
+                <v-chip :color="teacher.active ? 'green' : 'red'" variant="tonal" size="small">
+                  {{ teacher.active ? 'Hoạt động' : 'Ngưng' }}
+                </v-chip>
+              </td>
+              <td class="text-right">
+                <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(teacher)">Sửa</v-btn>
+                <v-btn
+                  size="small"
+                  color="error"
+                  variant="text"
+                  :disabled="!isAdmin"
+                  @click="openDeleteDialog(teacher)"
+                >
+                  Xóa
+                </v-btn>
+              </td>
+            </tr>
+            <tr v-if="teachers.length === 0">
+              <td colspan="8" class="text-center py-6">Không có dữ liệu</td>
+            </tr>
+          </tbody>
+        </v-table>
+
+        <v-divider />
+        <div class="d-flex align-center justify-space-between pa-4">
+          <div class="text-caption" style="color: #64748b">Trang {{ page }} / {{ totalPages }}</div>
+          <v-pagination
+            :model-value="page"
+            :length="totalPages"
+            density="comfortable"
+            rounded="lg"
+            @update:model-value="changePage"
           />
-        </v-col>
-      </v-row>
-
-      <v-progress-linear v-if="loading" indeterminate class="mb-4" />
-
-      <v-table>
-        <thead>
-        <tr>
-          <th>ID</th>
-          <th>Mã NV</th>
-          <th>Username</th>
-          <th>Họ tên</th>
-          <th>Khoa</th>
-          <th>Chức danh</th>
-          <th>Trạng thái</th>
-          <th>Hành động</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="teacher in teachers" :key="teacher.id">
-          <td>{{ teacher.id }}</td>
-          <td>{{ teacher.employeeCode }}</td>
-          <td>{{ teacher.username }}</td>
-          <td>{{ teacher.fullName || '-' }}</td>
-          <td>{{ teacher.departmentName || '-' }}</td>
-          <td>{{ teacher.title || '-' }}</td>
-          <td>
-            <v-chip :color="teacher.active ? 'green' : 'red'" variant="tonal" size="small">
-              {{ teacher.active ? 'Hoạt động' : 'Ngưng' }}
-            </v-chip>
-          </td>
-          <td>
-            <v-btn size="small" variant="text" :disabled="!isAdmin" @click="openEditDialog(teacher)">Sửa</v-btn>
-            <v-btn size="small" color="error" variant="text" :disabled="!isAdmin" @click="openDeleteDialog(teacher)">Xóa</v-btn>
-          </td>
-        </tr>
-        <tr v-if="teachers.length === 0">
-          <td colspan="8" class="text-center py-6">Không có dữ liệu</td>
-        </tr>
-        </tbody>
-      </v-table>
-
-      <div class="d-flex align-center justify-center mt-4">
-        <v-btn :disabled="page === 1" variant="text" @click="changePage(page - 1)">Trước</v-btn>
-        <div class="mx-4">Trang {{ page }} / {{ totalPages }}</div>
-        <v-btn :disabled="page === totalPages" variant="text" @click="changePage(page + 1)">Sau</v-btn>
-      </div>
-    </v-card-text>
-  </v-card>
+        </div>
+      </v-card-text>
+    </v-card>
+  </div>
 
   <v-dialog v-model="dialogOpen" max-width="760">
     <v-card>

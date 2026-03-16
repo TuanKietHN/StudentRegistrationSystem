@@ -15,19 +15,23 @@ const TeacherList = () => import('../views/academic/TeacherList.vue')
 const SemesterList = () => import('../views/academic/SemesterList.vue')
 const SubjectList = () => import('../views/academic/SubjectList.vue')
 const CourseList = () => import('../views/academic/CourseList.vue')
-const CourseAttendanceView = () => import('../views/academic/CourseAttendanceView.vue')
 const UserList = () => import('../views/iam/UserList.vue')
 const AdminAdminClassesView = () => import('../views/admin/AdminAdminClassesView.vue')
 const AdminAdminClassStudentsView = () => import('../views/admin/AdminAdminClassStudentsView.vue')
 const AdminCourseEnrollmentsView = () => import('../views/admin/AdminCourseEnrollmentsView.vue')
+const AdminProgramListView = () => import('../views/academic/AdminProgramListView.vue')
+const AdminProgramSubjectsView = () => import('../views/academic/AdminProgramSubjectsView.vue')
 const StudentHomeView = () => import('../views/student/StudentHomeView.vue')
 const StudentCourseRegistrationView = () => import('../views/student/CourseRegistrationView.vue')
 const StudentMyEnrollmentsView = () => import('../views/student/MyEnrollmentsView.vue')
+const StudentProgressView = () => import('../views/academic/StudentProgressView.vue')
 const TeacherHomeView = () => import('../views/teacher/TeacherHomeView.vue')
 const TeacherCoursesView = () => import('../views/teacher/TeacherCoursesView.vue')
 const TeacherCourseEnrollmentsView = () => import('../views/teacher/TeacherCourseEnrollmentsView.vue')
 const TeacherAdminClassesView = () => import('../views/teacher/TeacherAdminClassesView.vue')
 const TeacherAdminClassStudentsView = () => import('../views/teacher/TeacherAdminClassStudentsView.vue')
+const TeacherAdminClassGradesView = () => import('../views/teacher/TeacherAdminClassGradesView.vue')
+const ScheduleView = () => import('../views/ScheduleView.vue')
 const NotFoundView = () => import('../views/NotFoundView.vue')
 
 const router = createRouter({
@@ -68,16 +72,17 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['ADMIN'], activeRoleRequired: 'ADMIN' },
       children: [
         { path: '', name: 'AdminHome', component: HomeView },
-        { path: 'departments', name: 'AdminDepartments', component: DepartmentList },
-        { path: 'teachers', name: 'AdminTeachers', component: TeacherList },
-        { path: 'semesters', name: 'AdminSemesters', component: SemesterList },
-        { path: 'classes', name: 'AdminClasses', component: SubjectList },
-        { path: 'cohorts', name: 'AdminCohorts', component: CourseList },
-        { path: 'cohorts/:cohortId/enrollments', name: 'AdminCohortEnrollments', component: AdminCourseEnrollmentsView },
-        { path: 'cohorts/:cohortId/attendance', name: 'AdminCohortAttendance', component: CourseAttendanceView },
-        { path: 'admin-classes', name: 'AdminAdminClasses', component: AdminAdminClassesView },
-        { path: 'admin-classes/:adminClassId/students', name: 'AdminAdminClassStudents', component: AdminAdminClassStudentsView },
-        { path: 'users', name: 'AdminUsers', component: UserList }
+        { path: 'departments', name: 'AdminDepartments', component: DepartmentList, meta: { permissions: ['DEPARTMENT:READ'] } },
+        { path: 'teachers', name: 'AdminTeachers', component: TeacherList, meta: { permissions: ['TEACHER:READ'] } },
+        { path: 'semesters', name: 'AdminSemesters', component: SemesterList, meta: { permissions: ['SEMESTER:READ'] } },
+        { path: 'subjects', name: 'AdminSubjects', component: SubjectList, meta: { permissions: ['SUBJECT:READ'] } },
+        { path: 'sections', name: 'AdminSections', component: CourseList, meta: { permissions: ['SECTION:READ', 'SEMESTER:READ', 'SUBJECT:READ', 'TEACHER:READ'] } },
+        { path: 'sections/:sectionId/enrollments', name: 'AdminSectionEnrollments', component: AdminCourseEnrollmentsView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ'] } },
+        { path: 'admin-classes', name: 'AdminAdminClasses', component: AdminAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'admin-classes/:adminClassId/students', name: 'AdminAdminClassStudents', component: AdminAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ', 'COHORT:READ', 'DEPARTMENT:READ', 'TEACHER:READ'] } },
+        { path: 'academic-programs', name: 'AdminPrograms', component: AdminProgramListView, meta: { permissions: ['ACADEMIC_PROGRAM:READ'] } },
+        { path: 'academic-programs/:programId/subjects', name: 'AdminProgramSubjects', component: AdminProgramSubjectsView, meta: { permissions: ['ACADEMIC_PROGRAM:READ', 'SUBJECT:READ'] } },
+        { path: 'users', name: 'AdminUsers', component: UserList, meta: { permissions: ['USER:READ'] } }
       ]
     },
     {
@@ -86,11 +91,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['TEACHER'], activeRoleRequired: 'TEACHER' },
       children: [
         { path: '', name: 'TeacherHome', component: TeacherHomeView },
-        { path: 'cohorts', name: 'TeacherCohorts', component: TeacherCoursesView },
-        { path: 'cohorts/:cohortId/enrollments', name: 'TeacherCohortEnrollments', component: TeacherCourseEnrollmentsView },
-        { path: 'cohorts/:cohortId/attendance', name: 'TeacherCohortAttendance', component: CourseAttendanceView },
-        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView },
-        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView }
+        { path: 'sections', name: 'TeacherSections', component: TeacherCoursesView, meta: { permissions: ['SECTION:READ'] } },
+        { path: 'sections/:sectionId/enrollments', name: 'TeacherSectionEnrollments', component: TeacherCourseEnrollmentsView, meta: { permissions: ['ENROLLMENT:READ'] } },
+        { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
+        { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
+        { path: 'admin-classes/:adminClassId/grades', name: 'TeacherAdminClassGrades', component: TeacherAdminClassGradesView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
+        { path: 'schedule', name: 'TeacherSchedule', component: ScheduleView, meta: { permissions: ['SECTION:READ'] } }
       ]
     },
     {
@@ -99,25 +105,30 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['STUDENT'], activeRoleRequired: 'STUDENT' },
       children: [
         { path: '', name: 'StudentHome', component: StudentHomeView },
-        { path: 'cohorts', name: 'StudentCohortRegistration', component: StudentCourseRegistrationView },
-        { path: 'enrollments', name: 'StudentMyEnrollments', component: StudentMyEnrollmentsView }
+        { path: 'sections', name: 'StudentSectionRegistration', component: StudentCourseRegistrationView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ', 'ENROLLMENT:CREATE'] } },
+        { path: 'enrollments', name: 'StudentMyEnrollments', component: StudentMyEnrollmentsView, meta: { permissions: ['ENROLLMENT:READ', 'ENROLLMENT:DELETE'] } },
+        { path: 'progress', name: 'StudentProgress', component: StudentProgressView, meta: { permissions: ['STUDENT_PROGRESS:READ_SELF'] } },
+        { path: 'schedule', name: 'StudentSchedule', component: ScheduleView, meta: { permissions: ['SECTION:READ', 'ENROLLMENT:READ'] } }
       ]
     },
     { path: '/users', redirect: { name: 'AdminUsers' } },
     { path: '/departments', redirect: { name: 'AdminDepartments' } },
     { path: '/teachers', redirect: { name: 'AdminTeachers' } },
     { path: '/semesters', redirect: { name: 'AdminSemesters' } },
-    { path: '/classes', redirect: { name: 'AdminClasses' } },
-    { path: '/cohorts', redirect: { name: 'AdminCohorts' } },
-    { path: '/subjects', redirect: { name: 'AdminClasses' } },
-    { path: '/courses', redirect: { name: 'AdminCohorts' } },
+    { path: '/classes', redirect: { name: 'AdminSubjects' } },
+    { path: '/subjects', redirect: { name: 'AdminSubjects' } },
+    { path: '/cohorts', redirect: { name: 'AdminSections' } },
+    { path: '/courses', redirect: { name: 'AdminSections' } },
+    { path: '/sections', redirect: { name: 'AdminSections' } },
 
-    { path: '/app/cohorts', redirect: { name: 'StudentCohortRegistration' } },
+    { path: '/app/cohorts', redirect: { name: 'StudentSectionRegistration' } },
+    { path: '/app/sections', redirect: { name: 'StudentSectionRegistration' } },
     { path: '/app/enrollments', redirect: { name: 'StudentMyEnrollments' } },
     { path: '/app/teacher', redirect: { name: 'TeacherHome' } },
-    { path: '/app/teacher/cohorts', redirect: { name: 'TeacherCohorts' } },
-    { path: '/app/courses', redirect: { name: 'StudentCohortRegistration' } },
-    { path: '/app/teacher/courses', redirect: { name: 'TeacherCohorts' } },
+    { path: '/app/teacher/cohorts', redirect: { name: 'TeacherSections' } },
+    { path: '/app/teacher/sections', redirect: { name: 'TeacherSections' } },
+    { path: '/app/courses', redirect: { name: 'StudentSectionRegistration' } },
+    { path: '/app/teacher/courses', redirect: { name: 'TeacherSections' } },
 
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView }
   ]

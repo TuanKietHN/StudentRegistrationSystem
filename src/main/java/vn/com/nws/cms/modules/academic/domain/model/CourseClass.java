@@ -4,13 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import vn.com.nws.cms.common.audit.AuditEntity;
+import vn.com.nws.cms.common.domain.model.Audit;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CourseClass extends AuditEntity {
+public class CourseClass extends Audit {
     private Long id;
     private String name;
     private String code;

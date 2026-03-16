@@ -1,6 +1,5 @@
 C:\Users\Admin\Downloads\Repo\cms\src\main\java\vn\com\nws\cms>tree /f /a
 Folder PATH listing
-Volume serial number is 32AB-2ACA
 C:.
 |   CmsApplication.java
 |
@@ -20,6 +19,10 @@ C:.
 |   |       SwaggerConfig.java
 |   |       WebConfig.java
 |   |
+|   +---domain
+|   |   \---model
+|   |           Audit.java
+|   |
 |   +---dto
 |   |       ApiResponse.java
 |   |       EmailMessage.java
@@ -32,12 +35,17 @@ C:.
 |   |       ResourceNotFoundException.java
 |   |
 |   +---security
+|   |       JwtBlacklistValidator.java
 |   |       JwtProvider.java
+|   |       SpaCsrfTokenRequestHandler.java
+|   |       XssFilter.java
+|   |       XssRequestWrapper.java
 |   |
 |   +---seed
 |   |       DataSeeder.java
 |   |
 |   \---util
+|
 +---domain
 |   \---enums
 |           RoleType.java
@@ -54,83 +62,206 @@ C:.
 \---modules
     +---academic
     |   +---api
-    |   |   |   CourseController.java
+    |   |   |   AcademicProgramController.java
+    |   |   |   CohortController.java
+    |   |   |   DepartmentController.java
     |   |   |   EnrollmentController.java
+    |   |   |   ScheduleController.java
+    |   |   |   SectionController.java
     |   |   |   SemesterController.java
+    |   |   |   StudentClassController.java
+    |   |   |   StudentController.java
+    |   |   |   StudentProgressController.java
     |   |   |   SubjectController.java
+    |   |   |   TeacherController.java
     |   |   |
     |   |   \---dto
-    |   |           CourseCreateRequest.java
+    |   |           AcademicProgramCreateRequest.java
+    |   |           AcademicProgramResponse.java
+    |   |           AcademicProgramUpdateRequest.java
+    |   |           CohortCancelRequest.java
+    |   |           CohortCreateRequest.java
+    |   |           CohortFilterRequest.java
+    |   |           CohortMergeRequest.java
+    |   |           CohortResponse.java
+    |   |           CourseCreateRequest.java        (legacy - may be unused)
     |   |           CourseFilterRequest.java
     |   |           CourseResponse.java
     |   |           CourseUpdateRequest.java
+    |   |           DepartmentCreateRequest.java
+    |   |           DepartmentFilterRequest.java
+    |   |           DepartmentResponse.java
+    |   |           DepartmentUpdateRequest.java
     |   |           EnrollmentCreateRequest.java
     |   |           EnrollmentResponse.java
+    |   |           EnrollmentSelfRequest.java
     |   |           EnrollmentUpdateRequest.java
+    |   |           GradesImportResultResponse.java
+    |   |           ScheduleResponse.java
+    |   |           SectionCancelRequest.java
+    |   |           SectionCreateRequest.java
+    |   |           SectionFilterRequest.java
+    |   |           SectionMergeRequest.java
+    |   |           SectionResponse.java
+    |   |           SectionTimeSlotRequest.java
+    |   |           SectionTimeSlotResponse.java
+    |   |           SectionUpdateRequest.java
     |   |           SemesterCreateRequest.java
     |   |           SemesterFilterRequest.java
     |   |           SemesterResponse.java
     |   |           SemesterUpdateRequest.java
+    |   |           StudentClassCreateRequest.java
+    |   |           StudentClassFilterRequest.java
+    |   |           StudentClassResponse.java
+    |   |           StudentClassUpdateRequest.java
+    |   |           StudentCreateRequest.java
+    |   |           StudentFilterRequest.java
+    |   |           StudentProgressResponse.java
+    |   |           StudentResponse.java
+    |   |           StudentUpdateRequest.java
     |   |           SubjectCreateRequest.java
     |   |           SubjectFilterRequest.java
     |   |           SubjectResponse.java
     |   |           SubjectUpdateRequest.java
+    |   |           TeacherCreateRequest.java
+    |   |           TeacherFilterRequest.java
+    |   |           TeacherResponse.java
+    |   |           TeacherUpdateRequest.java
     |   |
     |   +---application
-    |   |       CourseService.java
-    |   |       CourseServiceImpl.java
-    |   |       EnrollmentService.java
-    |   |       EnrollmentServiceImpl.java
-    |   |       SemesterService.java
-    |   |       SemesterServiceImpl.java
-    |   |       SubjectService.java
-    |   |       SubjectServiceImpl.java
+    |   |   |   AcademicProgramService.java
+    |   |   |   CohortService.java
+    |   |   |   DepartmentService.java
+    |   |   |   EnrollmentService.java
+    |   |   |   ScheduleService.java
+    |   |   |   SectionService.java
+    |   |   |   SemesterService.java
+    |   |   |   StudentClassService.java
+    |   |   |   StudentProgressService.java
+    |   |   |   StudentService.java
+    |   |   |   SubjectService.java
+    |   |   |   TeacherService.java
+    |   |   |
+    |   |   +---impl
+    |   |   |       AcademicProgramServiceImpl.java
+    |   |   |       CohortServiceImpl.java
+    |   |   |       DepartmentServiceImpl.java
+    |   |   |       EnrollmentServiceImpl.java
+    |   |   |       ScheduleServiceImpl.java
+    |   |   |       SectionServiceImpl.java
+    |   |   |       SemesterServiceImpl.java
+    |   |   |       StudentClassServiceImpl.java
+    |   |   |       StudentProgressServiceImpl.java
+    |   |   |       StudentServiceImpl.java
+    |   |   |       SubjectServiceImpl.java
+    |   |   |       TeacherServiceImpl.java
+    |   |   |
+    |   |   \---mapper
+    |   |           AcademicProgramDTOMapper.java
     |   |
     |   +---domain
+    |   |   +---enums
+    |   |   |       AttendanceStatus.java
+    |   |   |       CohortLifecycleStatus.java
+    |   |   |       EnrollmentStatus.java
+    |   |   |       SectionLifecycleStatus.java
+    |   |   |
     |   |   +---model
-    |   |   |       Course.java
+    |   |   |       AcademicProgram.java
+    |   |   |       Cohort.java
+    |   |   |       CourseClass.java
+    |   |   |       Department.java
     |   |   |       Enrollment.java
+    |   |   |       ProgramSubject.java
+    |   |   |       Section.java
+    |   |   |       SectionTimeSlot.java
     |   |   |       Semester.java
+    |   |   |       Student.java
+    |   |   |       StudentClass.java
     |   |   |       Subject.java
+    |   |   |       Teacher.java
     |   |   |
     |   |   \---repository
-    |   |           CourseRepository.java
+    |   |           AcademicProgramRepository.java
+    |   |           CohortRepository.java
+    |   |           DepartmentRepository.java
     |   |           EnrollmentRepository.java
+    |   |           ProgramSubjectRepository.java
+    |   |           SectionRepository.java
+    |   |           SectionTimeSlotRepository.java
     |   |           SemesterRepository.java
+    |   |           StudentClassRepository.java
+    |   |           StudentRepository.java
     |   |           SubjectRepository.java
+    |   |           TeacherRepository.java
     |   |
     |   \---infrastructure
     |       \---persistence
     |           +---entity
-    |           |       CourseEntity.java
+    |           |       AcademicProgramEntity.java
+    |           |       CohortEntity.java
     |           |       DepartmentEntity.java
     |           |       EnrollmentEntity.java
+    |           |       ProgramSubjectEntity.java
+    |           |       SectionEntity.java
+    |           |       SectionTimeSlotEntity.java
     |           |       SemesterEntity.java
+    |           |       StudentClassEntity.java
+    |           |       StudentEntity.java
     |           |       SubjectEntity.java
     |           |       TeacherEntity.java
     |           |
     |           +---mapper
-    |           |       CourseMapper.java
+    |           |       AcademicProgramMapper.java
+    |           |       CohortMapper.java
+    |           |       DepartmentMapper.java
     |           |       EnrollmentMapper.java
+    |           |       ProgramSubjectMapper.java
+    |           |       SectionMapper.java
+    |           |       SectionTimeSlotMapper.java
     |           |       SemesterMapper.java
+    |           |       StudentClassMapper.java
+    |           |       StudentMapper.java
     |           |       SubjectMapper.java
+    |           |       TeacherMapper.java
     |           |
     |           \---repository
-    |                   CourseRepositoryImpl.java
+    |                   AcademicProgramRepositoryImpl.java
+    |                   CohortRepositoryImpl.java
+    |                   DepartmentJpaRepository.java
+    |                   DepartmentRepositoryImpl.java
     |                   EnrollmentRepositoryImpl.java
-    |                   JpaCourseRepository.java
+    |                   JpaAcademicProgramRepository.java
+    |                   JpaCohortRepository.java
     |                   JpaEnrollmentRepository.java
+    |                   JpaProgramSubjectRepository.java
+    |                   JpaSectionRepository.java
     |                   JpaSemesterRepository.java
+    |                   JpaStudentClassRepository.java
     |                   JpaSubjectRepository.java
+    |                   JpaTeacherRepository.java
+    |                   ProgramSubjectRepositoryImpl.java
+    |                   SectionRepositoryImpl.java
+    |                   SectionTimeSlotJpaRepository.java
+    |                   SectionTimeSlotRepositoryImpl.java
     |                   SemesterRepositoryImpl.java
+    |                   StudentClassRepositoryImpl.java
+    |                   StudentJpaRepository.java
+    |                   StudentRepositoryImpl.java
     |                   SubjectRepositoryImpl.java
+    |                   TeacherJpaRepository.java
+    |                   TeacherRepositoryImpl.java
     |
     +---auth
     |   +---api
     |   |   |   AuthController.java
+    |   |   |   AuthSessionController.java
     |   |   |
     |   |   \---dto
+    |   |           AuthMeResponse.java
+    |   |           AuthSessionInfo.java
     |   |           ForgotPasswordRequest.java
+    |   |           ForgotPasswordResponse.java
     |   |           LoginRequest.java
     |   |           RefreshTokenRequest.java
     |   |           RegisterRequest.java
@@ -138,7 +269,11 @@ C:.
     |   |           TokenResponse.java
     |   |
     |   +---application
+    |   |       AuthAuditService.java
+    |   |       AuthCookieService.java
     |   |       AuthenticationService.java
+    |   |       AuthRateLimitService.java
+    |   |       AuthSessionService.java
     |   |       PasswordService.java
     |   |       RegistrationService.java
     |   |
@@ -147,6 +282,8 @@ C:.
     |   |   |       User.java
     |   |   |
     |   |   \---repository
+    |   |           PermissionRepository.java
+    |   |           SessionRepository.java
     |   |           UserRepository.java
     |   |
     |   \---infrastructure
@@ -154,7 +291,11 @@ C:.
     |       |
     |       \---persistence
     |           +---entity
+    |           |       AuthAuditEventEntity.java
+    |           |       PermissionEntity.java
     |           |       RoleEntity.java
+    |           |       RolePermissionEntity.java
+    |           |       RolePermissionId.java
     |           |       UserEntity.java
     |           |       UserRoleEntity.java
     |           |       UserRoleId.java
@@ -163,11 +304,16 @@ C:.
     |           |       UserMapper.java
     |           |
     |           \---repository
+    |                   JpaAuthAuditEventRepository.java
+    |                   JpaPermissionRepository.java
+    |                   JpaRolePermissionRepository.java
     |                   JpaRoleRepository.java
     |                   JpaUserRepository.java
+    |                   PermissionRepositoryImpl.java
+    |                   RedisSessionRepository.java
     |                   UserRepositoryImpl.java
     |
-    \---user
+    \---iam
         +---api
         |   |   UserController.java
         |   |
@@ -180,3 +326,73 @@ C:.
         \---application
                 UserService.java
                 UserServiceImpl.java
+
+Frontend (frontend/src/)
+|   App.vue
+|   main.ts
+|   style.css
+|   vite-env.d.ts
+|
++---api
+|   |   axios.ts
+|   |   response.ts
+|   |
+|   \---services
+|           academicProgram.service.ts
+|           auth.service.ts
+|           cohort.service.ts
+|           department.service.ts
+|           enrollment.service.ts
+|           schedule.service.ts
+|           section.service.ts
+|           semester.service.ts
+|           studentClass.service.ts
+|           studentProgress.service.ts
+|           subject.service.ts
+|           teacher.service.ts
+|           user.service.ts
+|
++---views
+|       ForgotPasswordView.vue
+|       HomeView.vue
+|       LoginView.vue
+|       NotFoundView.vue
+|       RegisterView.vue
+|       ResetPasswordView.vue
+|       RootRedirectView.vue
+|       ScheduleView.vue
+|
+|   +---academic
+|   |       AdminProgramListView.vue
+|   |       CourseList.vue
+|   |       DepartmentList.vue
+|   |       SemesterList.vue
+|   |       StudentProgressView.vue
+|   |       SubjectList.vue
+|   |       TeacherList.vue
+|   |
+|   +---admin
+|   |       AdminAdminClassStudentsView.vue
+|   |       AdminAdminClassesView.vue
+|   |       AdminCourseEnrollmentsView.vue
+|   |
+|   +---iam
+|   |       UserList.vue
+|   |
+|   +---student
+|   |       CourseRegistrationView.vue
+|   |       MyEnrollmentsView.vue
+|   |       StudentHomeView.vue
+|   |
+|   \---teacher
+|           TeacherAdminClassGradesView.vue
+|           TeacherAdminClassStudentsView.vue
+|           TeacherAdminClassesView.vue
+|           TeacherCourseEnrollmentsView.vue
+|           TeacherCoursesView.vue
+|           TeacherHomeView.vue
+
+Migrations (src/main/resources/db/migration/)
+    V1__init_schema.sql            (consolidated V1-V25, 495 lines)
+    V2__add_academic_permissions.sql
+    V3__fix_permission_casing_and_add_sections.sql

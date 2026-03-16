@@ -24,7 +24,7 @@ public class StudentController {
     private final StudentService studentService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT:READ')")
     @Operation(summary = "Danh sách sinh viên", description = "Lấy danh sách hồ sơ sinh viên (Admin)")
     public ResponseEntity<ApiResponse<PageResponse<StudentResponse>>> getStudents(StudentFilterRequest request) {
         PageResponse<StudentResponse> response = studentService.getStudents(request);
@@ -32,7 +32,7 @@ public class StudentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT:READ')")
     @Operation(summary = "Chi tiết sinh viên", description = "Lấy thông tin hồ sơ sinh viên theo ID (Admin)")
     public ResponseEntity<ApiResponse<StudentResponse>> getStudentById(@PathVariable Long id) {
         StudentResponse response = studentService.getStudentById(id);
@@ -40,7 +40,7 @@ public class StudentController {
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT:READ')")
     @Operation(summary = "Sinh viên theo user", description = "Lấy hồ sơ sinh viên theo User ID (Admin)")
     public ResponseEntity<ApiResponse<StudentResponse>> getStudentByUserId(@PathVariable Long userId) {
         StudentResponse response = studentService.getStudentByUserId(userId);
@@ -48,7 +48,7 @@ public class StudentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT:CREATE')")
     @Operation(summary = "Tạo hồ sơ sinh viên", description = "Tạo hồ sơ sinh viên cho một user (Admin)")
     public ResponseEntity<ApiResponse<StudentResponse>> createStudent(@Valid @RequestBody StudentCreateRequest request) {
         StudentResponse response = studentService.createStudent(request);
@@ -56,7 +56,7 @@ public class StudentController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT:UPDATE')")
     @Operation(summary = "Cập nhật hồ sơ sinh viên", description = "Cập nhật hồ sơ sinh viên (Admin)")
     public ResponseEntity<ApiResponse<StudentResponse>> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentUpdateRequest request) {
         StudentResponse response = studentService.updateStudent(id, request);
@@ -64,11 +64,10 @@ public class StudentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('STUDENT:DELETE')")
     @Operation(summary = "Xóa hồ sơ sinh viên", description = "Xóa hồ sơ sinh viên (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteStudent(@PathVariable Long id) {
         studentService.deleteStudent(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa hồ sơ sinh viên thành công", null));
     }
 }
-

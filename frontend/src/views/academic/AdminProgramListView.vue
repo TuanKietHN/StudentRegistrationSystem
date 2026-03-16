@@ -1,0 +1,294 @@
+<template>
+  <v-container fluid>
+    <PageHeader 
+      title="Chương trình đào tạo" 
+      subtitle="Quản lý danh sách chương trình đào tạo và môn học"
+    >
+      <template #actions>
+        <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">
+          Tạo mới
+        </v-btn>
+      </template>
+    </PageHeader>
+
+    <v-card class="mt-4">
+      <v-data-table
+        :headers="headers"
+        :items="programs"
+        :loading="loading"
+        class="elevation-1"
+      >
+        <template v-slot:item.active="{ item }">
+          <v-chip
+            :color="item.active ? 'success' : 'grey'"
+            size="small"
+            variant="tonal"
+          >
+            {{ item.active ? 'Hoạt động' : 'Vô hiệu' }}
+          </v-chip>
+        </template>
+        
+        <template v-slot:item.department="{ item }">
+          {{ item.department?.name }}
+        </template>
+
+        <template v-slot:item.actions="{ item }">
+          <v-btn icon="mdi-pencil" size="small" variant="text" color="primary" @click="editProgram(item)" v-tooltip="'Sửa thông tin'"></v-btn>
+          <v-btn 
+            icon="mdi-book-multiple" 
+            size="small" 
+            variant="text" 
+            color="info" 
+            :to="`/admin/academic-programs/${item.id}/subjects`"
+            v-tooltip="'Quản lý môn học'"
+          ></v-btn>
+          <v-btn icon="mdi-delete" size="small" variant="text" color="error" @click="confirmDelete(item)" v-tooltip="'Xóa chương trình'"></v-btn>
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <!-- Create/Edit Dialog -->
+    <v-dialog v-model="dialog" max-width="600px">
+      <v-card>
+        <v-card-title>
+          {{ editedIndex === -1 ? 'Tạo chương trình mới' : 'Cập nhật chương trình' }}
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="editedItem.code"
+                  label="Mã chương trình"
+                  :readonly="editedIndex !== -1"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="editedItem.totalCredits"
+                  label="Tổng tín chỉ"
+                  type="number"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="editedItem.name"
+                  label="Tên chương trình"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-select
+                  v-model="editedItem.departmentId"
+                  :items="departments"
+                  item-title="name"
+                  item-value="id"
+                  label="Khoa"
+                  required
+                ></v-select>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea
+                  v-model="editedItem.description"
+                  label="Mô tả"
+                  rows="3"
+                ></v-textarea>
+              </v-col>
+              <v-col cols="12" v-if="editedIndex !== -1">
+                <v-switch
+                  v-model="editedItem.active"
+                  color="primary"
+                  label="Trạng thái hoạt động"
+                ></v-switch>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue-darken-1" variant="text" @click="closeDialog">Hủy</v-btn>
+          <v-btn color="blue-darken-1" variant="text" @click="saveProgram">Lưu</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+
+    <ConfirmDialog 
+      v-model="confirmState.show" 
+      :title="confirmState.title" 
+      :text="confirmState.text" 
+      :loading="confirmState.loading"
+      @confirm="executeConfirm"
+    />
+  </v-container>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, reactive } from 'vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import academicProgramService, { type AcademicProgramResponse, type ProgramSubjectResponse } from '@/api/services/academicProgram.service'
+import { departmentService } from '@/api/services/department.service'
+import { subjectService } from '@/api/services/subject.service'
+import { useUiStore } from '@/stores/ui'
+import { unwrapApiResponse } from '@/api/response'
+
+const uiStore = useUiStore()
+
+// Confirm Dialog State
+const confirmState = reactive({
+  show: false,
+  title: '',
+  text: '',
+  loading: false,
+  action: null as (() => Promise<void>) | null
+})
+
+const loading = ref(false)
+const programs = ref<AcademicProgramResponse[]>([])
+const departments = ref<any[]>([])
+const availableSubjects = ref<any[]>([])
+
+// Dialog states
+const dialog = ref(false)
+const editedIndex = ref(-1)
+
+const editedItem = reactive({
+  id: -1,
+  code: '',
+  name: '',
+  departmentId: null as number | null,
+  totalCredits: 0,
+  description: '',
+  active: true
+})
+
+const headers = [
+  { title: 'Mã CT', key: 'code' },
+  { title: 'Tên chương trình', key: 'name' },
+  { title: 'Khoa', key: 'department' },
+  { title: 'Tổng tín chỉ', key: 'totalCredits' },
+  { title: 'Trạng thái', key: 'active' },
+  { title: 'Hành động', key: 'actions', sortable: false, align: 'end' },
+]
+
+const loadData = async () => {
+  loading.value = true
+  try {
+    const [progRes, deptRes] = await Promise.all([
+      academicProgramService.getAll(),
+      departmentService.getAll()
+    ])
+    programs.value = progRes.data || []
+    
+    // departmentService returns AxiosResponse
+    // API returns ApiResponse<PageResponse<Department>>, so we need deptRes.data.data.data
+    const deptData = (deptRes.data as any)?.data
+    if (deptData && Array.isArray(deptData.data)) {
+      departments.value = deptData.data
+    } else {
+      departments.value = []
+    }
+  } catch (error) {
+    uiStore.notify('Lỗi tải dữ liệu', 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+const openCreateDialog = () => {
+  editedIndex.value = -1
+  Object.assign(editedItem, {
+    id: -1,
+    code: '',
+    name: '',
+    departmentId: null,
+    totalCredits: 0,
+    description: '',
+    active: true
+  })
+  dialog.value = true
+}
+
+const editProgram = (item: AcademicProgramResponse) => {
+  editedIndex.value = programs.value.indexOf(item)
+  Object.assign(editedItem, {
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    departmentId: item.department?.id,
+    totalCredits: item.totalCredits,
+    description: item.description,
+    active: item.active
+  })
+  dialog.value = true
+}
+
+const closeDialog = () => {
+  dialog.value = false
+}
+
+const saveProgram = async () => {
+  try {
+    if (!editedItem.departmentId) {
+        uiStore.notify('Vui lòng chọn Khoa', 'error')
+        return
+    }
+    
+    if (editedIndex.value > -1) {
+      await academicProgramService.update(editedItem.id, {
+        name: editedItem.name,
+        departmentId: editedItem.departmentId,
+        totalCredits: Number(editedItem.totalCredits),
+        description: editedItem.description,
+        active: editedItem.active
+      })
+      uiStore.notify('Cập nhật thành công', 'success')
+    } else {
+      await academicProgramService.create({
+        code: editedItem.code,
+        name: editedItem.name,
+        departmentId: editedItem.departmentId,
+        totalCredits: Number(editedItem.totalCredits),
+        description: editedItem.description
+      })
+      uiStore.notify('Tạo mới thành công', 'success')
+    }
+    closeDialog()
+    loadData()
+  } catch (error: any) {
+    uiStore.notify(error.response?.data?.message || 'Có lỗi xảy ra', 'error')
+  }
+}
+
+const confirmDelete = (item: AcademicProgramResponse) => {
+  confirmState.title = 'Xác nhận xóa'
+  confirmState.text = `Bạn có chắc muốn xóa chương trình "${item.name}"?`
+  confirmState.action = async () => {
+    try {
+      await academicProgramService.delete(item.id)
+      uiStore.notify('Xóa thành công', 'success')
+      loadData()
+    } catch (error: any) {
+      uiStore.notify(error.response?.data?.message || 'Không thể xóa chương trình', 'error')
+    }
+  }
+  confirmState.show = true
+}
+
+const executeConfirm = async () => {
+  if (confirmState.action) {
+    confirmState.loading = true
+    await confirmState.action()
+    confirmState.loading = false
+    confirmState.show = false
+  }
+}
+
+
+onMounted(() => {
+  loadData()
+})
+</script>

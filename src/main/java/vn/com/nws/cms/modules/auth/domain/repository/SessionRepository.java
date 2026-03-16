@@ -31,6 +31,10 @@ public interface SessionRepository {
     void removeUserSessionId(String username, String sessionId);
 
     void expireUserSessions(String username, long ttlMs);
+    
+    void blacklist(String jti, long ttlMs);
+    
+    boolean isBlacklisted(String jti);
 
     record SessionIssue(String sessionId, String refreshToken) {}
 

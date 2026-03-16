@@ -1,6 +1,8 @@
 package vn.com.nws.cms.modules.auth.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +15,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "users")
+@SQLDelete(sql = "UPDATE users SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 @Data
 @Builder
 @NoArgsConstructor
@@ -52,4 +56,8 @@ public class UserEntity extends AuditEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<UserRoleEntity> userRoles = new ArrayList<>();
+
+    public String getFullName() {
+        return username; // Currently we don't have separate first/last name fields
+    }
 }

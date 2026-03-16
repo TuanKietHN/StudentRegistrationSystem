@@ -19,12 +19,12 @@ import vn.com.nws.cms.modules.iam.application.UserService;
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 @Tag(name = "User", description = "Quản lý người dùng (Admin only)")
-@PreAuthorize("hasRole('ADMIN')")
 public class UserController {
 
     private final UserService userService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('USER:READ')")
     @Operation(summary = "Danh sách người dùng", description = "Lấy danh sách người dùng có phân trang và tìm kiếm")
     public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getUsers(
             @Parameter(description = "Từ khóa tìm kiếm (username, email)") @RequestParam(required = false) String keyword,
@@ -43,6 +43,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER:READ')")
     @Operation(summary = "Chi tiết người dùng", description = "Lấy thông tin chi tiết của một người dùng")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         UserResponse response = userService.getUserById(id);
@@ -50,6 +51,7 @@ public class UserController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('USER:CREATE')")
     @Operation(summary = "Tạo người dùng mới", description = "Tạo mới một người dùng (Admin)")
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody UserCreateRequest request) {
         UserResponse response = userService.createUser(request);
@@ -57,6 +59,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER:UPDATE')")
     @Operation(summary = "Cập nhật người dùng", description = "Cập nhật thông tin người dùng")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long id,
@@ -66,6 +69,7 @@ public class UserController {
     }
 
     @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('USER:UPDATE')")
     @Operation(summary = "Upload Avatar", description = "Upload ảnh đại diện cho người dùng")
     public ResponseEntity<ApiResponse<UserResponse>> uploadAvatar(
             @PathVariable Long id,
@@ -75,6 +79,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER:DELETE')")
     @Operation(summary = "Xóa người dùng", description = "Xóa vĩnh viễn người dùng khỏi hệ thống")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);

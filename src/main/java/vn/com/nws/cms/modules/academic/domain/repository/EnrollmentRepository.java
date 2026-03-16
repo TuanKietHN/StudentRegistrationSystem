@@ -10,10 +10,10 @@ public interface EnrollmentRepository {
     Optional<Enrollment> findById(Long id);
     void deleteById(Long id);
     
-    boolean existsByCourseIdAndStudentId(Long courseId, Long studentId);
+    boolean existsBySectionIdAndStudentId(Long sectionId, Long studentId);
     
-    List<Enrollment> findByCourseId(Long courseId);
+    List<Enrollment> findBySectionId(Long sectionId);
     List<Enrollment> findByStudentId(Long studentId);
     
-    long countByCourseId(Long courseId);
+    long countBySectionId(Long sectionId);
 }

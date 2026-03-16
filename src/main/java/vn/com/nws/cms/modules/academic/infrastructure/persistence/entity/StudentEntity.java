@@ -1,6 +1,8 @@
 package vn.com.nws.cms.modules.academic.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +12,8 @@ import vn.com.nws.cms.modules.auth.infrastructure.persistence.entity.UserEntity;
 
 @Entity
 @Table(name = "students")
+@SQLDelete(sql = "UPDATE students SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 @Data
 @Builder
 @NoArgsConstructor
@@ -32,8 +36,8 @@ public class StudentEntity extends AuditEntity {
     private DepartmentEntity department;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "admin_class_id")
-    private AdminClassEntity adminClass;
+    @JoinColumn(name = "student_class_id")
+    private StudentClassEntity studentClass;
 
     private String phone;
 

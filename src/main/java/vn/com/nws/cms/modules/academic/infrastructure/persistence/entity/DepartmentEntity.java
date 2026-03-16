@@ -31,7 +31,7 @@ public class DepartmentEntity extends AuditEntity {
     @JoinColumn(name = "parent_id")
     private DepartmentEntity parent;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "head_teacher_id")
     private TeacherEntity headTeacher;
 

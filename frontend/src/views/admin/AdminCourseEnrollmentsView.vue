@@ -49,7 +49,7 @@
             <td>{{ e.student?.email || '-' }}</td>
             <td>{{ e.studentPhone || '-' }}</td>
             <td>{{ e.studentDepartmentCode || '-' }}</td>
-            <td>{{ e.studentAdminClassCode || '-' }}</td>
+            <td>{{ e.studentClassCode || '-' }}</td>
             <td>
               <v-chip :color="e.studentActive ? 'green' : 'grey'" variant="tonal" size="small">
                 {{ e.studentActive ? 'Đang học' : 'Ngưng' }}
@@ -126,17 +126,17 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { unwrapApiResponse } from '@/api/response'
-import { cohortService } from '@/api/services/cohort.service'
-import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
+import { sectionService } from '@/api/services/section.service'
+import { sectionGradeService, type SectionGradeResponse } from '@/api/services/section-grade.service'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 const uiStore = useUiStore()
 const route = useRoute()
 
-const cohortId = Number(route.params.cohortId)
-const courseTitle = ref(`Danh sách sinh viên (Cohort #${cohortId})`)
-const enrollments = ref<Enrollment[]>([])
+const sectionId = Number(route.params.sectionId)
+const courseTitle = ref(`Danh sách sinh viên (Section #${sectionId})`)
+const enrollments = ref<SectionGradeResponse[]>([])
 const loading = ref(false)
 const savingId = ref<number | null>(null)
 const importing = ref(false)
@@ -154,21 +154,21 @@ const draftProcess = reactive<Record<number, any>>({})
 const draftExam = reactive<Record<number, any>>({})
 const draftReason = reactive<Record<number, string>>({})
 
-const loadCourse = async () => {
+const loadSection = async () => {
   try {
-    const res = await cohortService.getById(cohortId)
-    const c = unwrapApiResponse<any>(res)
-    courseTitle.value = c?.code && c?.name ? `Danh sách sinh viên - ${c.code} - ${c.name}` : courseTitle.value
+    const res = await sectionService.getById(sectionId)
+    const s = unwrapApiResponse<any>(res)
+    courseTitle.value = s?.code && s?.name ? `Danh sách sinh viên - ${s.code} - ${s.name}` : courseTitle.value
   } catch {
-    courseTitle.value = `Danh sách sinh viên (Cohort #${cohortId})`
+    courseTitle.value = `Danh sách sinh viên (Section #${sectionId})`
   }
 }
 
 const reload = async () => {
   loading.value = true
   try {
-    const res = await enrollmentService.getCohortEnrollments(cohortId)
-    enrollments.value = unwrapApiResponse<Enrollment[]>(res) || []
+    const res = await sectionGradeService.getSectionGrades(sectionId)
+    enrollments.value = unwrapApiResponse<SectionGradeResponse[]>(res) || []
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Không tải được danh sách sinh viên', 'error', 4000)
   } finally {
@@ -183,7 +183,7 @@ const toScoreOrNull = (v: any): number | null => {
   return n
 }
 
-const save = async (e: Enrollment) => {
+const save = async (e: SectionGradeResponse) => {
   savingId.value = e.id
   try {
     const status = draftStatus[e.id]
@@ -202,7 +202,7 @@ const save = async (e: Enrollment) => {
       if (e.scoreLocked) payload.overrideReason = overrideReason
     }
 
-    await enrollmentService.updateEnrollment(e.id, payload)
+    await sectionGradeService.updateGrade(e.id, payload)
     uiStore.notify('Lưu thành công', 'success')
     await reload()
   } catch (err: any) {
@@ -216,7 +216,7 @@ const importGrades = async () => {
   if (!selectedFile.value) return
   importing.value = true
   try {
-    const res = await enrollmentService.importCohortGrades(cohortId, selectedFile.value)
+    const res = await sectionGradeService.importSectionGrades(sectionId, selectedFile.value)
     const data = unwrapApiResponse<any>(res)
     const imported = data?.imported ?? 0
     const skippedLocked = data?.skippedLocked ?? 0
@@ -236,7 +236,7 @@ const importGrades = async () => {
 }
 
 onMounted(async () => {
-  await loadCourse()
+  await loadSection()
   await reload()
 })
 </script>

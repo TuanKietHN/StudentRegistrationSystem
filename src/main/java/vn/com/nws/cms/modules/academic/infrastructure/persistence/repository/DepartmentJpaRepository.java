@@ -16,7 +16,8 @@ public interface DepartmentJpaRepository extends JpaRepository<DepartmentEntity,
            "AND (:active IS NULL OR d.active = :active)")
     Page<DepartmentEntity> findAll(@Param("keyword") String keyword, @Param("active") Boolean active, Pageable pageable);
 
-    Page<DepartmentEntity> findAllByActive(boolean active, Pageable pageable);
+    @Query("SELECT d FROM DepartmentEntity d WHERE (:active IS NULL OR d.active = :active)")
+    Page<DepartmentEntity> findAllByActive(@Param("active") Boolean active, Pageable pageable);
 
     boolean existsByCode(String code);
     

@@ -33,20 +33,19 @@ defineProps<{
 }
 
 .header-title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
-  color: #1f2937;
+  color: #0f172a;
   margin: 0;
   letter-spacing: -0.5px;
 }
 
 .header-subtitle {
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 14px;
+  color: #64748b;
   margin: 8px 0 0 0;
   font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .header-actions {
@@ -86,4 +85,3 @@ defineProps<{
   }
 }
 </style>
-

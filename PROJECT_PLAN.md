@@ -96,6 +96,11 @@ cms-root/
         3.  Copy folder `dist` vào `src/main/resources/static`.
     *   Kết quả: 1 file JAR duy nhất chứa cả Backend và Frontend.
 
+### Seed dữ liệu dev
+*   `DataSeeder` chỉ được nạp khi chạy profile `dev` và `cms.seed.enabled=true` ([DataSeeder](file:///c:/Users/Admin/Downloads/Repo/cms/src/main/java/vn/com/nws/cms/common/seed/DataSeeder.java)).
+*   Trong repo hiện tại, `application-dev.properties` đặt `cms.seed.enabled=${CMS_SEED_ENABLED:true}` để mặc định bật seed ở dev và có thể tắt bằng env `CMS_SEED_ENABLED=false` (có thể khai báo trong `.env` do app đang `spring.config.import=optional:file:.env[.properties]`).
+*   Việc đổi `spring.jpa.hibernate.ddl-auto` (validate/update) chỉ ảnh hưởng đồng bộ schema, không quyết định việc seeder có chạy hay không.
+
 ## 4. Coding Conventions & Rules
 
 ### Null Safety
@@ -129,6 +134,13 @@ cms-root/
 ### Giai đoạn 3: Core Features (Fullstack)
 - [ ] **User Management**: API + UI (Profile, Admin Dashboard).
 - [ ] **Academic**: API + UI (Quản lý Học kỳ, Môn học).
+- [ ] **Academic - Lớp hành chính (StudentClass)**: Đồng nhất API `student-classes`, loại bỏ `admin-classes`, và đảm bảo FE/BE map đúng dữ liệu (form v-model, danh sách sinh viên).
 
 ### Giai đoạn 4: E-learning Features
 N/A (ngoài phạm vi dự án hiện tại).
+
+## 6. RBAC (Phân quyền) — Hiện trạng & kế hoạch chuyển đổi
+
+- Hiện trạng phân quyền đang dựa nhiều vào `@PreAuthorize(hasRole...)` (hardcode policy trong code) trong khi database đã có đầy đủ bảng RBAC (`roles`, `permissions`, `role_permissions`, `user_roles`) nhưng chưa được tận dụng để enforce theo permission.
+- Đã triển khai bước đầu: đưa permission (từ DB) vào JWT `scope` khi login/refresh để sẵn sàng chuyển dần sang `hasAuthority('X:Y')`.
+- Tài liệu tổng hợp chức năng theo role + lộ trình chuyển sang phân quyền động theo permission: [RBAC_CURRENT_FEATURES_AND_PLAN.md](file:///c:/Users/Admin/Downloads/Repo/cms/docs/RBAC_CURRENT_FEATURES_AND_PLAN.md).

@@ -96,8 +96,12 @@ public class DepartmentServiceImpl implements DepartmentService {
         department.setActive(request.isActive());
 
         if (request.getParentId() != null) {
+            if (request.getParentId().equals(id)) {
+                throw new BusinessException("Khoa cha không hợp lệ (không thể là chính nó)");
+            }
             Department parent = departmentRepository.findById(request.getParentId())
                     .orElseThrow(() -> new BusinessException("Không tìm thấy khoa cha với ID: " + request.getParentId()));
+            validateNoCycle(id, parent);
             department.setParent(parent);
         } else {
             department.setParent(null);
@@ -130,5 +134,18 @@ public class DepartmentServiceImpl implements DepartmentService {
              response.setHeadTeacherName(department.getHeadTeacher().getUser().getUsername());
         }
         return response;
+    }
+
+    private void validateNoCycle(Long departmentId, Department parentCandidate) {
+        Department cursor = parentCandidate;
+        while (cursor != null) {
+            if (departmentId.equals(cursor.getId())) {
+                throw new BusinessException("Khoa cha không hợp lệ (tạo vòng lặp cây khoa)");
+            }
+            if (cursor.getParent() == null || cursor.getParent().getId() == null) {
+                break;
+            }
+            cursor = departmentRepository.findById(cursor.getParent().getId()).orElse(null);
+        }
     }
 }

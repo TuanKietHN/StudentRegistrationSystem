@@ -19,4 +19,9 @@ public class UserCreateRequest {
 
     @NotBlank(message = "Role is required")
     private String role;
+
+    // Các trường bổ sung cho sinh viên
+    private String studentCode;
+    private String phone;
+    private Long departmentId;
 }

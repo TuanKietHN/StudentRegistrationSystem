@@ -24,8 +24,8 @@
         </v-col>
         <v-col cols="12" md="4">
           <v-select
-            v-model="classFilterId"
-            :items="classOptions"
+            v-model="subjectFilterId"
+            :items="subjectOptions"
             item-title="title"
             item-value="value"
             label="Lọc môn học"
@@ -56,7 +56,7 @@
             <td>{{ c.code }}</td>
             <td>{{ c.name }}</td>
             <td>{{ c.semester?.code || '-' }}</td>
-            <td>{{ c.clazz?.code || '-' }}</td>
+            <td>{{ c.subject?.code || '-' }}</td>
             <td>{{ formatTimeSlots(c.timeSlots) }}</td>
             <td>{{ formatWindow(c.enrollmentStartDate, c.enrollmentEndDate) }}</td>
             <td>{{ c.currentStudents }} / {{ c.maxStudents }}</td>
@@ -98,7 +98,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { useLookupsStore } from '@/stores/lookups'
 import { unwrapApiResponse, unwrapPageResponse } from '@/api/response'
-import { cohortService, type Cohort, type CohortTimeSlot } from '@/api/services/cohort.service'
+import { sectionService, type Section, type SectionTimeSlot } from '@/api/services/section.service'
 import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
 import { useDebounceFn } from '@/composables/useDebounceFn'
 import { formatTimeSlotsVn } from '@/utils/schedule'
@@ -107,7 +107,7 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 const uiStore = useUiStore()
 const lookupsStore = useLookupsStore()
 
-const courses = ref<Cohort[]>([])
+const courses = ref<Section[]>([])
 const myEnrollments = ref<Enrollment[]>([])
 const enrollingId = ref<number | null>(null)
 
@@ -117,10 +117,10 @@ const size = ref(10)
 const totalPages = ref(1)
 const keyword = ref('')
 const semesterFilterId = ref<number | null>(null)
-const classFilterId = ref<number | null>(null)
+const subjectFilterId = ref<number | null>(null)
 
 const semesterOptions = computed(() => lookupsStore.semesterOptions)
-const classOptions = computed(() => lookupsStore.classOptions)
+const subjectOptions = computed(() => lookupsStore.subjectOptions)
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
@@ -130,16 +130,16 @@ const isWindowOpen = (start?: string | null, end?: string | null) => {
   return now >= start && now <= end
 }
 
-const isFull = (c: Cohort) => (c.currentStudents || 0) >= (c.maxStudents || 0)
+const isFull = (c: Section) => (c.currentStudents || 0) >= (c.maxStudents || 0)
 
-const isAlreadyEnrolled = (cohortId: number) => myEnrollments.value.some((e) => e.cohort?.id === cohortId && e.status === 'ENROLLED')
+const isAlreadyEnrolled = (sectionId: number) => myEnrollments.value.some((e) => e.section?.id === sectionId && e.status === 'ENROLLED')
 
 const toMinutes = (time: string) => {
   const [h, m] = time.split(':')
   return Number(h) * 60 + Number(m)
 }
 
-const overlap = (a: CohortTimeSlot, b: CohortTimeSlot) => {
+const overlap = (a: SectionTimeSlot, b: SectionTimeSlot) => {
   if (a.dayOfWeek !== b.dayOfWeek) return false
   const aStart = toMinutes(a.startTime)
   const aEnd = toMinutes(a.endTime)
@@ -148,7 +148,7 @@ const overlap = (a: CohortTimeSlot, b: CohortTimeSlot) => {
   return aStart < bEnd && aEnd > bStart
 }
 
-const isScheduleConflict = (c: Cohort) => {
+const isScheduleConflict = (c: Section) => {
   const slots = c.timeSlots || []
   if (!slots.length) return false
   const semesterId = c.semester?.id
@@ -156,8 +156,8 @@ const isScheduleConflict = (c: Cohort) => {
 
   for (const e of myEnrollments.value) {
     if (e.status !== 'ENROLLED') continue
-    if (e.cohort?.semester?.id !== semesterId) continue
-    const enrolledSlots = e.cohort?.timeSlots || []
+    if (e.section?.semester?.id !== semesterId) continue
+    const enrolledSlots = e.section?.timeSlots || []
     for (const s of slots) {
       for (const es of enrolledSlots) {
         if (overlap(s, es)) return true
@@ -167,7 +167,7 @@ const isScheduleConflict = (c: Cohort) => {
   return false
 }
 
-const statusText = (c: Cohort) => {
+const statusText = (c: Section) => {
   if (isAlreadyEnrolled(c.id)) return 'Đã đăng ký'
   if (!c.active) return 'Ngưng'
   if (c.registrationEnabled === false) return 'Đóng đăng ký'
@@ -177,14 +177,14 @@ const statusText = (c: Cohort) => {
   return 'Có thể đăng ký'
 }
 
-const statusColor = (c: Cohort) => {
+const statusColor = (c: Section) => {
   const text = statusText(c)
   if (text === 'Có thể đăng ký') return 'green'
   if (text === 'Đã đăng ký') return 'blue'
   return 'orange'
 }
 
-const isDisabled = (c: Cohort) => {
+const isDisabled = (c: Section) => {
   if (isAlreadyEnrolled(c.id)) return true
   if (!c.active) return true
   if (c.registrationEnabled === false) return true
@@ -199,7 +199,7 @@ const formatWindow = (start?: string | null, end?: string | null) => {
   return `${start} → ${end}`
 }
 
-const formatTimeSlots = (slots?: CohortTimeSlot[] | null) => formatTimeSlotsVn(slots)
+const formatTimeSlots = (slots?: SectionTimeSlot[] | null) => formatTimeSlotsVn(slots)
 
 const fetchMyEnrollments = async () => {
   try {
@@ -214,15 +214,15 @@ const fetchMyEnrollments = async () => {
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const res = await cohortService.getAll({
+    const res = await sectionService.getAll({
       page: page.value,
       size: size.value,
       keyword: keyword.value || undefined,
       semesterId: semesterFilterId.value || undefined,
-      classId: classFilterId.value || undefined,
+      subjectId: subjectFilterId.value || undefined,
       active: true
     })
-    const pageRes = unwrapPageResponse<Cohort>(res)
+    const pageRes = unwrapPageResponse<Section>(res)
     courses.value = pageRes.data || []
     totalPages.value = pageRes.totalPages || 1
   } finally {
@@ -246,7 +246,7 @@ const { debounced: debouncedSearch } = useDebounceFn(async () => {
 
 const handleSearch = () => debouncedSearch()
 
-const enroll = async (c: Cohort) => {
+const enroll = async (c: Section) => {
   enrollingId.value = c.id
   try {
     await enrollmentService.enrollSelf(c.id)

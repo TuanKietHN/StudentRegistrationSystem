@@ -31,7 +31,7 @@ Dự án hiện dùng:
 
 Cấu hình:
 - `application.properties`: `cms.seed.enabled=false`
-- `application-dev.properties`: `cms.seed.enabled=true`
+- `application-dev.properties`: `cms.seed.enabled=${CMS_SEED_ENABLED:true}` (mặc định bật, có thể tắt bằng env `CMS_SEED_ENABLED=false`)
 
 ### 4) Quy ước “code-first” cho database trong dự án này
 

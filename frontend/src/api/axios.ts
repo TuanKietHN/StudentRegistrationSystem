@@ -3,6 +3,8 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: '/api', // Proxied by Vite or direct URL
   withCredentials: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,6 +15,10 @@ api.interceptors.request.use(
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const activeRole = localStorage.getItem('activeRole');
+    if (activeRole) {
+      config.headers['X-Active-Role'] = activeRole;
     }
     return config;
   },
@@ -33,6 +39,8 @@ function clearSession() {
 const refreshClient = axios.create({
   baseURL: '/api',
   withCredentials: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
     'Content-Type': 'application/json',
   },

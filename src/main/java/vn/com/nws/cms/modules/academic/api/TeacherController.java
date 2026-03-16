@@ -22,6 +22,7 @@ public class TeacherController {
     private final TeacherService teacherService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('TEACHER:READ')")
     @Operation(summary = "Danh sách giảng viên", description = "Lấy danh sách giảng viên có phân trang và tìm kiếm")
     public ResponseEntity<ApiResponse<PageResponse<TeacherResponse>>> getTeachers(
             @Parameter(description = "Từ khóa tìm kiếm (tên, mã)") @RequestParam(required = false) String keyword,
@@ -42,6 +43,7 @@ public class TeacherController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('TEACHER:READ')")
     @Operation(summary = "Chi tiết giảng viên", description = "Lấy thông tin chi tiết hồ sơ giảng viên")
     public ResponseEntity<ApiResponse<TeacherResponse>> getTeacherById(@PathVariable Long id) {
         TeacherResponse response = teacherService.getTeacherById(id);
@@ -49,6 +51,7 @@ public class TeacherController {
     }
     
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('TEACHER:READ')")
     @Operation(summary = "Chi tiết giảng viên theo User ID", description = "Lấy hồ sơ giảng viên dựa trên User ID")
     public ResponseEntity<ApiResponse<TeacherResponse>> getTeacherByUserId(@PathVariable Long userId) {
         TeacherResponse response = teacherService.getTeacherByUserId(userId);
@@ -56,7 +59,7 @@ public class TeacherController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('TEACHER:CREATE')")
     @Operation(summary = "Tạo hồ sơ giảng viên", description = "Tạo mới hồ sơ giảng viên (Admin)")
     public ResponseEntity<ApiResponse<TeacherResponse>> createTeacher(@Valid @RequestBody TeacherCreateRequest request) {
         TeacherResponse response = teacherService.createTeacher(request);
@@ -64,7 +67,7 @@ public class TeacherController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('TEACHER:UPDATE')")
     @Operation(summary = "Cập nhật hồ sơ giảng viên", description = "Cập nhật thông tin giảng viên (Admin)")
     public ResponseEntity<ApiResponse<TeacherResponse>> updateTeacher(
             @PathVariable Long id,
@@ -74,7 +77,7 @@ public class TeacherController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('TEACHER:DELETE')")
     @Operation(summary = "Xóa hồ sơ giảng viên", description = "Xóa hồ sơ giảng viên (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteTeacher(@PathVariable Long id) {
         teacherService.deleteTeacher(id);

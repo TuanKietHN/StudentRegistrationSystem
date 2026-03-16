@@ -254,6 +254,22 @@ public class RedisSessionRepository implements SessionRepository {
         redis.expire(userSessionsKey(username), Duration.ofMillis(ttlMs));
     }
 
+    @Override
+    public void blacklist(String jti, long ttlMs) {
+        if (jti == null || jti.isBlank()) {
+            return;
+        }
+        redis.opsForValue().set(blacklistKey(jti), "true", Duration.ofMillis(ttlMs));
+    }
+
+    @Override
+    public boolean isBlacklisted(String jti) {
+        if (jti == null || jti.isBlank()) {
+            return false;
+        }
+        return Boolean.TRUE.equals(redis.hasKey(blacklistKey(jti)));
+    }
+
     private void storeSession(String sessionId, String refreshToken, SessionData data, long ttlMs) {
         Duration ttl = Duration.ofMillis(ttlMs);
         redis.opsForValue().set(sessKey(sessionId), toJson(data), ttl);
@@ -298,6 +314,10 @@ public class RedisSessionRepository implements SessionRepository {
 
     private String deviceKey(String username, String deviceId) {
         return "auth:u:dev:" + username + ":" + deviceId;
+    }
+
+    private String blacklistKey(String jti) {
+        return "auth:bl:" + jti;
     }
 
     private static final class ReuseDetected {}

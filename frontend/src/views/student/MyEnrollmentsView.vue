@@ -38,7 +38,7 @@
                 variant="text"
                 :loading="cancelingId === e.id"
                 :disabled="!canCancel(e)"
-                @click="cancel(e)"
+                @click="openCancelDialog(e)"
               >
                 Hủy
               </v-btn>
@@ -49,23 +49,42 @@
           </tr>
         </tbody>
       </v-table>
+
+      <ConfirmDialog
+        v-model="confirmState.show"
+        :title="confirmState.title"
+        :text="confirmState.text"
+        :loading="confirmState.loading"
+        confirm-text="Xác nhận hủy"
+        @confirm="executeConfirm"
+      />
     </v-card-text>
   </v-card>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { unwrapApiResponse } from '@/api/response'
 import { enrollmentService, type Enrollment } from '@/api/services/enrollment.service'
 import { useUiStore } from '@/stores/ui'
 import { formatTimeSlotsVn } from '@/utils/schedule'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const uiStore = useUiStore()
 
 const enrollments = ref<Enrollment[]>([])
 const loading = ref(false)
 const cancelingId = ref<number | null>(null)
+
+// Confirm Dialog State
+const confirmState = reactive({
+  show: false,
+  title: '',
+  text: '',
+  loading: false,
+  action: null as (() => Promise<void>) | null
+})
 
 const todayStr = () => new Date().toISOString().slice(0, 10)
 
@@ -93,17 +112,31 @@ const reload = async () => {
   }
 }
 
-const cancel = async (e: Enrollment) => {
-  cancelingId.value = e.id
-  try {
-    await enrollmentService.cancelEnrollment(e.id)
-    uiStore.notify('Hủy đăng ký thành công', 'success')
-    await reload()
-  } catch (err: any) {
-    const msg = err?.response?.data?.message || 'Hủy đăng ký thất bại'
-    uiStore.notify(msg, 'error', 4000)
-  } finally {
-    cancelingId.value = null
+const openCancelDialog = (e: Enrollment) => {
+  confirmState.title = 'Xác nhận hủy đăng ký'
+  confirmState.text = `Bạn có chắc chắn muốn hủy đăng ký lớp "${e.section?.name || e.section?.code}" không?`
+  confirmState.action = async () => {
+    cancelingId.value = e.id
+    try {
+      await enrollmentService.cancelEnrollment(e.id)
+      uiStore.notify('Hủy đăng ký thành công', 'success')
+      await reload()
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Hủy đăng ký thất bại'
+      uiStore.notify(msg, 'error', 4000)
+    } finally {
+      cancelingId.value = null
+    }
+  }
+  confirmState.show = true
+}
+
+const executeConfirm = async () => {
+  if (confirmState.action) {
+    confirmState.loading = true
+    await confirmState.action()
+    confirmState.loading = false
+    confirmState.show = false
   }
 }
 

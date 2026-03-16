@@ -1,6 +1,8 @@
 package vn.com.nws.cms.modules.academic.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +13,8 @@ import vn.com.nws.cms.common.audit.AuditEntity;
 @Table(name = "program_subjects", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"program_id", "subject_id"})
 })
+@SQLDelete(sql = "UPDATE program_subjects SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 @Data
 @Builder
 @NoArgsConstructor

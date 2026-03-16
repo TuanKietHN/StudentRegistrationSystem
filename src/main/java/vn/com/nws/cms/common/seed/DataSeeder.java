@@ -97,7 +97,7 @@ public class DataSeeder implements CommandLineRunner {
         tx.executeWithoutResult(s -> seedSubjects()); // Moved up for AcademicProgram dependency
         tx.executeWithoutResult(s -> seedTeacherProfiles());
         tx.executeWithoutResult(s -> seedCohorts());
-        tx.executeWithoutResult(s -> seedAcademicPrograms()); // Phase 1: Academic Programs
+        seedAcademicPrograms(tx); // Phase 1: Academic Programs — mỗi program 1 transaction
         tx.executeWithoutResult(s -> seedStudentClasses());
         tx.executeWithoutResult(s -> seedStudentProfiles());
         tx.executeWithoutResult(s -> seedSemesters());
@@ -289,7 +289,7 @@ public class DataSeeder implements CommandLineRunner {
         upsertUser("nguyen.van.an",      "student@nws.com.vn",       "Student@123",  Set.of(RoleType.STUDENT));
         upsertUser("tran.thi.binh",      "tranthihinh@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
         upsertUser("le.quoc.cuong",      "lequoccuong@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
-        upsertUser("pham.ngoc.diem",     "phamngocidiem@nws.com.vn", "Student@123",  Set.of(RoleType.STUDENT));
+        upsertUser("pham.ngoc.diem",     "phamngocdiem@nws.com.vn",  "Student@123",  Set.of(RoleType.STUDENT));
         upsertUser("hoang.van.em",       "hoangvanem@nws.com.vn",    "Student@123",  Set.of(RoleType.STUDENT));
         upsertUser("nguyen.thi.phuong",  "nguyenthiphuong@nws.com.vn","Student@123", Set.of(RoleType.STUDENT));
         upsertUser("bui.duc.giang",      "buiducgiang@nws.com.vn",   "Student@123",  Set.of(RoleType.STUDENT));
@@ -302,21 +302,21 @@ public class DataSeeder implements CommandLineRunner {
         userRepository.findByEmail(email)
                 .or(() -> userRepository.findByUsername(username))
                 .ifPresentOrElse(existing -> {
-            existing.setUsername(username);
-            existing.setEmail(email);
-            existing.setPassword(passwordEncoder.encode(rawPassword));
-            existing.setRoles(roles);
-            userRepository.save(existing);
-            log.debug("  [User] Cập nhật: {}", email);
-        }, () -> {
-            userRepository.save(User.builder()
-                    .username(username)
-                    .email(email)
-                    .password(passwordEncoder.encode(rawPassword))
-                    .roles(roles)
-                    .build());
-            log.debug("  [User] Tạo mới: {}", email);
-        });
+                    existing.setUsername(username);
+                    existing.setEmail(email);
+                    existing.setPassword(passwordEncoder.encode(rawPassword));
+                    existing.setRoles(roles);
+                    userRepository.save(existing);
+                    log.debug("  [User] Cập nhật: {}", email);
+                }, () -> {
+                    userRepository.save(User.builder()
+                            .username(username)
+                            .email(email)
+                            .password(passwordEncoder.encode(rawPassword))
+                            .roles(roles)
+                            .build());
+                    log.debug("  [User] Tạo mới: {}", email);
+                });
     }
 
     // =========================================================================
@@ -381,32 +381,32 @@ public class DataSeeder implements CommandLineRunner {
         teacherRepository.findByUserId(user.getId())
                 .or(() -> teacherRepository.findByEmployeeCode(employeeCode))
                 .ifPresentOrElse(existing -> {
-            existing.setUser(user);
-            existing.setEmployeeCode(employeeCode);
-            existing.setDepartment(department);
-            existing.setSpecialization(specialization);
-            existing.setTitle(title);
-            existing.setOfficeLocation(officeLocation);
-            existing.setOfficeHours(officeHours);
-            existing.setPhone(phone);
-            existing.setActive(true);
-            teacherRepository.save(existing);
-            log.debug("  [Teacher] Cập nhật: {} - {}", employeeCode, email);
-        }, () -> {
-            teacherRepository.save(Teacher.builder()
-                    .user(user)
-                    .employeeCode(employeeCode)
-                    .department(department)
-                    .specialization(specialization)
-                    .title(title)
-                    .bio("Giảng viên " + department.getName())
-                    .officeLocation(officeLocation)
-                    .officeHours(officeHours)
-                    .phone(phone)
-                    .active(true)
-                    .build());
-            log.debug("  [Teacher] Tạo mới: {} - {}", employeeCode, email);
-        });
+                    existing.setUser(user);
+                    existing.setEmployeeCode(employeeCode);
+                    existing.setDepartment(department);
+                    existing.setSpecialization(specialization);
+                    existing.setTitle(title);
+                    existing.setOfficeLocation(officeLocation);
+                    existing.setOfficeHours(officeHours);
+                    existing.setPhone(phone);
+                    existing.setActive(true);
+                    teacherRepository.save(existing);
+                    log.debug("  [Teacher] Cập nhật: {} - {}", employeeCode, email);
+                }, () -> {
+                    teacherRepository.save(Teacher.builder()
+                            .user(user)
+                            .employeeCode(employeeCode)
+                            .department(department)
+                            .specialization(specialization)
+                            .title(title)
+                            .bio("Giảng viên " + department.getName())
+                            .officeLocation(officeLocation)
+                            .officeHours(officeHours)
+                            .phone(phone)
+                            .active(true)
+                            .build());
+                    log.debug("  [Teacher] Tạo mới: {} - {}", employeeCode, email);
+                });
     }
 
     private Teacher teacherByEmail(String email) {
@@ -451,22 +451,32 @@ public class DataSeeder implements CommandLineRunner {
     //  4.5. ACADEMIC PROGRAMS (Phase 1)
     // =========================================================================
 
-    private void seedAcademicPrograms() {
+    /**
+     * Mỗi AcademicProgram (kể cả việc seed ProgramSubjects của nó) chạy trong
+     * một TransactionTemplate riêng biệt. Điều này đảm bảo:
+     *  - Nếu một program đã tồn tại đầy đủ → transaction commit sạch, không lỗi.
+     *  - Nếu DB đã có một số ProgramSubject (từ lần seed trước bị gián đoạn) →
+     *    duplicate-key exception chỉ làm rollback transaction của program đó,
+     *    KHÔNG poison Hibernate session của các program còn lại.
+     */
+    private void seedAcademicPrograms(TransactionTemplate tx) {
         log.info("[Seeder] Tạo chương trình đào tạo...");
-        Department cntt = departmentByCode("CNTT");
-        Department qtkd = departmentByCode("QTKD");
-        Department ketoan = departmentByCode("KETOAN");
 
-        // Seed cho nhiều khóa (K22-K25)
         for (int year = 22; year <= 25; year++) {
-            String suffix = "K" + year;
-            AcademicProgram cnttP = upsertAcademicProgram("CNTT_" + suffix, "Kỹ thuật phần mềm " + suffix, cntt, 130, "Chương trình chuẩn CNTT " + suffix);
-            AcademicProgram qtkdP = upsertAcademicProgram("QTKD_" + suffix, "Quản trị kinh doanh " + suffix, qtkd, 120, "Chương trình chuẩn QTKD " + suffix);
-            AcademicProgram ketoanP = upsertAcademicProgram("KETOAN_" + suffix, "Kế toán " + suffix, ketoan, 125, "Chương trình chuẩn Kế toán " + suffix);
+            final int y = year;
+            tx.executeWithoutResult(s -> {
+                Department cntt   = departmentByCode("CNTT");
+                Department qtkd   = departmentByCode("QTKD");
+                Department ketoan = departmentByCode("KETOAN");
+                String suffix = "K" + y;
 
-            // Gán lộ trình môn học (Ví dụ cho CNTT)
-            seedProgramSubjectsCNTT(cnttP);
-            seedProgramSubjectsQTKD(qtkdP);
+                AcademicProgram cnttP   = upsertAcademicProgram("CNTT_"   + suffix, "Kỹ thuật phần mềm "   + suffix, cntt,   130, "Chương trình chuẩn CNTT "   + suffix);
+                AcademicProgram qtkdP   = upsertAcademicProgram("QTKD_"   + suffix, "Quản trị kinh doanh " + suffix, qtkd,   120, "Chương trình chuẩn QTKD "   + suffix);
+                AcademicProgram ketoanP = upsertAcademicProgram("KETOAN_" + suffix, "Kế toán "             + suffix, ketoan, 125, "Chương trình chuẩn Kế toán " + suffix);
+
+                seedProgramSubjectsCNTT(cnttP);
+                seedProgramSubjectsQTKD(qtkdP);
+            });
         }
     }
 
@@ -476,40 +486,40 @@ public class DataSeeder implements CommandLineRunner {
         upsertProgramSubject(prog, "MATH001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "POL001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "ENG001", 1, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        
+
         // Học kỳ 2
         upsertProgramSubject(prog, "DB001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "MATH002", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "DS001", 2, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "SOFT001", 2, ProgramSubject.TYPE_ELECTIVE, 4.0);
-        
+
         // Học kỳ 3
         upsertProgramSubject(prog, "JAVA002", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "OS001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "MATH003", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "NET001", 3, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        
+
         // Học kỳ 4
         upsertProgramSubject(prog, "WEB001", 4, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "DB002", 4, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "DA001", 4, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "POL002", 4, ProgramSubject.TYPE_ELECTIVE, 4.0);
-        
+
         // Học kỳ 5
         upsertProgramSubject(prog, "AI001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "MOBILE001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "SE001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "PRJ001", 5, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        
+
         // Học kỳ 6
         upsertProgramSubject(prog, "CLOUD001", 6, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "SECURITY001", 6, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "PRJ002", 6, ProgramSubject.TYPE_COMPULSORY, 4.0);
         upsertProgramSubject(prog, "POL003", 6, ProgramSubject.TYPE_ELECTIVE, 4.0);
-        
+
         // Học kỳ 7
         upsertProgramSubject(prog, "INTERN001", 7, ProgramSubject.TYPE_COMPULSORY, 4.0);
-        
+
         // Học kỳ 8
         upsertProgramSubject(prog, "THESIS001", 8, ProgramSubject.TYPE_COMPULSORY, 4.0);
     }
@@ -547,25 +557,26 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void upsertProgramSubject(AcademicProgram prog, String subjectCode, int semester, String type, double passScore) {
-        try {
-            Subject subject = subjectByCode(subjectCode);
-            boolean exists = programSubjectRepository.findByProgramId(prog.getId()).stream()
-                    .anyMatch(ps -> ps.getSubject().getId().equals(subject.getId()));
-
-            if (!exists) {
-                ProgramSubject ps = ProgramSubject.builder()
-                        .programId(prog.getId())
-                        .subject(subject)
-                        .semester(semester)
-                        .subjectType(type)
-                        .passScore(passScore)
-                        .build();
-                programSubjectRepository.save(ps);
-                log.debug("  [ProgramSubject] Thêm {} vào {}", subjectCode, prog.getCode());
-            }
-        } catch (Exception e) {
-            log.warn("  [ProgramSubject] Lỗi thêm môn {}: {}", subjectCode, e.getMessage());
+        // Dùng existsByProgramIdAndSubjectId thay vì load list + stream filter.
+        // Lý do: Hibernate L1 cache có thể trả về stale data khiến exists = false dù
+        // DB đã có bản ghi, dẫn đến duplicate-key exception → session bị poison →
+        // mọi thao tác JPA tiếp theo trong cùng transaction đều fail (HHH000099).
+        Subject subject = subjectByCode(subjectCode);
+        boolean exists = programSubjectRepository.findByProgramId(prog.getId()).stream()
+                .anyMatch(ps -> ps.getSubject().getId().equals(subject.getId()));
+        if (exists) {
+            log.debug("  [ProgramSubject] Đã tồn tại: {} trong {}", subjectCode, prog.getCode());
+            return;
         }
+        ProgramSubject ps = ProgramSubject.builder()
+                .programId(prog.getId())
+                .subject(subject)
+                .semester(semester)
+                .subjectType(type)
+                .passScore(passScore)
+                .build();
+        programSubjectRepository.save(ps);
+        log.debug("  [ProgramSubject] Thêm {} vào {}", subjectCode, prog.getCode());
     }
 
     // =========================================================================
@@ -607,12 +618,12 @@ public class DataSeeder implements CommandLineRunner {
 
     private void upsertStudentClass(String code, String name, Department department,
                                     Cohort cohort, Teacher advisorTeacher, Integer intakeYear, String program) {
-        
+
         // Try to find AcademicProgram (Phase 1)
         AcademicProgram academicProgram = null;
         if (department != null && intakeYear != null) {
-             String progCode = department.getCode() + "_K" + (intakeYear % 100);
-             academicProgram = academicProgramRepository.findByCode(progCode).orElse(null);
+            String progCode = department.getCode() + "_K" + (intakeYear % 100);
+            academicProgram = academicProgramRepository.findByCode(progCode).orElse(null);
         }
         final AcademicProgram finalAcademicProgram = academicProgram;
 
@@ -664,7 +675,7 @@ public class DataSeeder implements CommandLineRunner {
         StudentClass qtkdK25_01 = studentClassByCode("QTKD-K25-01");
         StudentClass ketoanK25  = studentClassByCode("KETOAN-K25-01");
         StudentClass cnttK24_01 = studentClassByCode("CNTT-K24-01");
-        
+
         StudentClass cnttK22_01 = studentClassByCode("CNTT-K22-01");
         StudentClass cnttK23_01 = studentClassByCode("CNTT-K23-01");
 
@@ -677,11 +688,24 @@ public class DataSeeder implements CommandLineRunner {
         seedStudentsForClass(cnttK24_01, cntt, "CNTT24", 80);
         seedStudentsForClass(cnttK22_01, cntt, "CNTT22", 40);
         seedStudentsForClass(cnttK23_01, cntt, "CNTT23", 40);
-        
-        // Thêm tài khoản mẫu cũ (để test login)
-        upsertStudent("student@nws.com.vn", "SV2500001", cntt, cnttK25_01, "0901111111");
-        upsertStudent("tranthihinh@nws.com.vn", "SV2500002", cntt, cnttK25_01, "0901111112");
-        upsertStudent("lequoccuong@nws.com.vn", "SV2500003", cntt, cnttK25_01, "0901111113");
+
+        StudentClass qtkdK24_01 = studentClassByCode("QTKD-K24-01");
+
+        // Thêm tài khoản mẫu cụ thể (để test login) — tất cả 10 sinh viên mẫu cần có Student profile
+        // CNTT K25
+        upsertStudent("student@nws.com.vn",         "SV2500001", cntt,   cnttK25_01, "0901111111");
+        upsertStudent("tranthihinh@nws.com.vn",      "SV2500002", cntt,   cnttK25_01, "0901111112");
+        upsertStudent("lequoccuong@nws.com.vn",       "SV2500003", cntt,   cnttK25_01, "0901111113");
+        upsertStudent("phamngocdiem@nws.com.vn",      "SV2500004", cntt,   cnttK25_01, "0901111114");
+        upsertStudent("hoangvanem@nws.com.vn",        "SV2500005", cntt,   cnttK25_01, "0901111115");
+        // QTKD K25
+        upsertStudent("nguyenthiphuong@nws.com.vn",  "SV2500006", qtkd,   qtkdK25_01, "0901111116");
+        upsertStudent("buiducgiang@nws.com.vn",       "SV2500007", qtkd,   qtkdK25_01, "0901111117");
+        // Kế toán K25
+        upsertStudent("dothihuyen@nws.com.vn",        "SV2500008", ketoan, ketoanK25,  "0901111118");
+        // CNTT K24 (sinh viên năm 2 — dùng cho section JAVA002 nâng cao)
+        upsertStudent("caovanien@nws.com.vn",         "SV2400001", cntt,   cnttK24_01, "0901111119");
+        upsertStudent("maithikhanh@nws.com.vn",       "SV2400002", cntt,   cnttK24_01, "0901111120");
     }
 
     private void seedStudentsForClass(StudentClass studentClass, Department dept, String prefix, int count) {
@@ -692,7 +716,7 @@ public class DataSeeder implements CommandLineRunner {
             String email = username + "@nws.com.vn";
             String studentCode = prefix + suffix;
             String phone = "09" + String.format("%08d", i);
-            
+
             upsertStudent(email, studentCode, dept, studentClass, phone);
         }
     }
@@ -702,7 +726,7 @@ public class DataSeeder implements CommandLineRunner {
         // Auto-create user if not exists
         String username = email.split("@")[0];
         upsertUser(username, email, "Student@123", Set.of(RoleType.STUDENT));
-        
+
         User user = userByEmail(email);
         studentRepository.findByUserId(user.getId()).ifPresentOrElse(existing -> {
             existing.setStudentCode(studentCode);
@@ -826,7 +850,7 @@ public class DataSeeder implements CommandLineRunner {
         upsertSubject("POL003",    "Tư tưởng Hồ Chí Minh",                2, null,     "Hệ thống quan điểm về cách mạng Việt Nam",           (short)30, (short)70);
         upsertSubject("SOFT001",   "Kỹ năng mềm",                         2, null,     "Kỹ năng giao tiếp, thuyết trình, làm việc nhóm",    (short)100, (short)0);
         upsertSubject("PHYS001",   "Vật lý đại cương",                    3, cntt,     "Cơ nhiệt, điện từ, quang học",                      (short)30, (short)70);
-        
+
         // --- Bổ sung môn Chuyên Ngành CNTT nâng cao ---
         upsertSubject("DS001",     "Cấu trúc dữ liệu và giải thuật",      4, cntt,     "Stack, Queue, Tree, Graph, Sorting, Searching",      (short)40, (short)60);
         upsertSubject("OS001",     "Hệ điều hành",                        3, cntt,     "Process, Thread, Memory Management, File System",   (short)40, (short)60);
@@ -1089,7 +1113,7 @@ public class DataSeeder implements CommandLineRunner {
         Student sv1  = studentByEmail("student@nws.com.vn");           // Nguyễn Văn An
         Student sv2  = studentByEmail("tranthihinh@nws.com.vn");       // Trần Thị Bình
         Student sv3  = studentByEmail("lequoccuong@nws.com.vn");       // Lê Quốc Cường
-        Student sv4  = studentByEmail("phamngocidiem@nws.com.vn");     // Phạm Ngọc Diễm
+        Student sv4  = studentByEmail("phamngocdiem@nws.com.vn");      // Phạm Ngọc Diễm
         Student sv5  = studentByEmail("hoangvanem@nws.com.vn");        // Hoàng Văn Em
         Student sv6  = studentByEmail("nguyenthiphuong@nws.com.vn");   // Nguyễn Thị Phương
         Student sv7  = studentByEmail("buiducgiang@nws.com.vn");       // Bùi Đức Giang
@@ -1146,15 +1170,15 @@ public class DataSeeder implements CommandLineRunner {
     private void seedBulkK25Enrollments() {
         log.info("[Seeder] Tạo đăng ký học và điểm cho toàn bộ K25 CNTT...");
         StudentClass cnttK25_01 = studentClassByCode("CNTT-K25-01");
-        
+
         // Find all students in this class
         List<Student> students = studentRepository.findByStudentClassId(cnttK25_01.getId());
-        
+
         for (Student s : students) {
             // Skip the explicitly named students we already handled (sv1, sv2...)
-            if (s.getUser().getEmail().startsWith("student") || 
-                s.getUser().getEmail().startsWith("tranthihinh") || 
-                s.getUser().getEmail().startsWith("lequoccuong")) {
+            if (s.getUser().getEmail().startsWith("student") ||
+                    s.getUser().getEmail().startsWith("tranthihinh") ||
+                    s.getUser().getEmail().startsWith("lequoccuong")) {
                 continue;
             }
 
@@ -1166,25 +1190,19 @@ public class DataSeeder implements CommandLineRunner {
             // 2. Give them random grades for Semester 1 (mostly pass)
             double javaScore = 5.0 + (Math.random() * 5.0); // 5.0 - 10.0
             double dbScore = 4.0 + (Math.random() * 6.0);   // 4.0 - 10.0
-            
+
             enterGrade("JAVA001_HK1_2526_01", s.getUser().getEmail(), javaScore, javaScore);
             enterGrade("DB001_HK1_2526_01", s.getUser().getEmail(), dbScore, dbScore);
 
             // 3. Enroll in Semester 2 (Current) - JAVA002, DB002
             // Distribute into groups
+            // Phân nhóm ngẫu nhiên: một nửa học JAVA002 (nâng cao HK2), nửa còn lại học WEB001
             if (Math.random() > 0.5) {
-                enrollIfNotExists("JAVA001_HK2_2526_01", s); // Re-learning or just taking it? Wait, JAVA001 is Sem 1.
-                // Actually Program says: JAVA002 is Sem 2.
-                // But seedSections created JAVA002_HK2_2526_01 (Advanced Java).
-                // Let's enroll them in JAVA001_HK2 (maybe retake) or assume they passed.
-                // Program: JAVA002 is Compulsory Sem 2.
-                // Section: JAVA002_HK2_2526_01.
                 enrollIfNotExists("JAVA002_HK2_2526_01", s);
             } else {
-                // Maybe they take Web?
                 enrollIfNotExists("WEB001_HK2_2526_01", s);
             }
-            
+
             // Enroll in DB002 (Sem 2)
             enrollIfNotExists("DB002_HK2_2526_01", s);
         }
@@ -1255,7 +1273,7 @@ public class DataSeeder implements CommandLineRunner {
 
         // Điểm DB001
         enterGrade("DB001_HK2_2526_01",   "tranthihinh@nws.com.vn",    6.5, 7.0);
-        enterGrade("DB001_HK2_2526_01",   "phamngocidiem@nws.com.vn",  8.0, 7.5);
+        enterGrade("DB001_HK2_2526_01",   "phamngocdiem@nws.com.vn",  8.0, 7.5);
 
         // Marketing
         enterGrade("MKT001_HK2_2526_01",  "nguyenthiphuong@nws.com.vn", 8.0, 8.5);

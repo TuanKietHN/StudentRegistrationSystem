@@ -25,7 +25,17 @@ public class ProgramSubjectRepositoryImpl implements ProgramSubjectRepository {
     @Override
     @Transactional
     public ProgramSubject save(ProgramSubject programSubject) {
-        ProgramSubjectEntity entity = mapper.toEntity(programSubject);
+        ProgramSubjectEntity entity;
+        if (programSubject.getId() != null) {
+            entity = jpaRepository.findById(programSubject.getId())
+                    .orElseGet(ProgramSubjectEntity::new);
+        } else {
+            entity = new ProgramSubjectEntity();
+        }
+        
+        entity.setSemester(programSubject.getSemester());
+        entity.setSubjectType(programSubject.getSubjectType());
+        entity.setPassScore(programSubject.getPassScore());
         
         if (programSubject.getProgramId() != null) {
             entity.setAcademicProgram(entityManager.getReference(AcademicProgramEntity.class, programSubject.getProgramId()));

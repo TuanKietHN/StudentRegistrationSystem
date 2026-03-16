@@ -101,16 +101,10 @@ public class SectionGradeServiceImpl implements SectionGradeService {
             enrollment.setProcessScore(processScore);
             enrollment.setExamScore(examScore);
             enrollment.setFinalScore(finalScore);
-            enrollment.setGrade(finalScore.doubleValue());
             if (!enrollment.isScoreLocked()) {
                 enrollment.setScoredAt(LocalDateTime.now());
             }
             enrollment.setScoreLocked(true);
-        } else if (request.getGrade() != null) {
-            if (isTeacher && enrollment.isScoreLocked()) {
-                throw new BusinessException("Điểm đã được nhập. Vui lòng liên hệ Admin để thay đổi");
-            }
-            enrollment.setGrade(request.getGrade());
         }
 
         enrollment = enrollmentRepository.save(enrollment);
@@ -248,7 +242,6 @@ public class SectionGradeServiceImpl implements SectionGradeService {
                 .enrollmentId(enrollment.getId())
                 .id(enrollment.getId()) // Added `id` mapping so `e.id` on Vue frontend keeps working
                 .status(enrollment.getStatus())
-                .grade(enrollment.getFinalScore() != null ? Double.valueOf(enrollment.getFinalScore().doubleValue()) : enrollment.getGrade())
                 .processScore(enrollment.getProcessScore())
                 .examScore(enrollment.getExamScore())
                 .finalScore(enrollment.getFinalScore())

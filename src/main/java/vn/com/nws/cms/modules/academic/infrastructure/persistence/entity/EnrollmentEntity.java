@@ -1,6 +1,8 @@
 package vn.com.nws.cms.modules.academic.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +17,8 @@ import java.time.LocalDateTime;
 @Table(name = "enrollments", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"section_id", "student_id"})
 })
+@SQLDelete(sql = "UPDATE enrollments SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 @Data
 @Builder
 @NoArgsConstructor
@@ -35,8 +39,6 @@ public class EnrollmentEntity extends AuditEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EnrollmentStatus status;
-
-    private Double grade;
 
     @Column(name = "process_score", precision = 4, scale = 2)
     private BigDecimal processScore;

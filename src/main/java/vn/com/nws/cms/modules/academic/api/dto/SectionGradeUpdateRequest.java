@@ -6,7 +6,7 @@ import vn.com.nws.cms.modules.academic.domain.enums.EnrollmentStatus;
 @Data
 public class SectionGradeUpdateRequest {
     private EnrollmentStatus status; // To allow teacher to update status from the grade view
-    private Double grade;
+
     private Double processScore;
     private Double examScore;
     private String overrideReason;

@@ -1,6 +1,8 @@
 package vn.com.nws.cms.modules.academic.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +13,8 @@ import java.time.LocalTime;
 
 @Entity
 @Table(name = "section_time_slots")
+@SQLDelete(sql = "UPDATE section_time_slots SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false")
 @Data
 @Builder
 @NoArgsConstructor

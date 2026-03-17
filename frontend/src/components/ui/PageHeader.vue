@@ -1,8 +1,20 @@
 <template>
   <div class="page-header">
     <div class="header-content">
-      <h1 class="header-title">{{ title }}</h1>
-      <p v-if="subtitle" class="header-subtitle">{{ subtitle }}</p>
+      <div class="d-flex align-center">
+        <v-btn
+          v-if="backTo || showBack"
+          icon="mdi-arrow-left"
+          variant="text"
+          class="mr-2"
+          density="comfortable"
+          @click="goBack"
+        ></v-btn>
+        <div>
+          <h1 class="header-title">{{ title }}</h1>
+          <p v-if="subtitle" class="header-subtitle">{{ subtitle }}</p>
+        </div>
+      </div>
     </div>
     <div class="header-actions">
       <slot name="actions" />
@@ -11,10 +23,24 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { useRouter } from 'vue-router'
+
+const props = defineProps<{
   title: string
   subtitle?: string
+  backTo?: string | any
+  showBack?: boolean
 }>()
+
+const router = useRouter()
+
+const goBack = () => {
+  if (props.backTo) {
+    router.push(props.backTo)
+  } else {
+    router.back()
+  }
+}
 </script>
 
 <style scoped>

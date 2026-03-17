@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-text>
-      <PageHeader :title="courseTitle">
+      <PageHeader :title="courseTitle" back-to="/teacher/sections">
         <template #actions>
           <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
           <v-btn variant="text" :disabled="!selectedFile" :loading="importing" @click="importGrades">Import Excel</v-btn>

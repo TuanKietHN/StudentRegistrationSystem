@@ -1,9 +1,8 @@
 <template>
   <v-card>
     <v-card-text>
-      <PageHeader :title="`Bảng điểm lớp: ${studentClass?.name || ''}`">
+      <PageHeader :title="`Bảng điểm lớp: ${studentClass?.name || ''}`" back-to="/teacher/admin-classes">
         <template #actions>
-          <v-btn variant="text" @click="router.back()">Quay lại</v-btn>
           <v-btn variant="text" :loading="loading" @click="fetchGrades">Tải lại</v-btn>
         </template>
       </PageHeader>

@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-text>
-      <PageHeader :title="classTitle">
+      <PageHeader :title="classTitle" back-to="/admin/admin-classes">
         <template #actions>
           <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
         </template>

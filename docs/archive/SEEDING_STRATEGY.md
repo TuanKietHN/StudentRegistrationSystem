@@ -36,8 +36,7 @@ Cấu hình:
 
 - “Tạo database từ code” nghĩa là tạo schema bằng Flyway migrations trong repo.
 - Nếu gặp lỗi kiểu “entity không có field nhưng DB lại bắt NOT NULL”, đó là dấu hiệu DB drift.
-- Cách xử lý chuẩn: reset database/schema rồi chạy app để Flyway migrate lại từ đầu:
-  - [DEV_DB_RESET.md](file:///c:/Users/Admin/Downloads/Repo/cms/docs/DEV_DB_RESET.md)
+- Cách xử lý chuẩn: reset database/schema rồi chạy app để Flyway migrate lại từ đầu.
 
 ### 3) Khi nào dùng Repeatable migration (`R__*.sql`)?
 

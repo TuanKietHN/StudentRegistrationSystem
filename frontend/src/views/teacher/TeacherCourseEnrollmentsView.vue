@@ -4,7 +4,8 @@
       <PageHeader :title="courseTitle" back-to="/teacher/sections">
         <template #actions>
           <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
-          <v-btn variant="text" :disabled="!selectedFile" :loading="importing" @click="importGrades">Import Excel</v-btn>
+          <v-btn variant="text" :loading="downloading" @click="downloadTemplate" prepend-icon="mdi-download">Tải file điểm</v-btn>
+          <v-btn variant="text" :loading="importing" @click="importGrades" prepend-icon="mdi-upload">Import Excel</v-btn>
         </template>
       </PageHeader>
 
@@ -99,7 +100,14 @@
               <v-chip v-if="e.scoreOverridden" class="ml-2" size="x-small" color="warning" variant="tonal">Đã sửa</v-chip>
             </td>
             <td>
-              <v-btn size="small" color="primary" variant="flat" :loading="savingId === e.id" @click="save(e.id)">
+              <v-btn 
+                size="small" 
+                color="primary" 
+                variant="flat" 
+                :loading="savingId === e.id" 
+                :disabled="!isRowChanged(e)"
+                @click="save(e.id)"
+              >
                 Lưu
               </v-btn>
             </td>
@@ -126,11 +134,13 @@ const uiStore = useUiStore()
 const route = useRoute()
 
 const sectionId = Number(route.params.sectionId)
+const sectionCode = ref<string>('')
 const courseTitle = ref(`Danh sách sinh viên (Section #${sectionId})`)
 const enrollments = ref<SectionGradeResponse[]>([])
 const loading = ref(false)
 const savingId = ref<number | null>(null)
 const importing = ref(false)
+const downloading = ref(false)
 const selectedFile = ref<File | null>(null)
 
 const statusOptions = [
@@ -144,10 +154,19 @@ const draftStatus = reactive<Record<number, string>>({})
 const draftProcess = reactive<Record<number, any>>({})
 const draftExam = reactive<Record<number, any>>({})
 
+const isRowChanged = (e: SectionGradeResponse) => {
+  const statusChanged = draftStatus[e.id] !== undefined && draftStatus[e.id] !== e.status
+  const processChanged = draftProcess[e.id] !== undefined && draftProcess[e.id] !== (e.processScore ?? '').toString()
+  const examChanged = draftExam[e.id] !== undefined && draftExam[e.id] !== (e.examScore ?? '').toString()
+  
+  return statusChanged || processChanged || examChanged
+}
+
 const loadSection = async () => {
   try {
     const res = await sectionService.getById(sectionId)
     const s = unwrapApiResponse<any>(res)
+    if (s?.code) sectionCode.value = s.code
     courseTitle.value = s?.code && s?.name ? `Danh sách sinh viên - ${s.code} - ${s.name}` : courseTitle.value
   } catch {
     courseTitle.value = `Danh sách sinh viên (Section #${sectionId})`
@@ -186,6 +205,10 @@ const save = async (enrollmentId: number) => {
     }
     await sectionGradeService.updateGrade(enrollmentId, payload)
     uiStore.notify('Lưu thành công', 'success')
+    // Clear draft values after save
+    delete draftStatus[enrollmentId]
+    delete draftProcess[enrollmentId]
+    delete draftExam[enrollmentId]
     await reload()
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Lưu thất bại', 'error', 4000)
@@ -194,8 +217,43 @@ const save = async (enrollmentId: number) => {
   }
 }
 
+const downloadTemplate = async () => {
+  downloading.value = true
+  try {
+    const res = await sectionGradeService.downloadTemplate(sectionId)
+    const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `Bang_diem_${sectionCode.value || sectionId}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    uiStore.notify('Tải file điểm thành công', 'success')
+  } catch (err: any) {
+    uiStore.notify('Không thể tải file điểm', 'error')
+  } finally {
+    downloading.value = false
+  }
+}
+
 const importGrades = async () => {
-  if (!selectedFile.value) return
+  if (!selectedFile.value) {
+    uiStore.notify('Vui lòng chọn file Excel trước khi Import', 'error')
+    return
+  }
+  
+  if (selectedFile.value.size > 5 * 1024 * 1024) {
+    uiStore.notify('File quá lớn (tối đa 5MB)', 'error')
+    return
+  }
+  
+  if (!selectedFile.value.name.endsWith('.xlsx')) {
+    uiStore.notify('Vui lòng chọn file định dạng .xlsx', 'error')
+    return
+  }
+
   importing.value = true
   try {
     const res = await sectionGradeService.importSectionGrades(sectionId, selectedFile.value)
@@ -205,9 +263,9 @@ const importGrades = async () => {
     const skippedNotFound = data?.skippedNotFound ?? 0
     const skippedInvalid = data?.skippedInvalid ?? 0
     uiStore.notify(
-      `Import xong: ${imported} dòng. Bỏ qua: khóa ${skippedLocked}, không tìm thấy ${skippedNotFound}, lỗi ${skippedInvalid}.`,
+      `Thành công: ${imported} SV. Bỏ qua: ${skippedLocked} SV đã khóa điểm, ${skippedNotFound} SV không thuộc lớp, ${skippedInvalid} dòng lỗi hoặc trống.`,
       'success',
-      4500
+      6000
     )
     await reload()
   } catch (err: any) {

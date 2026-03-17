@@ -11,4 +11,5 @@ public interface SectionGradeService {
     List<SectionGradeResponse> getSectionGrades(Long sectionId, String username, boolean isAdmin, boolean isTeacher);
     SectionGradeResponse updateGrade(Long enrollmentId, String username, boolean isAdmin, boolean isTeacher, SectionGradeUpdateRequest request);
     GradesImportResultResponse importSectionGrades(Long sectionId, String username, boolean isAdmin, boolean isTeacher, MultipartFile file);
+    byte[] downloadGradeTemplate(Long sectionId, String username, boolean isAdmin, boolean isTeacher);
 }

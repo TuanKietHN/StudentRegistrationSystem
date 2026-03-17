@@ -39,5 +39,8 @@ export const sectionGradeService = {
     return api.post(`/v1/sections/${sectionId}/grades/import`, form, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
+  },
+  downloadTemplate(sectionId: number) {
+    return api.get(`/v1/sections/${sectionId}/grades/template`, { responseType: 'blob' })
   }
 }

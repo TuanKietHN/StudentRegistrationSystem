@@ -18,6 +18,7 @@ import vn.com.nws.cms.modules.auth.domain.model.User;
 import vn.com.nws.cms.modules.auth.domain.repository.UserRepository;
 import vn.com.nws.cms.modules.iam.api.dto.UserResponse;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -231,6 +232,60 @@ public class SectionGradeServiceImpl implements SectionGradeService {
                 .skippedInvalid(skippedInvalid)
                 .errors(errors)
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadGradeTemplate(Long sectionId, String username, boolean isAdmin, boolean isTeacher) {
+        if (!isAdmin && !isTeacher) {
+            throw new BusinessException("Không có quyền tải mẫu điểm");
+        }
+        Section section = sectionRepository.findById(sectionId).orElseThrow(() -> new BusinessException("Section not found"));
+        if (isTeacher && !isAdmin) {
+            assertTeacherOwnsSection(username, section);
+        }
+
+        List<Enrollment> enrollments = enrollmentRepository.findBySectionId(sectionId);
+
+        try (var wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             var baos = new ByteArrayOutputStream()) {
+            var sheet = wb.createSheet("Grades Template");
+
+            // Header row
+            var headerRow = sheet.createRow(0);
+            String[] headers = {"MSSV", "Tài khoản", "Họ tên", "Điểm quá trình", "Điểm thi"};
+            for (int i = 0; i < headers.length; i++) {
+                var cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+            }
+
+            // Data rows
+            int rowIdx = 1;
+            for (Enrollment e : enrollments) {
+                if (e.getStudent() == null || e.getStudent().getUser() == null) continue;
+                var row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(e.getStudent().getStudentCode() != null ? e.getStudent().getStudentCode() : "");
+                row.createCell(1).setCellValue(e.getStudent().getUser().getUsername() != null ? e.getStudent().getUser().getUsername() : "");
+                row.createCell(2).setCellValue(e.getStudent().getUser().getFullName() != null ? e.getStudent().getUser().getFullName() : e.getStudent().getUser().getUsername());
+                
+                if (e.getProcessScore() != null) {
+                    row.createCell(3).setCellValue(e.getProcessScore().doubleValue());
+                }
+                if (e.getExamScore() != null) {
+                    row.createCell(4).setCellValue(e.getExamScore().doubleValue());
+                }
+            }
+
+            // Auto size columns
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            wb.write(baos);
+            return baos.toByteArray();
+        } catch (Exception ex) {
+            throw new BusinessException("Lỗi khi tạo file Excel mẫu: " + ex.getMessage());
+        }
     }
 
     private SectionGradeResponse toResponse(Enrollment enrollment) {

@@ -1,0 +1,35 @@
+# Walkthrough - Cải thiện chức năng quản lý điểm
+
+Mình đã hoàn thành việc cải thiện chức năng nhập điểm bằng tay và thêm tính năng Import/Export điểm bằng Excel cho Giảng viên.
+
+## Các thay đổi chính
+
+### 1. Nút Lưu (Save Button) thông minh hơn
+- **Hành vi mới**: Nút "Lưu" sẽ bị **vô hiệu hóa (Disabled)** nếu dữ liệu trên hàng đó chưa có thay đổi gì so với dữ liệu gốc từ máy chủ. Khi bạn nhập điểm hoặc đổi trạng thái, nút sẽ tự động nổi khối (Enabled).
+- **Xóa trạng thái nháp**: Sau khi bấm Lưu thành công, trạng thái "nháp" của hàng đó sẽ được xóa bỏ, và nút Lưu sẽ quay về trạng thái Disabled cho đến khi có thay đổi mới.
+
+### 2. Tải file mẫu Excel (Export Template)
+- Thêm nút **"Tải file mẫu"** trên giao diện danh sách sinh viên của lớp học phần.
+- File tải xuống sẽ chứa danh sách sinh viên hiện tại kèm MSSV, Tài khoản, Họ tên và các cột điểm hiện có. Giảng viên chỉ cần điền điểm vào file này và upload lại.
+
+### 3. Import điểm từ Excel an toàn
+- **Validation**: Đã thêm kiểm tra loại file (.xlsx) và dung lượng file (tối đa 5MB) ở cả Frontend để phản hồi nhanh cho người dùng.
+- **Backend Security**: Backend kiểm tra quyền sở hữu lớp học phần của Giảng viên và validate cấu trúc Header của file Excel. Nếu file không đúng mẫu hoặc Giảng viên không dạy lớp đó, hệ thống sẽ từ chối xử lý.
+
+## Các tệp đã thay đổi
+
+### Backend
+- [SectionGradeService.java](file:///C:/Users/Admin/Downloads/Repo/StudentRegistrationSystem/src/main/java/vn/com/nws/cms/modules/academic/application/SectionGradeService.java): Thêm interface tải template.
+- [SectionGradeServiceImpl.java](file:///C:/Users/Admin/Downloads/Repo/StudentRegistrationSystem/src/main/java/vn/com/nws/cms/modules/academic/application/impl/SectionGradeServiceImpl.java): Triển khai logic tạo file Excel bằng Apache POI.
+- [SectionGradeController.java](file:///C:/Users/Admin/Downloads/Repo/StudentRegistrationSystem/src/main/java/vn/com/nws/cms/modules/academic/api/SectionGradeController.java): Thêm endpoint API download template.
+
+### Frontend
+- [section-grade.service.ts](file:///C:/Users/Admin/Downloads/Repo/StudentRegistrationSystem/frontend/src/api/services/section-grade.service.ts): Thêm hàm gọi API download template.
+- [TeacherCourseEnrollmentsView.vue](file:///C:/Users/Admin/Downloads/Repo/StudentRegistrationSystem/frontend/src/views/teacher/TeacherCourseEnrollmentsView.vue): Cập nhật UI, thêm nút bấm, xử lý logic disable nút Lưu và validate file import.
+
+## Hướng dẫn kiểm tra
+1. Vào mục "Lớp học phần đang dạy" của Giảng viên.
+2. Chọn "Nhập điểm".
+3. Thử thay đổi điểm -> Nút Lưu hiện lên. Bấm Lưu -> Nút Lưu ẩn đi.
+4. Bấm "Tải file mẫu" -> Mở file kiểm tra danh sách SV.
+5. Sửa điểm trong file -> Chọn file ở ô "File Excel điểm" -> Bấm "Import Excel" -> Kiểm tra kết quả.

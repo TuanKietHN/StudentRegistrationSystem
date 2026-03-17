@@ -15,8 +15,7 @@
 Nên seed bằng Flyway migrations, đảm bảo idempotent (ví dụ dùng `ON CONFLICT DO NOTHING`).
 
 Ví dụ đang có:
-- V2 seed `roles`, `permissions`, mappings RBAC.
-- V1 seed một số dữ liệu mẫu (semesters/subjects/users/courses).
+- V1 seed một số dữ liệu nền tảng (`roles`, `permissions`) và dữ liệu mẫu (semesters/subjects/users/courses).
 
 ### 2) Demo/dev data: dùng Application Seeder (dev profile)
 

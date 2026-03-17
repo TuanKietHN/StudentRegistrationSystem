@@ -4,7 +4,7 @@
 -- Database:  PostgreSQL
 -- Dùng cho:  Fresh install — chạy một lần duy nhất
 -- Sửa lỗi:  Thêm cột is_deleted vào tất cả bảng (fix lỗi startup)
---            Thêm đầy đủ permissions từ V2/V3
+--            Thêm đầy đủ permissions
 -- ============================================================
 
 
@@ -53,6 +53,12 @@ CREATE TABLE users (
                        username   VARCHAR(255) NOT NULL,
                        email      VARCHAR(255) NOT NULL,
                        password   VARCHAR(255) NOT NULL,
+                       avatar VARCHAR(500),
+                       failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+                       last_login_at TIMESTAMP,
+                       last_login_ip VARCHAR(45),
+                       last_login_user_agent VARCHAR(500),
+                       lock_until TIMESTAMP,
                        CONSTRAINT uk_users_username UNIQUE (username),
                        CONSTRAINT uk_users_email    UNIQUE (email)
 );

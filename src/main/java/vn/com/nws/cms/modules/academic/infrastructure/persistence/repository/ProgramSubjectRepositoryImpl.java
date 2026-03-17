@@ -63,6 +63,18 @@ public class ProgramSubjectRepositoryImpl implements ProgramSubjectRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean existsByProgramIdAndSubjectId(Long programId, Long subjectId) {
+        return jpaRepository.existsByAcademicProgramIdAndSubjectId(programId, subjectId);
+    }
+
+    @Override
+    @Transactional
+    public void upsert(Long programId, Long subjectId, Integer semester, String subjectType, Double passScore) {
+        jpaRepository.upsertNative(programId, subjectId, semester, subjectType, passScore);
+    }
+
+    @Override
     @Transactional
     public void deleteById(Long id) {
         jpaRepository.deleteById(id);

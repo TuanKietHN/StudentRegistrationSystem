@@ -96,6 +96,8 @@ const router = createRouter({
         { path: 'admin-classes', name: 'TeacherAdminClasses', component: TeacherAdminClassesView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
         { path: 'admin-classes/:adminClassId/students', name: 'TeacherAdminClassStudents', component: TeacherAdminClassStudentsView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
         { path: 'admin-classes/:adminClassId/grades', name: 'TeacherAdminClassGrades', component: TeacherAdminClassGradesView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
+        // 👇 Route mới: xem tiến độ học tập của sinh viên
+        { path: 'students/:studentId/progress', name: 'TeacherStudentProgress', component: StudentProgressView, meta: { permissions: ['STUDENT_CLASS:READ'] } },
         { path: 'schedule', name: 'TeacherSchedule', component: ScheduleView, meta: { permissions: ['SECTION:READ'] } }
       ]
     },

@@ -61,18 +61,4 @@ public class SectionGradeController {
         GradesImportResultResponse response = sectionGradeService.importSectionGrades(sectionId, authentication.getName(), isAdmin, isTeacher, file);
         return ResponseEntity.ok(ApiResponse.success("Import điểm thành công", response));
     }
-
-    @GetMapping("/{sectionId}/grades/template")
-    @PreAuthorize("hasAuthority('ENROLLMENT:READ') and (hasRole('ADMIN') or hasRole('TEACHER'))")
-    @Operation(summary = "Tải file mẫu nhập điểm", description = "Tải file Excel mẫu chứa danh sách sinh viên")
-    public ResponseEntity<byte[]> downloadTemplate(Authentication authentication, @PathVariable Long sectionId) {
-        boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        boolean isTeacher = authentication.getAuthorities().stream().anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
-        byte[] data = sectionGradeService.downloadGradeTemplate(sectionId, authentication.getName(), isAdmin, isTeacher);
-        
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=template_grades_" + sectionId + ".xlsx")
-                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                .body(data);
-    }
 }

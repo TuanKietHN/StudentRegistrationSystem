@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-card-text>
-      <PageHeader :title="classTitle" back-to="/teacher/admin-classes">
+      <PageHeader :title="`Danh sách sinh viên lớp: ${studentClass?.name || ''}`" back-to="/teacher/admin-classes">
         <template #actions>
           <v-btn variant="text" :loading="loading" @click="reload">Tải lại</v-btn>
         </template>
@@ -9,7 +9,7 @@
 
       <v-progress-linear v-if="loading" indeterminate class="mb-4" />
 
-      <v-table>
+      <v-table v-else>
         <thead>
         <tr>
           <th>MSSV</th>
@@ -32,12 +32,12 @@
             <v-chip :color="s.active ? 'green' : 'grey'" variant="tonal" size="small">{{ s.active ? 'Đang học' : 'Ngưng' }}</v-chip>
           </td>
           <td class="text-center">
-            <v-btn 
-              color="primary" 
-              variant="text" 
-              size="small" 
-              prepend-icon="mdi-chart-bar"
-              @click="viewProgress(s)"
+            <v-btn
+                color="primary"
+                variant="text"
+                size="small"
+                prepend-icon="mdi-chart-bar"
+                @click="viewProgress(s)"
             >
               Tiến độ
             </v-btn>
@@ -49,59 +49,44 @@
         </tbody>
       </v-table>
     </v-card-text>
-
-    <!-- Progress Dialog -->
-    <v-dialog v-model="showProgressDialog" fullscreen transition="dialog-bottom-transition">
-      <v-card>
-        <v-toolbar color="primary">
-          <v-btn icon="mdi-close" @click="showProgressDialog = false"></v-btn>
-          <v-toolbar-title>Tiến độ học tập: {{ selectedStudent?.username }} ({{ selectedStudent?.studentCode }})</v-toolbar-title>
-        </v-toolbar>
-        <v-card-text class="bg-grey-lighten-4">
-          <v-container>
-            <StudentProgressView v-if="selectedStudent" :student-id="selectedStudent.id" />
-          </v-container>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
   </v-card>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { unwrapApiResponse } from '@/api/response'
 import { studentClassService, type StudentProfile } from '@/api/services/studentClass.service'
 import { useUiStore } from '@/stores/ui'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import StudentProgressView from '@/views/academic/StudentProgressView.vue'
 
 const uiStore = useUiStore()
 const route = useRoute()
+const router = useRouter()
 const adminClassId = Number(route.params.adminClassId)
+
+// Define local type for StudentClass since we only need basic fields
+interface StudentClass {
+  id: number
+  code: string
+  name: string
+}
 
 const loading = ref(false)
 const students = ref<StudentProfile[]>([])
-const classTitle = ref(`Danh sách sinh viên (Lớp #${adminClassId})`)
-
-const showProgressDialog = ref(false)
-const selectedStudent = ref<StudentProfile | null>(null)
-
-const loadAdminClass = async () => {
-  try {
-    const res = await studentClassService.getById(adminClassId)
-    const c = unwrapApiResponse<any>(res)
-    classTitle.value = c?.code && c?.name ? `Danh sách sinh viên - ${c.code} - ${c.name}` : classTitle.value
-  } catch {
-    classTitle.value = `Danh sách sinh viên (Lớp #${adminClassId})`
-  }
-}
+const studentClass = ref<StudentClass | null>(null)
 
 const reload = async () => {
   loading.value = true
   try {
-    const res = await studentClassService.getStudents(adminClassId)
-    students.value = unwrapApiResponse<StudentProfile[]>(res) || []
+    const [classRes, studentsRes] = await Promise.all([
+      studentClassService.getById(adminClassId),
+      studentClassService.getStudents(adminClassId)
+    ])
+    // @ts-ignore
+    studentClass.value = unwrapApiResponse<StudentClass>(classRes)
+    // @ts-ignore
+    students.value = unwrapApiResponse<StudentProfile[]>(studentsRes) || []
   } catch (err: any) {
     uiStore.notify(err?.response?.data?.message || 'Không tải được danh sách sinh viên', 'error', 4000)
   } finally {
@@ -110,12 +95,14 @@ const reload = async () => {
 }
 
 const viewProgress = (student: StudentProfile) => {
-  selectedStudent.value = student
-  showProgressDialog.value = true
+  router.push({
+    name: 'TeacherStudentProgress',
+    params: { studentId: student.id },
+    query: { backTo: `/teacher/admin-classes/${adminClassId}/students` }
+  })
 }
 
 onMounted(async () => {
-  await loadAdminClass()
   await reload()
 })
 </script>

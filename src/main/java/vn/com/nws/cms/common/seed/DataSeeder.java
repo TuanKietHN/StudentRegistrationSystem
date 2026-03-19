@@ -557,26 +557,9 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void upsertProgramSubject(AcademicProgram prog, String subjectCode, int semester, String type, double passScore) {
-        // Dùng existsByProgramIdAndSubjectId thay vì load list + stream filter.
-        // Lý do: Hibernate L1 cache có thể trả về stale data khiến exists = false dù
-        // DB đã có bản ghi, dẫn đến duplicate-key exception → session bị poison →
-        // mọi thao tác JPA tiếp theo trong cùng transaction đều fail (HHH000099).
         Subject subject = subjectByCode(subjectCode);
-        boolean exists = programSubjectRepository.findByProgramId(prog.getId()).stream()
-                .anyMatch(ps -> ps.getSubject().getId().equals(subject.getId()));
-        if (exists) {
-            log.debug("  [ProgramSubject] Đã tồn tại: {} trong {}", subjectCode, prog.getCode());
-            return;
-        }
-        ProgramSubject ps = ProgramSubject.builder()
-                .programId(prog.getId())
-                .subject(subject)
-                .semester(semester)
-                .subjectType(type)
-                .passScore(passScore)
-                .build();
-        programSubjectRepository.save(ps);
-        log.debug("  [ProgramSubject] Thêm {} vào {}", subjectCode, prog.getCode());
+        programSubjectRepository.upsert(prog.getId(), subject.getId(), semester, type, passScore);
+        log.debug("  [ProgramSubject] Thêm/Cập nhật {} vào {}", subjectCode, prog.getCode());
     }
 
     // =========================================================================

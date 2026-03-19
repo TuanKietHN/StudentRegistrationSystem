@@ -1,6 +1,6 @@
 # So Sánh Chi Tiết Database Schema: Entity vs Flyway SQL
 
-Tài liệu này tổng hợp chi tiết sự khác biệt (schema drift) giữa các class Entity (JPA/Hibernate) và các file migration SQL của Flyway (`V1__init_schema.sql`, `V2__add_user_columns.sql`) trong dự án. 
+Tài liệu này tổng hợp chi tiết sự khác biệt (schema drift) giữa các class Entity (JPA/Hibernate) và các file migration SQL của Flyway (`V1__init_schema.sql`) trong dự án. 
 
 Sự sai lệch này chính là nguyên nhân gây ra các lỗi trong quá trình khởi chạy ứng dụng (DataSeeder) hoặc khi chạy migrate Flyway thủ công.
 
@@ -9,8 +9,8 @@ Sự sai lệch này chính là nguyên nhân gây ra các lỗi trong quá trì
 ## 1. Lỗi Hiện Tại & Nguyên Nhân Gốc Rễ
 
 ### Lỗi 1: `ERROR: column ue1_0.avatar does not exist`
-- **Nguyên nhân**: Bảng `users` trong cơ sở dữ liệu hiện tại đang thiếu các cột được định nghĩa trong `V2__add_user_columns.sql` (bao gồm `avatar`, `failed_login_attempts`, `last_login_at`, `last_login_ip`, `last_login_user_agent`, `lock_until`).
-- **Phân tích**: Mặc dù `V2` có lệnh `ALTER TABLE users ADD COLUMN...`, nhưng do quá trình migrate chưa chạy thành công (có thể do lỗi version, Flyway history bị lệch, hoặc Spring Boot chạy `DataSeeder` gọi hàm `findByEmail` trước khi Flyway migrate xong), dẫn đến việc Hibernate gọi câu lệnh `SELECT` chứa cột `avatar` nhưng DB chưa có cột này.
+- **Nguyên nhân**: Bảng `users` trong cơ sở dữ liệu hiện tại đang thiếu các cột bổ sung như `avatar`, `failed_login_attempts`, `last_login_at`, v.v.
+- **Phân tích**: Lệnh `ALTER TABLE users ADD COLUMN...` (trước đó) do quá trình migrate chưa chạy thành công (có thể do lỗi version, Flyway history bị lệch, hoặc Spring Boot chạy `DataSeeder` gọi hàm `findByEmail` trước khi Flyway migrate xong), dẫn đến việc Hibernate gọi câu lệnh `SELECT` chứa cột `avatar` nhưng DB chưa có cột này.
 
 ### Lỗi 2: `ERROR: column "assigned_at" of relation "user_roles" does not exist`
 - **Nguyên nhân**: Thực thể `UserRoleEntity` có khai báo trường `assignedAt`. Tuy nhiên bản Flyway `V1__init_schema.sql` không hề tạo cột này!
@@ -39,7 +39,7 @@ Kiểm tra toàn bộ dự án, dưới đây là danh sách chi tiết những 
 
 ### 2.4. Bảng `auth_audit_events` bị thiếu hoàn toàn
 - **Entity (`AuthAuditEventEntity`)**: Định nghĩa `@Table(name = "auth_audit_events")` với các trường `username`, `event_type`, `success`, `ip`, `user_agent`, v.v.
-- **Flyway**: Khảo sát toàn bộ script `V1` và `V2` không hề có câu lệnh `CREATE TABLE auth_audit_events`.
+- **Flyway**: Khảo sát toàn bộ script `V1` không hề có câu lệnh `CREATE TABLE auth_audit_events`.
 - **Mức độ**: 🔴 **Nghiêm trọng** (Ứng dụng ghi log audit sẽ văng Exception "relation does not exist").
 
 ### 2.5. Thừa cột `created_by`, `updated_by` trong `academic_programs` & `program_subjects`
@@ -48,7 +48,7 @@ Kiểm tra toàn bộ dự án, dưới đây là danh sách chi tiết những 
 - **Mức độ**: 🟡 **Cảnh báo** (Không gây lỗi ứng dụng trực tiếp do các cột này cho phép Null, tuy nhiên gây rác data và dư thừa schema).
 
 ### 2.6. Đồng bộ cột `users` (Nguyên nhân Flyway thất bại)
-- Nếu đã có `V2__add_user_columns.sql`, bạn phải đảm bảo Flyway chạy thành công. Khi migrate thủ công gặp lỗi, lý do thường là database metadata của Flyway bị conflict (VD: Đã lỡ thay đổi thủ công schema) hoặc V1 có checksum/nội dung bị sửa so với lần chạy đầu tiên.
+- Khi migrate thủ công gặp lỗi, lý do thường là database metadata của Flyway bị conflict (VD: Đã lỡ thay đổi thủ công schema) hoặc V1 có checksum/nội dung bị sửa so với lần chạy đầu tiên.
 
 ---
 
@@ -70,7 +70,7 @@ Kiểm tra toàn bộ dự án, dưới đây là danh sách chi tiết những 
   - Bổ sung `granted_at` cho `role_permissions`.
   - Bổ sung lệnh `CREATE TABLE auth_audit_events(...)`.
   - Bổ sung `grade` cho `enrollments`.
-- Gộp nội dung V2 vào V1 luôn (tạo thẳng các cột `avatar`, `lock_until`, `last_login_at`,... ở CREATE TABLE `users`).
-- Xóa file V2 đi và chạy lại từ DB trống.
+- Đảm bảo gộp đầy đủ cấu trúc vào `V1`.
+- Xóa bản sửa lỗi hay file cũ và chạy lại từ DB trống.
 
 Nếu sử dụng **Cách 2**, khởi động lại Spring Boot sẽ báo Flyway migrate thành công và DataSeeder sẽ chạy qua nhẹ nhàng không còn lỗi SQLGrammarException.

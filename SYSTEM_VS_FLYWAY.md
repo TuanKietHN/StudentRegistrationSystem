@@ -4,7 +4,7 @@
 
 | Java Entity | Database Table | Status | Notes |
 | :--- | :--- | :--- | :--- |
-| `UserEntity` / `User` | `users` | ✅ Aligned | Roles được map qua `user_roles` (V2). Cột legacy `users.role` đã drop ở V7. |
+| `UserEntity` / `User` | `users` | ✅ Aligned | Roles được map qua `user_roles`. Cột legacy `users.role` đã drop ở V7. |
 | `RoleEntity` | `roles` | ✅ Aligned | `RoleType` map theo `ROLE_` prefix trong mapper. |
 | `SemesterEntity` / `Semester` | `semesters` | ✅ Aligned | `code`, `name`, `start_date`, `end_date`, `active`. |
 | `SubjectEntity` / `Subject` | `subjects` | ✅ Aligned | Dùng cột `credits`; cột legacy `credit` được hợp nhất và drop ở V11. |

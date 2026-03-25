@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🎓 Course Management System (CMS)
+# 🎓 Student Registration System
 
-### Hệ thống Quản lý Khóa học & Sinh viên Toàn diện
+### Hệ thống Quản lý Sinh viên Toàn diện
 
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.x-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)](https://vuejs.org/)
@@ -14,7 +14,7 @@
   <img src="app-gif.gif" alt="Demo" width="600"/>
 </p>
 
-**Course Management System (CMS)** là một ứng dụng quản lý giáo dục hiện đại, được xây dựng dựa trên kiến trúc **Modular Monolith** sử dụng **Spring Boot** ở Backend và **Vue.js** ở Frontend.
+**Student Registration System ** là một ứng dụng quản lý giáo dục hiện đại, được xây dựng dựa trên kiến trúc **Modular Monolith** sử dụng **Spring Boot** ở Backend và **Vue.js** ở Frontend.
 
 [Tính năng](#-tính-năng) • [Cài đặt](#-cài-đặt) • [Chạy dự án](#-chạy-dự-án) • [Kiến trúc](#-kiến-trúc-hệ-thống) • [Lỗi thường gặp](#-lỗi-thường-gặp) • [Đóng góp](#-đóng-góp)
 
@@ -42,7 +42,7 @@
 
 ## 🎯 Giới thiệu
 
-**Course Management System (CMS)** là nền tảng quản lý trường học và trung tâm giáo dục, giúp số hóa quy trình quản lý khóa học, sinh viên, giảng viên và kết quả học tập. Dự án theo đuổi kiến trúc Modular Monolith nhằm đảm bảo sự rạch ròi giữa các module nghiệp vụ mà không làm tăng độ phức tạp trong vận hành như Microservices.
+**Student Registration System** là nền tảng quản lý trường học và trung tâm giáo dục, giúp số hóa quy trình quản lý khóa học, sinh viên, giảng viên và kết quả học tập. Dự án theo đuổi kiến trúc Modular Monolith nhằm đảm bảo sự rạch ròi giữa các module nghiệp vụ mà không làm tăng độ phức tạp trong vận hành như Microservices.
 
 ### 🌟 Điểm nổi bật
 
@@ -69,31 +69,20 @@
 
 </details>
 
-<details>
-<summary><b>Tương tác & Tài liệu</b></summary>
-
-- ✅ Tải xuống tài liệu bài giảng
-- ✅ Nộp bài tập
-- ✅ Tham gia thảo luận trong lớp học
-
-</details>
 
 ### 👨‍🏫 Giảng viên
 
 <details>
-<summary><b>Quản lý lớp học</b></summary>
+<summary><b>Quản lý lớp học phần</b></summary>
 
 - ✅ Xem danh sách sinh viên trong lớp
-- ✅ Điểm danh và ghi nhận chuyên cần
-- ✅ Upload tài liệu giảng dạy
+- ✅ Nhập điểm sinh viên trong lớp 
 
 </details>
 
 <details>
-<summary><b>Đánh giá & Chấm điểm</b></summary>
+<summary><b>Quản lý lớp hành chính</b></summary>
 
-- ✅ Tạo bài tập và bài kiểm tra
-- ✅ Chấm điểm và nhận xét sinh viên
 - ✅ Quản lý điểm số tổng hợp của lớp
 
 </details>
@@ -135,7 +124,7 @@ Build Tool: Vite 5.x
 ### Database & Caching & Services
 
 ```
-RDBMS: PostgreSQL 16
+RDBMS: PostgreSQL 18
 Cache: Redis 7
 Message Queue: RabbitMQ 3
 Object Storage: MinIO
@@ -193,21 +182,14 @@ Dự án được xây dựng theo kiến trúc **Modular Monolith**, gom nhóm 
 
 ## 📦 Cài đặt
 
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/your-username/CourseManagementSystem.git
-cd CourseManagementSystem
-```
-
-### 2. Cài đặt Backend Dependencies
+### 1. Cài đặt Backend Dependencies
 
 Backend sử dụng Maven Wrapper, các thư viện sẽ tự động cài khi build:
 ```bash
 ./mvnw clean compile
 ```
 
-### 3. Cài đặt Frontend Dependencies
+### 2. Cài đặt Frontend Dependencies
 
 ```bash
 cd frontend
@@ -369,17 +351,7 @@ erDiagram
 
 ---
 
-## 🤝 Đóng góp
 
-Mọi đóng góp đều được chào đón! Để tham gia vào dự án:
-
-1. Fork repository này
-2. Tạo nhánh chức năng mới (`git checkout -b feature/NewFeature`)
-3. Commit thông điệp (`git commit -m 'Add some NewFeature'`)
-4. Push nhánh của bạn (`git push origin feature/NewFeature`)
-5. Tạo Pull Request
-
----
 
 ## 👨💻 Tác giả
 

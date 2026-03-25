@@ -134,7 +134,7 @@ cms-root/
 ### Giai đoạn 3: Core Features (Fullstack)
 - [ ] **User Management**: API + UI (Profile, Admin Dashboard).
 - [ ] **Academic**: API + UI (Quản lý Học kỳ, Môn học).
-- [ ] **Academic - Lớp hành chính (StudentClass)**: Đồng nhất API `student-classes`, loại bỏ `admin-classes`, và đảm bảo FE/BE map đúng dữ liệu (form v-model, danh sách sinh viên).
+- [ ] **Academic - Lớp hành chính (StudentClass)**: đảm bảo FE/BE map đúng dữ liệu (form v-model, danh sách sinh viên).
 
 ### Giai đoạn 4: E-learning Features
 N/A (ngoài phạm vi dự án hiện tại).
